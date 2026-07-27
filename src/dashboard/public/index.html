@@ -3,29 +3,37 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Dashboard Admin - Auto Notifikasi Pengaduan WhatsApp">
-  <title>Auto Notif Pengaduan — Dashboard</title>
-  <link rel="stylesheet" href="/style.css?v=2.1">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔔</text></svg>">
+  <meta name="description" content="Dashboard Pengawasan & Otomatisasi Notifikasi Pengaduan - Kementerian ATR/BPN Kanwil Aceh">
+  <title>Portal Pengawasan Pengaduan — Kanwil ATR/BPN Aceh</title>
+  <link rel="stylesheet" href="/style.css?v=4.0.0">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏛️</text></svg>">
 </head>
 <body>
-  <!-- Auth Gate / Password Login Form -->
-  <div id="auth-gate" style="position: fixed; inset: 0; z-index: 99999; background: radial-gradient(circle at center, #0f172a 0%, #020617 100%); display: flex; align-items: center; justify-content: center; padding: 20px; transition: opacity 0.4s ease, visibility 0.4s ease;">
-    <div style="width: 100%; max-width: 420px; background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.12); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 40px rgba(14, 165, 233, 0.15); border-radius: 20px; padding: 36px 30px; text-align: center;">
-      <div style="width: 76px; height: 76px; background: linear-gradient(135deg, #0284c7, #38bdf8); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 38px; margin: 0 auto 20px; box-shadow: 0 10px 25px -5px rgba(2, 132, 199, 0.5);">🔐</div>
-      <h2 style="font-size: 1.5rem; font-weight: 700; color: #f8fafc; margin-bottom: 8px; letter-spacing: -0.025em;">Portal Pengawasan BPN</h2>
-      <p style="font-size: 0.88rem; color: #94a3b8; margin-bottom: 28px; line-height: 1.5;">Sistem Otomatisasi Notifikasi Pengaduan & Eskalasi Kantor Wilayah BPN Provinsi Aceh. Silahkan masukkan kata sandi akses utama.</p>
+  <!-- Auth Gate / Password Login Form (Ministerial Executive Style) -->
+  <div id="auth-gate" style="position: fixed; inset: 0; z-index: 99999; background: radial-gradient(circle at 15% 15%, rgba(217, 119, 6, 0.15) 0%, transparent 40%), radial-gradient(circle at center, #0a0f1d 0%, #030712 100%); display: flex; align-items: center; justify-content: center; padding: 20px; transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.4s ease;">
+    <div style="width: 100%; max-width: 440px; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(28px) saturate(190%); -webkit-backdrop-filter: blur(28px) saturate(190%); border: 1px solid rgba(255, 255, 255, 0.14); box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.8), 0 0 50px rgba(245, 158, 11, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.2); border-radius: 26px; padding: 42px 34px; text-align: center; position: relative; overflow: hidden;">
+      <!-- Subtle Golden Glow Banner -->
+      <div style="position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: linear-gradient(90deg, #f59e0b, #d97706, #b45309);"></div>
       
-      <form onsubmit="handleGateLogin(event); return false;" style="display: flex; flex-direction: column; gap: 16px;">
+      <div style="display: inline-flex; align-items: center; gap: 6px; padding: 5px 14px; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 30px; font-size: 0.75rem; font-weight: 700; color: #fbbf24; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 22px;">
+        🇮🇩 Kementerian ATR / BPN
+      </div>
+      
+      <div style="width: 82px; height: 82px; background: linear-gradient(135deg, #f59e0b, #b45309); border-radius: 22px; display: flex; align-items: center; justify-content: center; font-size: 42px; margin: 0 auto 22px; box-shadow: 0 15px 30px -5px rgba(217, 119, 6, 0.5), inset 0 1px 0 rgba(255,255,255,0.4); border: 1px solid rgba(255,255,255,0.2);">🏛️</div>
+      
+      <h2 style="font-size: 1.6rem; font-weight: 800; color: #f8fafc; margin-bottom: 8px; letter-spacing: -0.03em;">Portal Pengawasan Terpadu</h2>
+      <p style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 32px; line-height: 1.5; font-weight: 500;">Sistem Pemantauan Resolusi Tiket OCA Interaction & Otomatisasi Eskalasi WhatsApp Kantor Wilayah BPN Provinsi Aceh.</p>
+      
+      <form onsubmit="handleGateLogin(event); return false;" style="display: flex; flex-direction: column; gap: 18px;">
         <div style="position: relative;">
-          <input type="password" id="gate-password" placeholder="Masukkan kata sandi..." required onkeydown="if(event.key==='Enter'){ handleGateLogin(event); return false; }" style="width: 100%; padding: 14px 18px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.18); background: rgba(15, 23, 42, 0.8); color: #fff; font-size: 15px; outline: none; transition: all 0.2s; box-shadow: inset 0 2px 4px rgba(0,0,0,0.3); text-align: center; letter-spacing: 1px;">
+          <input type="password" id="gate-password" placeholder="Masukkan kata sandi pengawas..." required onkeydown="if(event.key==='Enter'){ handleGateLogin(event); return false; }" style="width: 100%; padding: 16px 20px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.18); background: rgba(10, 15, 28, 0.8); color: #fff; font-size: 15px; outline: none; transition: all 0.25s; box-shadow: inset 0 2px 6px rgba(0,0,0,0.4); text-align: center; letter-spacing: 2px; font-weight: 600;">
         </div>
-        <div id="gate-error" style="color: #f43f5e; font-size: 0.85rem; font-weight: 500; display: none;">❌ Kata sandi tidak benar! Silahkan periksa dan coba lagi.</div>
-        <button type="button" onclick="handleGateLogin(event)" style="width: 100%; padding: 14px; background: linear-gradient(135deg, #0284c7, #0369a1); color: white; font-weight: 700; font-size: 16px; border: none; border-radius: 12px; cursor: pointer; transition: transform 0.1s, box-shadow 0.2s; box-shadow: 0 10px 20px -5px rgba(2, 132, 199, 0.5);">🚀 MASUK KE DASHBOARD</button>
+        <div id="gate-error" style="color: #f87171; font-size: 0.85rem; font-weight: 600; display: none; padding: 10px; background: rgba(244,63,94,0.1); border-radius: 10px; border: 1px solid rgba(244,63,94,0.3);">❌ Kata sandi tidak benar! Silakan periksa kembali.</div>
+        <button type="button" onclick="handleGateLogin(event)" style="width: 100%; padding: 16px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #92400e 100%); color: white; font-weight: 800; font-size: 16px; border: 1px solid rgba(255,255,255,0.25); border-radius: 14px; cursor: pointer; transition: all 0.2s; box-shadow: 0 10px 25px -5px rgba(217, 119, 6, 0.5), inset 0 1px 0 rgba(255,255,255,0.3); letter-spacing: 0.5px;">MASUK KE SYSTEM 🚀</button>
       </form>
 
-      <div style="margin-top: 28px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 0.75rem; color: #64748b;">
-        🔒 Protected Executive System • BPN Aceh
+      <div style="margin-top: 32px; padding-top: 22px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 0.78rem; font-weight: 600; color: #64748b; display: flex; align-items: center; justify-content: center; gap: 6px;">
+        <span>🔒 STRICT EXECUTIVE ACCESS</span> • <span>KANWIL BPN ACEH</span>
       </div>
     </div>
   </div>
@@ -34,14 +42,19 @@
     <!-- Header -->
     <header class="app-header">
       <div class="header-left">
-        <div class="header-icon">🔔</div>
+        <div class="header-icon">🏛️</div>
         <div class="header-title">
-          <h1>Auto Notif Pengaduan</h1>
-          <p>Monitoring Tiket OCA Interaction → WhatsApp</p>
+          <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: #fbbf24; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+            <span>🇮🇩 Kementerian ATR/BPN</span>
+            <span style="opacity: 0.5;">•</span>
+            <span style="color: #94a3b8;">Kanwil Provinsi Aceh</span>
+          </div>
+          <h1>Auto Notif <span class="gold">Pengaduan</span></h1>
+          <p>Sistem Telemetri & Otomatisasi Eskalasi OCA Interaction → WhatsApp</p>
         </div>
       </div>
-      <div class="header-right" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-        <div id="scraper-status" class="status-badge stopped">
+      <div class="header-right" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+        <div id="scraper-status" class="status-badge stopped" title="Status Mesin Scraper OCA">
           <span class="status-dot"></span>
           <span id="status-text">Stopped</span>
         </div>
@@ -54,7 +67,7 @@
           <span id="oca-text">OCA: Cek...</span>
         </div>
         <span class="timestamp" id="last-scrape">-</span>
-        <button class="btn btn-danger btn-sm" style="padding: 6px 12px; font-size: 12px; border-radius: 8px; background: rgba(244, 63, 94, 0.15); border: 1px solid rgba(244, 63, 94, 0.4); color: #f43f5e; cursor: pointer; font-weight: bold;" onclick="handleGateLogout()" title="Kunci & Keluar Dashboard">Keluar</button>
+        <button class="btn btn-danger btn-sm" style="padding: 8px 14px; font-size: 13px; border-radius: 10px; background: rgba(244, 63, 94, 0.15); border: 1px solid rgba(244, 63, 94, 0.4); color: #f43f5e; cursor: pointer; font-weight: 700; display: flex; align-items: center; gap: 6px;" onclick="handleGateLogout()" title="Kunci & Keluar Dashboard">Keluar 🔒</button>
       </div>
     </header>
 
@@ -493,6 +506,6 @@
   <!-- Toast Container -->
   <div class="toast-container" id="toast-container"></div>
 
-  <script src="/app.js?v=3.1"></script>
+  <script src="/app.js?v=4.0.0"></script>
 </body>
 </html>
