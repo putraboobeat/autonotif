@@ -5,6 +5,7 @@ const { buildTestMessage } = require('../notifier/message-builder');
 const { config } = require('../config');
 const { createLogger } = require('../utils/logger');
 const { getAuthStatus, startLoginInteractive, submitOtpInteractive } = require('../scraper/login-controller');
+const { getAllTemplates, renderTemplate } = require('../notifier/templates');
 
 const log = createLogger('ROUTES');
 
@@ -75,11 +76,11 @@ function createRoutes() {
   // Create admin
   router.post('/admins', (req, res) => {
     try {
-      const { nama, kantor_pertanahan, no_hp } = req.body;
+      const { nama, kantor_pertanahan, no_hp, jabatan = 'admin', nama_ktu = null, no_hp_ktu = null } = req.body;
       if (!nama || !kantor_pertanahan || !no_hp) {
         return res.status(400).json({ success: false, error: 'Nama, kantor pertanahan, dan no HP wajib diisi' });
       }
-      const result = AdminModel.create({ nama, kantor_pertanahan, no_hp });
+      const result = AdminModel.create({ nama, kantor_pertanahan, no_hp, jabatan, nama_ktu, no_hp_ktu });
       res.json({ success: true, data: { id: result.lastInsertRowid } });
     } catch (error) {
       if (error.message.includes('UNIQUE constraint')) {
@@ -92,11 +93,14 @@ function createRoutes() {
   // Update admin
   router.put('/admins/:id', (req, res) => {
     try {
-      const { nama, kantor_pertanahan, no_hp, is_active } = req.body;
+      const { nama, kantor_pertanahan, no_hp, jabatan = 'admin', nama_ktu = null, no_hp_ktu = null, is_active } = req.body;
       AdminModel.update(parseInt(req.params.id), {
         nama,
         kantor_pertanahan,
         no_hp,
+        jabatan,
+        nama_ktu,
+        no_hp_ktu,
         is_active: is_active !== undefined ? is_active : true,
       });
       res.json({ success: true });
@@ -139,6 +143,91 @@ function createRoutes() {
       } else {
         res.status(503).json({ success: false, error: 'Sistem scraper belum siap' });
       }
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  router.get('/tickets/export', (req, res) => {
+    try {
+      const tickets = TicketModel.getAll();
+      const header = 'No,Ticket ID,Kantor Pertanahan,Customer,Priority,Status,Category,Subject,Created Date,Last Notified\n';
+      const rows = tickets.map((t, idx) => {
+        const clean = str => `"${(str || '').toString().replace(/"/g, '""')}"`;
+        return `${idx + 1},${clean(t.ticket_id)},${clean(t.kantor_pertanahan)},${clean(t.customer)},${clean(t.priority)},${clean(t.status)},${clean(t.category)},${clean(t.subject)},${clean(t.created_date || t.created_at)},${clean(t.last_notified_at || t.notified_at)}`;
+      }).join('\n');
+      
+      const csv = '\uFEFF' + header + rows; // Include BOM for Excel UTF-8 display
+      const timestamp = new Date().toISOString().slice(0, 10);
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="Laporan_Tiket_Pengaduan_${timestamp}.csv"`);
+      res.send(csv);
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  router.post('/tickets/:ticketId/resend', async (req, res) => {
+    try {
+      const ticketId = req.params.ticketId;
+      const allTickets = TicketModel.getAll();
+      const ticket = allTickets.find(t => t.ticket_id === ticketId);
+      if (!ticket) {
+        return res.status(404).json({ success: false, error: 'Tiket tidak ditemukan' });
+      }
+
+      const admins = AdminModel.findByKantor(ticket.kantor_pertanahan);
+      if (admins && admins.length > 0) {
+        for (const admin of admins) {
+          const msg = renderTemplate('template_manual_resend', {
+            ticketId: ticket.ticket_id,
+            customer: ticket.customer,
+            kantor: ticket.kantor_pertanahan,
+            subjek: ticket.subject || ticket.category,
+            tanggal: ticket.created_date || ticket.created_at,
+            adminNama: admin.nama
+          });
+          const result = await sendPersonalMessage(admin.no_hp, msg);
+          NotificationLogModel.create({
+            ticketId: ticket.ticket_id,
+            targetType: 'personal_manual',
+            targetName: admin.nama,
+            targetNumber: admin.no_hp,
+            message: msg,
+            status: result && result.success ? 'sent' : 'failed',
+            response: JSON.stringify(result),
+          });
+        }
+        res.json({ success: true, message: `Peringatan langsung berhasil ditembakkan ke WhatsApp Admin ${ticket.kantor_pertanahan}!` });
+      } else {
+        res.status(400).json({ success: false, error: `Belum ada admin terdaftar untuk kantor ${ticket.kantor_pertanahan}` });
+      }
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // ============================================
+  // Customizable Notification Templates
+  // ============================================
+  router.get('/templates', (req, res) => {
+    try {
+      const data = getAllTemplates();
+      res.json({ success: true, data });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  router.post('/templates', (req, res) => {
+    try {
+      const templates = req.body || {};
+      for (const [key, val] of Object.entries(templates)) {
+        if (val !== undefined && val !== null) {
+          ConfigModel.set(key, val.toString());
+        }
+      }
+      res.json({ success: true, message: 'Template bahasa notifikasi berhasil diperbarui!' });
     } catch (error) {
       res.status(500).json({ success: false, error: error.message });
     }

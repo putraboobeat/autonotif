@@ -8,6 +8,9 @@ CREATE TABLE IF NOT EXISTS admins (
     nama VARCHAR(255) NOT NULL,
     kantor_pertanahan VARCHAR(255) NOT NULL,
     no_hp VARCHAR(20) NOT NULL,
+    jabatan VARCHAR(50) DEFAULT 'admin',
+    nama_ktu VARCHAR(255),
+    no_hp_ktu VARCHAR(50),
     is_active INTEGER DEFAULT 1,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP

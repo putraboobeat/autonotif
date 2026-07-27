@@ -82,16 +82,18 @@
             <thead>
               <tr>
                 <th>No</th>
-                <th>Nama</th>
                 <th>Kantor Pertanahan</th>
-                <th>No HP</th>
+                <th>Petugas Admin</th>
+                <th>No HP Admin</th>
+                <th>Kasubbag TU</th>
+                <th>No HP KTU</th>
                 <th>Status</th>
                 <th>Aksi</th>
               </tr>
             </thead>
             <tbody id="admin-table-body">
               <tr class="empty-row">
-                <td colspan="6">
+                <td colspan="8">
                   <div class="empty-state">
                     <div class="empty-icon">👥</div>
                     <h3>Belum ada data admin</h3>
@@ -108,14 +110,26 @@
     <!-- Tab: Tiket Terpantau -->
     <div class="tab-content" id="tab-tickets">
       <div class="card">
-        <div class="card-header">
+        <div class="card-header" style="flex-wrap: wrap; gap: 12px;">
           <h2>📋 Tiket Terpantau</h2>
-          <div style="display: flex; gap: 8px;">
+          <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+            <a href="/api/tickets/export" target="_blank" class="btn btn-success btn-sm" style="text-decoration: none; display: inline-flex; align-items: center; gap: 4px; background-color: #2e7d32; border-color: #2e7d32; color: #fff;">📥 Download Laporan (Excel/CSV)</a>
             <button class="btn btn-primary btn-sm" id="btn-refresh-tickets" onclick="refreshLiveTickets(this)">⚡ Ambil Data & Update Status Terbaru</button>
             <button class="btn btn-ghost btn-sm" onclick="loadTickets()">↻ Refresh Tabel</button>
           </div>
         </div>
         <div class="card-body">
+          <div style="display: flex; gap: 12px; margin-bottom: 16px; align-items: center; flex-wrap: wrap;">
+            <input type="text" id="ticket-search" placeholder="🔍 Cari ID Tiket, Customer, atau Nama Kantor..." oninput="filterTickets()" style="flex: 1; min-width: 220px; padding: 10px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: rgba(0,0,0,0.25); color: #fff; font-size: 14px;">
+            <select id="ticket-filter-kantor" onchange="filterTickets()" style="padding: 10px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: #1e293b; color: #fff; font-size: 14px; cursor: pointer;">
+              <option value="ALL">🏢 Semua Kantor Pertanahan</option>
+            </select>
+            <select id="ticket-filter-status" onchange="filterTickets()" style="padding: 10px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: #1e293b; color: #fff; font-size: 14px; cursor: pointer;">
+              <option value="ALL">Semua Status</option>
+              <option value="OPEN">🔥 Hanya Status Open</option>
+              <option value="CLOSED">✅ Hanya Closed / Resolved</option>
+            </select>
+          </div>
           <table class="data-table">
             <thead>
               <tr>
@@ -127,11 +141,12 @@
                 <th>Notif Group</th>
                 <th>Notif Admin</th>
                 <th>Waktu</th>
+                <th>Aksi Peringatan</th>
               </tr>
             </thead>
             <tbody id="ticket-table-body">
               <tr class="empty-row">
-                <td colspan="8">
+                <td colspan="9">
                   <div class="empty-state">
                     <div class="empty-icon">📋</div>
                     <h3>Belum ada tiket terpantau</h3>
@@ -148,8 +163,14 @@
     <!-- Tab: Log Notifikasi -->
     <div class="tab-content" id="tab-logs">
       <div class="card">
-        <div class="card-header">
-          <h2>📨 Log Notifikasi</h2>
+        <div class="card-header" style="flex-wrap: wrap; gap: 12px;">
+          <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+            <h2>📨 Log Notifikasi</h2>
+            <div style="display: flex; background: rgba(0,0,0,0.3); border-radius: 8px; padding: 4px; border: 1px solid rgba(255,255,255,0.1);">
+              <button id="btn-log-personal" class="btn btn-primary btn-sm" style="border-radius: 6px; padding: 6px 14px; font-weight: bold;" onclick="switchLogTab('personal', this)">📲 Pesan Japri / Personal</button>
+              <button id="btn-log-group" class="btn btn-ghost btn-sm" style="border-radius: 6px; padding: 6px 14px;" onclick="switchLogTab('group', this)">👥 Pesan Group</button>
+            </div>
+          </div>
           <div class="actions-bar">
             <button class="btn btn-success btn-sm" onclick="openTestModal()">🧪 Test Notifikasi</button>
             <button class="btn btn-ghost btn-sm" onclick="loadLogs()">↻ Refresh</button>
@@ -280,6 +301,21 @@
           </div>
         </div>
       </div>
+
+      <!-- Kustomisasi Template Bahasa Notifikasi -->
+      <div class="card" style="margin-top: 24px;">
+        <div class="card-header" style="flex-wrap: wrap; gap: 12px; border-left: 4px solid var(--primary, #0284c7);">
+          <div>
+            <h2>✍️ Kustomisasi Kata & Bahasa Notifikasi (Anti-Robot)</h2>
+            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px;">Sesuaikan kalimat pada setiap jenis pesan pengingat agar terasa sopan, komunikatif, profesional, dan tidak kaku seperti robot.</p>
+          </div>
+          <button class="btn btn-success btn-sm" onclick="saveAllTemplates()" style="font-size: 14px; padding: 10px 20px; font-weight: bold;">💾 Simpan Perubahan Bahasa</button>
+        </div>
+        <div class="card-body">
+          <div id="templates-loading" style="text-align: center; padding: 20px; color: var(--text-secondary);">Memuat daftar template notifikasi...</div>
+          <div id="templates-container" style="display: flex; flex-direction: column; gap: 24px;"></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -371,8 +407,19 @@
           </select>
         </div>
         <div class="form-group">
-          <label class="form-label">No HP (WhatsApp)</label>
+          <label class="form-label">No HP (WhatsApp) Petugas Admin</label>
           <input type="text" class="form-input" id="admin-hp" placeholder="08xxxxxxxxxx">
+        </div>
+        <div style="border-top: 1px dashed rgba(255,255,255,0.2); margin: 16px 0; padding-top: 16px;">
+          <h4 style="color: #c084fc; font-size: 0.95rem; margin-bottom: 10px;">👔 Kontak Kasubbag Tata Usaha (Eskalasi Jika > 24 Jam Belum Selesai)</h4>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nama Kasubbag Tata Usaha (Opsional)</label>
+          <input type="text" class="form-input" id="admin-nama-ktu" placeholder="Masukkan nama Kasubbag TU">
+        </div>
+        <div class="form-group">
+          <label class="form-label">No HP WhatsApp Kasubbag TU (Opsional)</label>
+          <input type="text" class="form-input" id="admin-hp-ktu" placeholder="08xxxxxxxxxx">
         </div>
       </div>
       <div class="modal-footer">

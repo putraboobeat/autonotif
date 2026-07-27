@@ -1,6 +1,7 @@
 /**
  * Build WhatsApp notification messages
  */
+const { renderTemplate } = require('./templates');
 
 function formatMention(phone) {
   if (!phone) return '';
@@ -138,15 +139,18 @@ function buildKanwilMessage(ticket, adminName) {
  * Build group reminder notification message
  */
 function buildGroupReminderMessage(ticket, groupName, reminderCount) {
+  const isEscalation = ticket.isEscalation || reminderCount >= 5;
   const lines = [
-    '⚠️ *REMINDER: PENGADUAN BELUM DISELESAIKAN* ⚠️',
+    isEscalation ? '🚨 *[ESKALASI KANWIL] PERINGATAN PENGADUAN DARURAT* 🚨' : '⚠️ *REMINDER: PENGADUAN BELUM DISELESAIKAN* ⚠️',
     '',
     `Pengaduan di group *${groupName || 'WhatsApp'}* ini masih berstatus OPEN (Reminder ke-${reminderCount}):`,
     `📋 *Ticket ID*: ${ticket.ticketId}`,
     `👤 *Customer*: ${ticket.customer || '-'}`,
     `🏢 *Kantor*: ${ticket.kantorPertanahan || '-'}`,
     '',
-    `Harap segera ditindaklanjuti pada Dashboard OCA Interaction.`,
+    isEscalation 
+      ? `🔥 *PENGADUAN INI TELAH MELEWATI >${reminderCount}X PENGINGAT!* Mohon perhatian serius dari pimpinan & admin bertugas.` 
+      : `Harap segera ditindaklanjuti pada Dashboard OCA Interaction.`,
     ''
   ];
 
@@ -166,8 +170,9 @@ function buildGroupReminderMessage(ticket, groupName, reminderCount) {
  * Build personal reminder notification message
  */
 function buildPersonalReminderMessage(ticket, adminData, reminderCount) {
+  const isEscalation = ticket.isEscalation || reminderCount >= 5;
   const lines = [
-    `⚠️ *REMINDER PENGADUAN: ${adminData.kantor_pertanahan}* ⚠️`,
+    isEscalation ? `🚨 *[ESKALASI] PERINGATAN DARURAT: ${adminData.kantor_pertanahan}* 🚨` : `⚠️ *REMINDER PENGADUAN: ${adminData.kantor_pertanahan}* ⚠️`,
     '',
     `Kepada Yth. Sdr/i *${adminData.nama}*,`,
     '',
@@ -179,7 +184,9 @@ function buildPersonalReminderMessage(ticket, adminData, reminderCount) {
     `💬 *Subjek*: ${ticket.subject || '-'}`,
     `📅 *Tanggal Masuk*: ${ticket.createdDate || '-'}`,
     '',
-    `Harap segera memproses pengaduan ini di OCA Interaction.`,
+    isEscalation 
+      ? `🔥 *MOHON SEGERA DIPROSES DATANYA SEKARANG JUGA DI OCA!*` 
+      : `Harap segera memproses pengaduan ini di OCA Interaction.`,
     '',
     `_Pesan Otomatis dari Sistem_`
   ];
@@ -209,7 +216,7 @@ function buildGroupReminderSummaryMessage(openTickets, groupName) {
   const lines = [
     '⚠️ *REMINDER: DAFTAR PENGADUAN BELUM DISELESAIKAN (OPEN)* ⚠️',
     '',
-    `Berikut adalah daftar tiket pengaduan di group *${groupName || 'WhatsApp'}* yang belum diseleseikan / closed:`,
+    `Berikut adalah daftar tiket pengaduan di group *${groupName || 'WhatsApp'}* yang belum diselesaikan / closed:`,
     ''
   ];
 
@@ -223,8 +230,10 @@ function buildGroupReminderSummaryMessage(openTickets, groupName) {
       if (m) allMentions.add(m);
     });
 
+    const badge = ticket.isEscalation ? '🔥 [ESKALASI] ' : '';
+
     lines.push(
-      `*${idx + 1}. Tiket ID*: ${ticket.ticketId}`,
+      `*${idx + 1}. ${badge}Tiket ID*: ${ticket.ticketId}`,
       `   🏢 *Kantor*: ${ticket.kantorPertanahan || '-'}`,
       `   👤 *Customer*: ${ticket.customer || '-'}`,
       `   🔖 *Subjek*: ${ticket.subject || ticket.category || '-'}`,
@@ -246,6 +255,50 @@ function buildGroupReminderSummaryMessage(openTickets, groupName) {
   return lines.join('\n');
 }
 
+/**
+ * Build group notification for newly resolved/closed tickets
+ */
+function buildClosedTicketGroupMessage(closedTickets) {
+  const lines = [
+    '✅ *APRESIASI PENYELESAIAN PENGADUAN* 🎉',
+    '',
+    `Sistem memantau terdapat *${closedTickets.length} tiket pengaduan* yang baru saja bertukar status menjadi *CLOSED / RESOLVED* di OCA Interaction:`,
+    ''
+  ];
+
+  const allMentions = new Set();
+
+  closedTickets.forEach((ticket, idx) => {
+    const admins = ticket.matchingAdmins || [];
+    const tagList = admins
+      .map(a => formatMention(a.no_hp))
+      .filter(Boolean)
+      .join(' ');
+    if (tagList) {
+      admins.forEach(a => {
+        const m = formatMention(a.no_hp);
+        if (m) allMentions.add(m);
+      });
+    }
+
+    lines.push(
+      `*${idx + 1}. Tiket ID*: ${ticket.ticketId} (${ticket.status})`,
+      `   🏢 *Kantor*: ${ticket.kantorPertanahan || '-'}`,
+      `   👤 *Customer*: ${ticket.customer || '-'}`,
+      `   💬 *Subjek*: ${ticket.subject || ticket.category || '-'}`,
+      `   👏 *Penanggung Jawab*: ${tagList || 'Admin Wilayah'}`,
+      ''
+    );
+  });
+
+  lines.push(
+    '🙏 _Terima kasih atas respons cepat dan pelayanan prima kepada masyarakat!_',
+    '_Pesan Otomatis dari Sistem Auto Notif Pengaduan_'
+  );
+
+  return lines.join('\n');
+}
+
 module.exports = {
   buildGroupMessage,
   buildPersonalMessage,
@@ -253,5 +306,6 @@ module.exports = {
   buildGroupReminderMessage,
   buildPersonalReminderMessage,
   buildGroupReminderSummaryMessage,
+  buildClosedTicketGroupMessage,
   buildTestMessage,
 };

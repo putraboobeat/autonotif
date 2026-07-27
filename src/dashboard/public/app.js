@@ -307,11 +307,11 @@ async function loadAdmins() {
     if (result.data.length === 0) {
       tbody.innerHTML = `
         <tr class="empty-row">
-          <td colspan="6">
+          <td colspan="8">
             <div class="empty-state">
               <div class="empty-icon">👥</div>
-              <h3>Belum ada data admin</h3>
-              <p>Klik "+ Tambah Admin" untuk menambahkan data admin kantor pertanahan</p>
+              <h3>Belum ada data admin & Kasubbag TU</h3>
+              <p>Klik "+ Tambah Admin" untuk mendaftarkan petugas dan Kasubbag TU kantor pertanahan</p>
             </div>
           </td>
         </tr>
@@ -322,9 +322,11 @@ async function loadAdmins() {
     tbody.innerHTML = result.data.map((admin, i) => `
       <tr>
         <td>${i + 1}</td>
-        <td><strong>${escapeHtml(admin.nama)}</strong></td>
-        <td>${escapeHtml(admin.kantor_pertanahan)}</td>
-        <td>${escapeHtml(admin.no_hp)}</td>
+        <td><strong style="color: #38bdf8;">${escapeHtml(admin.kantor_pertanahan)}</strong></td>
+        <td><strong>${escapeHtml(admin.nama || '-')}</strong></td>
+        <td>${escapeHtml(admin.no_hp || '-')}</td>
+        <td><span style="color: #d8b4fe; font-weight: 500;">👔 ${escapeHtml(admin.nama_ktu || 'Belum diisi')}</span></td>
+        <td>${escapeHtml(admin.no_hp_ktu || '-')}</td>
         <td>
           <span class="badge ${admin.is_active ? 'badge-success' : 'badge-danger'}">
             ${admin.is_active ? 'Aktif' : 'Nonaktif'}
@@ -333,7 +335,7 @@ async function loadAdmins() {
         <td>
           <div class="actions-bar">
             <button class="btn btn-ghost btn-sm btn-icon" onclick="editAdmin(${admin.id})" title="Edit">✏️</button>
-            <button class="btn btn-danger btn-sm btn-icon" onclick="deleteAdmin(${admin.id}, '${escapeHtml(admin.nama)}')" title="Hapus">🗑️</button>
+            <button class="btn btn-danger btn-sm btn-icon" onclick="deleteAdmin(${admin.id}, '${escapeHtml(admin.kantor_pertanahan)}')" title="Hapus">🗑️</button>
           </div>
         </td>
       </tr>
@@ -345,11 +347,13 @@ async function loadAdmins() {
 }
 
 function openAdminModal(admin = null) {
-  document.getElementById('admin-modal-title').textContent = admin ? 'Edit Admin' : 'Tambah Admin';
+  document.getElementById('admin-modal-title').textContent = admin ? 'Edit Admin & Kasubbag TU' : 'Tambah Admin & Kasubbag TU';
   document.getElementById('admin-edit-id').value = admin ? admin.id : '';
   document.getElementById('admin-nama').value = admin ? admin.nama : '';
   document.getElementById('admin-kantor').value = admin ? admin.kantor_pertanahan : '';
   document.getElementById('admin-hp').value = admin ? admin.no_hp : '';
+  document.getElementById('admin-nama-ktu').value = admin ? (admin.nama_ktu || '') : '';
+  document.getElementById('admin-hp-ktu').value = admin ? (admin.no_hp_ktu || '') : '';
   document.getElementById('admin-modal').classList.add('active');
 }
 
@@ -362,22 +366,24 @@ async function saveAdmin() {
   const nama = document.getElementById('admin-nama').value.trim();
   const kantor_pertanahan = document.getElementById('admin-kantor').value.trim();
   const no_hp = document.getElementById('admin-hp').value.trim();
+  const nama_ktu = document.getElementById('admin-nama-ktu').value.trim();
+  const no_hp_ktu = document.getElementById('admin-hp-ktu').value.trim();
 
   if (!nama || !kantor_pertanahan || !no_hp) {
-    showToast('Semua field wajib diisi', 'error');
+    showToast('Nama Admin, Kantor Pertanahan, dan No HP Admin wajib diisi', 'error');
     return;
   }
 
   try {
     let result;
     if (id) {
-      result = await apiPut(`/admins/${id}`, { nama, kantor_pertanahan, no_hp, is_active: true });
+      result = await apiPut(`/admins/${id}`, { nama, kantor_pertanahan, no_hp, nama_ktu, no_hp_ktu, is_active: true });
     } else {
-      result = await apiPost('/admins', { nama, kantor_pertanahan, no_hp });
+      result = await apiPost('/admins', { nama, kantor_pertanahan, no_hp, nama_ktu, no_hp_ktu });
     }
 
     if (result.success) {
-      showToast(`Admin ${id ? 'diperbarui' : 'ditambahkan'}`, 'success');
+      showToast(`Data kontak kantor pertanahan ${id ? 'diperbarui' : 'ditambahkan'}`, 'success');
       closeAdminModal();
       loadAdmins();
     } else {
@@ -419,40 +425,97 @@ async function deleteAdmin(id, nama) {
 // Tickets
 // ============================================
 
+let allLoadedTickets = [];
+
+function filterTickets() {
+  const query = (document.getElementById('ticket-search')?.value || '').toLowerCase().trim();
+  const statusFilter = document.getElementById('ticket-filter-status')?.value || 'ALL';
+  const kantorFilter = document.getElementById('ticket-filter-kantor')?.value || 'ALL';
+  const tbody = document.getElementById('ticket-table-body');
+  if (!tbody) return;
+
+  const filtered = allLoadedTickets.filter(ticket => {
+    const st = (ticket.status || '').toUpperCase();
+    if (statusFilter === 'OPEN' && st !== 'OPEN') return false;
+    if (statusFilter === 'CLOSED' && st !== 'CLOSED' && st !== 'RESOLVED') return false;
+    if (kantorFilter !== 'ALL' && ticket.kantor_pertanahan !== kantorFilter) return false;
+
+    if (!query) return true;
+    const matchId = (ticket.ticket_id || '').toLowerCase().includes(query);
+    const matchCust = (ticket.customer || '').toLowerCase().includes(query);
+    const matchKantor = (ticket.kantor_pertanahan || '').toLowerCase().includes(query);
+    return matchId || matchCust || matchKantor;
+  });
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `
+      <tr class="empty-row">
+        <td colspan="9">
+          <div class="empty-state">
+            <div class="empty-icon">🔍</div>
+            <h3>Tidak ada tiket yang cocok</h3>
+            <p>Cobalah kata kunci pencarian atau filter kantor / status yang lain</p>
+          </div>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map((ticket) => `
+    <tr>
+      <td><strong>${escapeHtml(ticket.ticket_id)}</strong></td>
+      <td>${escapeHtml(ticket.customer || '-')}</td>
+      <td>${escapeHtml(ticket.kantor_pertanahan || '-')}</td>
+      <td><span class="badge ${ticket.status === 'Open' ? 'badge-warning' : ticket.status === 'Closed' || ticket.status === 'Resolved' ? 'badge-success' : 'badge-info'}">${ticket.status}</span></td>
+      <td>${escapeHtml(ticket.priority || '-')}</td>
+      <td>${ticket.notified_group ? '<span class="badge badge-success">✓</span>' : '<span class="badge badge-danger">✕</span>'}</td>
+      <td>${ticket.notified_admin ? '<span class="badge badge-success">✓</span>' : '<span class="badge badge-danger">✕</span>'}</td>
+      <td class="timestamp">${formatDateTime(ticket.notified_at)}</td>
+      <td>
+        <button class="btn btn-warning btn-sm" style="font-size: 11px; padding: 6px 10px; background: #f59e0b; color: #000; font-weight: bold; border-radius: 6px; white-space: nowrap;" onclick="resendReminder('${ticket.ticket_id}', this)">📨 Kirim Ulang</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function resendReminder(ticketId, btn) {
+  if (!confirm(`Kirim ulang peringatan ke Admin untuk Tiket #${ticketId} sekarang?`)) return;
+  const oldText = btn.innerHTML;
+  try {
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Mengirim...';
+    showToast('Menembakkan pesan peringatan...', 'info');
+    const result = await apiPost(`/tickets/${ticketId}/resend`, {});
+    if (result && result.success) {
+      showToast(result.message || 'Penyampaian peringatan berhasil dikirim!', 'success');
+    } else {
+      showToast('Gagal: ' + ((result && result.error) ? result.error : 'Terjadi kesalahan'), 'error');
+    }
+  } catch (err) {
+    showToast('Gagal mengirim peringatan', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = oldText;
+  }
+}
+
 async function loadTickets() {
   try {
-    const result = await apiGet('/tickets?limit=50');
+    const result = await apiGet('/tickets?limit=500');
     if (!result.success) return;
-
-    const tbody = document.getElementById('ticket-table-body');
-
-    if (result.data.length === 0) {
-      tbody.innerHTML = `
-        <tr class="empty-row">
-          <td colspan="8">
-            <div class="empty-state">
-              <div class="empty-icon">📋</div>
-              <h3>Belum ada tiket terpantau</h3>
-              <p>Tiket akan muncul setelah scraper berjalan</p>
-            </div>
-          </td>
-        </tr>
-      `;
-      return;
+    allLoadedTickets = result.data || [];
+    
+    // Populate kantor filter dropdown
+    const kantorSelect = document.getElementById('ticket-filter-kantor');
+    if (kantorSelect) {
+      const currentVal = kantorSelect.value;
+      const kantors = [...new Set(allLoadedTickets.map(t => t.kantor_pertanahan).filter(Boolean))].sort();
+      kantorSelect.innerHTML = `<option value="ALL">🏢 Semua Kantor Pertanahan (${kantors.length})</option>` + 
+        kantors.map(k => `<option value="${escapeHtml(k)}" ${k === currentVal ? 'selected' : ''}>${escapeHtml(k)}</option>`).join('');
     }
 
-    tbody.innerHTML = result.data.map((ticket) => `
-      <tr>
-        <td><strong>${escapeHtml(ticket.ticket_id)}</strong></td>
-        <td>${escapeHtml(ticket.customer || '-')}</td>
-        <td>${escapeHtml(ticket.kantor_pertanahan || '-')}</td>
-        <td><span class="badge ${ticket.status === 'Open' ? 'badge-warning' : ticket.status === 'Closed' || ticket.status === 'Resolved' ? 'badge-success' : 'badge-info'}">${ticket.status}</span></td>
-        <td>${escapeHtml(ticket.priority || '-')}</td>
-        <td>${ticket.notified_group ? '<span class="badge badge-success">✓</span>' : '<span class="badge badge-danger">✕</span>'}</td>
-        <td>${ticket.notified_admin ? '<span class="badge badge-success">✓</span>' : '<span class="badge badge-danger">✕</span>'}</td>
-        <td class="timestamp">${formatDateTime(ticket.notified_at)}</td>
-      </tr>
-    `).join('');
+    filterTickets();
   } catch (error) {
     console.error('Failed to load tickets:', error);
     showToast('Gagal memuat data tiket', 'error');
@@ -489,37 +552,62 @@ async function refreshLiveTickets(btn) {
 // Notification Logs
 // ============================================
 
+let allLoadedLogs = [];
+let currentLogTab = 'personal';
+
+function switchLogTab(tab, btn) {
+  currentLogTab = tab;
+  document.getElementById('btn-log-personal').className = tab === 'personal' ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm';
+  document.getElementById('btn-log-personal').style.fontWeight = tab === 'personal' ? 'bold' : 'normal';
+  document.getElementById('btn-log-group').className = tab === 'group' ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm';
+  document.getElementById('btn-log-group').style.fontWeight = tab === 'group' ? 'bold' : 'normal';
+  renderLogs();
+}
+
+function renderLogs() {
+  const tbody = document.getElementById('log-table-body');
+  if (!tbody) return;
+
+  const filtered = allLoadedLogs.filter(log => {
+    if (currentLogTab === 'group') {
+      return log.target_type === 'group';
+    } else {
+      return log.target_type !== 'group';
+    }
+  });
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `
+      <tr class="empty-row">
+        <td colspan="5">
+          <div class="empty-state">
+            <div class="empty-icon">📨</div>
+            <h3>Belum ada log ${currentLogTab === 'group' ? 'Pesan Group' : 'Pesan Japri Personal'}</h3>
+            <p>Log akan muncul setelah notifikasi terkirim ke target tersebut</p>
+          </div>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map((log) => `
+    <tr>
+      <td><strong>${escapeHtml(log.ticket_id)}</strong></td>
+      <td><span class="badge ${log.target_type === 'group' ? 'badge-info' : 'badge-warning'}">${log.target_type}</span></td>
+      <td>${escapeHtml(log.target_name || log.target_number || '-')}</td>
+      <td><span class="badge ${log.status === 'sent' ? 'badge-success' : 'badge-danger'}">${log.status}</span></td>
+      <td class="timestamp">${formatDateTime(log.sent_at)}</td>
+    </tr>
+  `).join('');
+}
+
 async function loadLogs() {
   try {
-    const result = await apiGet('/logs?limit=100');
+    const result = await apiGet('/logs?limit=200');
     if (!result.success) return;
-
-    const tbody = document.getElementById('log-table-body');
-
-    if (result.data.length === 0) {
-      tbody.innerHTML = `
-        <tr class="empty-row">
-          <td colspan="5">
-            <div class="empty-state">
-              <div class="empty-icon">📨</div>
-              <h3>Belum ada log notifikasi</h3>
-              <p>Log akan muncul setelah notifikasi terkirim</p>
-            </div>
-          </td>
-        </tr>
-      `;
-      return;
-    }
-
-    tbody.innerHTML = result.data.map((log) => `
-      <tr>
-        <td><strong>${escapeHtml(log.ticket_id)}</strong></td>
-        <td><span class="badge ${log.target_type === 'group' ? 'badge-info' : 'badge-warning'}">${log.target_type}</span></td>
-        <td>${escapeHtml(log.target_name || log.target_number || '-')}</td>
-        <td><span class="badge ${log.status === 'sent' ? 'badge-success' : 'badge-danger'}">${log.status}</span></td>
-        <td class="timestamp">${formatDateTime(log.sent_at)}</td>
-      </tr>
-    `).join('');
+    allLoadedLogs = result.data || [];
+    renderLogs();
   } catch (error) {
     console.error('Failed to load logs:', error);
     showToast('Gagal memuat log notifikasi', 'error');
@@ -527,12 +615,82 @@ async function loadLogs() {
 }
 
 // ============================================
-// Initialization
+// Initialization & Templates
 // ============================================
+
+let cachedTemplates = {};
+
+async function loadTemplates() {
+  try {
+    const result = await apiGet('/templates');
+    const container = document.getElementById('templates-container');
+    const loading = document.getElementById('templates-loading');
+    if (!container) return;
+
+    if (loading) loading.style.display = 'none';
+    if (!result.success) {
+      container.innerHTML = '<div class="empty-state"><p>Gagal memuat template notifikasi</p></div>';
+      return;
+    }
+
+    cachedTemplates = result.data || {};
+    container.innerHTML = Object.entries(cachedTemplates).map(([key, item]) => `
+      <div style="background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 12px;">
+          <div>
+            <h3 style="font-size: 1.05rem; color: var(--primary-light, #38bdf8); margin-bottom: 4px;">${escapeHtml(item.title)}</h3>
+            <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0;">${escapeHtml(item.description)}</p>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="resetTemplate('${key}')" style="font-size: 12px; padding: 6px 12px;">↩️ Reset ke Default</button>
+        </div>
+        <div style="margin-bottom: 12px; font-size: 0.8rem; background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 6px; color: #cbd5e1;">
+          <strong>💡 Variabel Tersedia (Akan diganti otomatis oleh sistem):</strong> <span style="font-family: monospace; color: #facc15;">${escapeHtml(item.placeholders)}</span>
+        </div>
+        <textarea id="tpl-${key}" class="form-input template-input" data-key="${key}" rows="8" style="width: 100%; font-family: 'Courier New', monospace; font-size: 13.5px; line-height: 1.5; padding: 12px; border-radius: 8px; background: #0f172a; color: #f8fafc; border: 1px solid rgba(255,255,255,0.2);">${escapeHtml(item.text)}</textarea>
+      </div>
+    `).join('');
+  } catch (err) {
+    console.error('Failed to load templates:', err);
+  }
+}
+
+function resetTemplate(key) {
+  if (!confirm(`Kembalikan teks bahasa pada template "${cachedTemplates[key]?.title}" ke teks default pabrik?`)) return;
+  const el = document.getElementById(`tpl-${key}`);
+  if (el && cachedTemplates[key]) {
+    el.value = cachedTemplates[key].defaultText;
+    showToast('Teks dikembalikan ke default. Klik Simpan untuk memperbarui ke sistem!', 'info');
+  }
+}
+
+async function saveAllTemplates() {
+  const inputs = document.querySelectorAll('.template-input');
+  const data = {};
+  inputs.forEach(input => {
+    const key = input.getAttribute('data-key');
+    data[key] = input.value;
+  });
+
+  try {
+    showToast('Menyimpan perubahan bahasa...', 'info');
+    const result = await apiPost('/templates', data);
+    if (result.success) {
+      showToast(result.message || 'Semua template bahasa berhasil disimpan!', 'success');
+      loadTemplates();
+    } else {
+      showToast('Gagal menyimpan: ' + (result.error || 'Unknown error'), 'error');
+    }
+  } catch (err) {
+    showToast('Terjadi kesalahan saat menyimpan template', 'error');
+  }
+}
 
 async function initDashboard() {
   await loadStats();
   await loadAdmins();
+  await loadTickets();
+  await loadLogs();
+  await loadTemplates();
   await checkAuthStatus();
 
   // Polling every 10 seconds for stats and auth

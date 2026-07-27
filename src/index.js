@@ -8,8 +8,8 @@ const { performLogin } = require('./scraper/login');
 const { scrapeAllOpenTickets } = require('./scraper/ticket-scraper');
 const { detectNewOpenTickets, markTicketProcessed } = require('./detector/ticket-detector');
 const { sendTicketNotification, sendPersonalMessage } = require('./notifier/starsender');
-const { buildGroupMessage, buildPersonalMessage, buildKanwilMessage } = require('./notifier/message-builder');
 const { NotificationLogModel } = require('./database/models');
+const { renderTemplate } = require('./notifier/templates');
 const { startDashboard } = require('./dashboard/server');
 
 const log = createLogger('MAIN');
@@ -65,7 +65,7 @@ async function scrapeCycle() {
 
     // 2. Detect tickets to notify
     const { detectTicketsToNotify, markTicketProcessed } = require('./detector/ticket-detector');
-    const { newTickets, reminderTickets, allOpenTickets } = detectTicketsToNotify(await scrapeAllOpenTickets());
+    const { newTickets, reminderTickets, closedTickets, allOpenTickets } = detectTicketsToNotify(await scrapeAllOpenTickets());
 
     // Common config
     const notifEnabled = ConfigModel.get('notification_enabled') !== '0';
@@ -157,6 +157,60 @@ async function scrapeCycle() {
           await sendPersonalMessage(config.kanwil.phone, kanwilRemMsg);
         }
 
+        // ESKALASI > 1 HARI / 24 JAM TIDAK DI-CLOSE:
+        if (ticket.isOver24Hours) {
+          // 1. Eskalasi ke Kasubbag Umum dan Hubungan Masyarakat (Kanwil)
+          if (config.kasubbag_humas && config.kasubbag_humas.phone) {
+            log.warn(`🚨 Tiket #${ticket.ticketId} belum di-close > 1 hari! Eskalasi dikirim ke Kasubbag Umum & Humas (${config.kasubbag_humas.phone})...`);
+            const humasMsg = renderTemplate('template_eskalasi_humas', {
+              ticketId: ticket.ticketId,
+              kantor: ticket.kantorPertanahan,
+              customer: ticket.customer,
+              subjek: ticket.subject || ticket.category,
+              tanggal: ticket.createdDate,
+              reminderCount: rc
+            });
+
+            const humasRes = await sendPersonalMessage(config.kasubbag_humas.phone, humasMsg);
+            NotificationLogModel.create({
+              ticketId: ticket.ticketId,
+              targetType: 'kasubbag_humas',
+              targetName: config.kasubbag_humas.name,
+              targetNumber: config.kasubbag_humas.phone,
+              message: humasMsg,
+              status: humasRes && humasRes.success ? 'sent' : 'failed',
+              response: JSON.stringify(humasRes),
+            });
+            await sleep(2000);
+          }
+
+          // 2. Eskalasi ke Kasubbag Tata Usaha (KTU) di Kantor Pertanahan terkait
+          const ktuList = ticket.ktuAdmins || [];
+          for (const ktu of ktuList) {
+            log.warn(`🚨 Tiket #${ticket.ticketId} eskalasi lokal dikirim ke Kasubbag TU Kantah ${ktu.kantor_pertanahan} (${ktu.no_hp})...`);
+            const ktuMsg = renderTemplate('template_eskalasi_ktu', {
+              ticketId: ticket.ticketId,
+              customer: ticket.customer,
+              kantor: ktu.kantor_pertanahan || ticket.kantorPertanahan,
+              subjek: ticket.subject || ticket.category,
+              tanggal: ticket.createdDate,
+              ktuNama: ktu.nama
+            });
+
+            const ktuRes = await sendPersonalMessage(ktu.no_hp, ktuMsg);
+            NotificationLogModel.create({
+              ticketId: ticket.ticketId,
+              targetType: 'kasubbag_tu',
+              targetName: `${ktu.nama} (${ktu.kantor_pertanahan})`,
+              targetNumber: ktu.no_hp,
+              message: ktuMsg,
+              status: ktuRes && ktuRes.success ? 'sent' : 'failed',
+              response: JSON.stringify(ktuRes),
+            });
+            await sleep(2000);
+          }
+        }
+
         const personalRemMsgs = (ticket.matchingAdmins || []).map((admin) => ({
           admin,
           message: buildPersonalReminderMessage(ticket, admin, rc),
@@ -174,8 +228,41 @@ async function scrapeCycle() {
         markTicketProcessed(ticket, { notifiedGroup: groupSummarySuccess, notifiedAdmin, isReminder: true });
         await sleep(3000);
       }
-    } ConfigModel.set('scraper_status', 'idle');
+
+      // === PROCESS CLOSED TICKET ANNOUNCEMENTS ===
+      if (closedTickets && closedTickets.length > 0 && groupEnabled && waGroupId) {
+        const { buildClosedTicketGroupMessage } = require('./notifier/message-builder');
+        const { sendGroupMessage } = require('./notifier/starsender');
+        log.info(`Sending appreciation notification for ${closedTickets.length} resolved/closed tickets to group "${waGroupId}"...`);
+        const closedMsg = buildClosedTicketGroupMessage(closedTickets);
+        const closedRes = await sendGroupMessage(waGroupId, closedMsg);
+        
+        NotificationLogModel.create({
+          ticketId: 'APRESIASI_CLOSED',
+          targetType: 'group',
+          targetName: waGroupId,
+          targetNumber: waGroupId,
+          message: closedMsg,
+          status: closedRes && closedRes.success ? 'sent' : 'failed',
+          response: JSON.stringify(closedRes),
+        });
+        await sleep(2000);
+      }
+    } 
+
+    ConfigModel.set('scraper_status', 'idle');
     log.info(`Scrape cycle #${scrapeCount} complete. Next in ${config.app.scrapeInterval / 1000}s`);
+
+    // 3. Daily Automated Maintenance & Browser Recycling (Every ~1440 cycles / 24 hours at 60s interval)
+    if (scrapeCount > 0 && scrapeCount % 1440 === 0) {
+      log.info('♻️ Performing scheduled daily maintenance: recycling browser RAM & pruning 60-day old logs...');
+      try {
+        NotificationLogModel.pruneOldLogs(60);
+        await closeBrowser();
+      } catch (err) {
+        log.warn('Maintenance warning:', err.message);
+      }
+    }
 
   } catch (error) {
     log.error('Error in scrape cycle', { error: error.message, stack: error.stack });

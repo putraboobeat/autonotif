@@ -146,20 +146,51 @@ async function scrapeTickets() {
     return ticketData;
   });
 
+/**
+ * Resolve truncated or messy agent text to exact official 24 BPN Aceh office name
+ */
+function resolveKantorName(rawText) {
+  if (!rawText) return '';
+  const text = rawText.toString().toLowerCase();
+
+  // Special checks for overlapping names first
+  if (text.includes('barat daya') || text.includes('abdya')) return 'Kantah Kab Aceh Barat Daya - Prov Aceh';
+  if (text.includes('barat') && !text.includes('daya')) return 'Kantah Kab Aceh Barat - Prov Aceh';
+  if (text.includes('pidie jaya') || text.includes('pijay')) return 'Kantah Kab Pidie Jaya - Prov Aceh';
+  if (text.includes('pidie') && !text.includes('jaya')) return 'Kantah Kab Pidie - Prov Aceh';
+  if (text.includes('aceh jaya') || (text.includes('jaya') && !text.includes('pidie') && !text.includes('pijay'))) return 'Kantah Kab Aceh Jaya - Prov Aceh';
+
+  // Distinct keyword matches
+  if (text.includes('besar')) return 'Kantah Kab Aceh Besar - Prov Aceh';
+  if (text.includes('tengah')) return 'Kantah Kab Aceh Tengah - Prov Aceh';
+  if (text.includes('simeul') || text.includes('simeuleu')) return 'Kantah Kab Simeuleu - Prov Aceh';
+  if (text.includes('subulussalam')) return 'Kantah Kota Subulussalam - Prov Aceh';
+  if (text.includes('singkil')) return 'Kantah Kab Aceh Singkil - Prov Aceh';
+  if (text.includes('timur')) return 'Kantah Kab Aceh Timur - Prov Aceh';
+  if (text.includes('gayo lues') || text.includes('gayo') || text.includes('lues')) return 'Kantah Kab Gayo Lues - Prov Aceh';
+  if (text.includes('banda aceh') || text.includes('banda')) return 'Kantah Kota Banda Aceh - Prov Aceh';
+  if (text.includes('tamiang')) return 'Kantah Kab Aceh Tamiang - Prov Aceh';
+  if (text.includes('nagan') || text.includes('raya')) return 'Kantah Kab Nagan Raya - Prov Aceh';
+  if (text.includes('langsa')) return 'Kantah Kota Langsa - Prov Aceh';
+  if (text.includes('sabang')) return 'Kantah Kota Sabang - Prov Aceh';
+  if (text.includes('selatan')) return 'Kantah Kab Aceh Selatan - Prov Aceh';
+  if (text.includes('tenggara')) return 'Kantah Kab Aceh Tenggara - Prov Aceh';
+  if (text.includes('utara')) return 'Kantah Kab Aceh Utara - Prov Aceh';
+  if (text.includes('bener meriah') || text.includes('bener') || text.includes('meriah')) return 'Kantah Kab Bener Meriah - Prov Aceh';
+  if (text.includes('bireuen') || text.includes('biereun')) return 'Kantah Kab Bireuen - Prov Aceh';
+  if (text.includes('lhokseumawe') || text.includes('lhok')) return 'Kantah Kota Lhokseumawe - Prov Aceh';
+  if (text.includes('kanwil') || text.includes('provinsi aceh') || text.includes('prov aceh')) return 'Kanwil ATR/BPN Prov Aceh';
+
+  // Fallback if no known keyword matches: return clean first line
+  const lines = rawText.split('\n').map((l) => l.trim()).filter(Boolean);
+  return lines.length >= 1 ? lines[0].replace(/\.\.\.$/, '') : rawText.trim();
+}
+
   log.info(`Scraped ${tickets.length} tickets from current page`);
 
-  // Parse agent field to extract kantor pertanahan
+  // Parse agent field to extract and intelligently resolve kantor pertanahan
   const enrichedTickets = tickets.map((ticket) => {
-    // Agent text often contains kantor pertanahan info
-    // Format: "Kantah Kab Gayo Lues - Prov Ac...\n Kantor Pertanahan Kabupaten Ga..."
-    const agentLines = ticket.agent.split('\n').map((l) => l.trim()).filter(Boolean);
-    let kantorPertanahan = '';
-
-    if (agentLines.length >= 1) {
-      // First line is usually the kantor name
-      kantorPertanahan = agentLines[0];
-    }
-
+    const kantorPertanahan = resolveKantorName(ticket.agent);
     return {
       ...ticket,
       kantorPertanahan,

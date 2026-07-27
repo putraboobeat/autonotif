@@ -28,6 +28,12 @@ const config = {
     phone: process.env.KANWIL_ADMIN_PHONE || '',
   },
 
+  // Kasubbag Umum dan Hubungan Masyarakat (Kanwil) — menerima eskalasi jika tiket > 1x24 jam tidak di-close
+  kasubbag_humas: {
+    name: process.env.KASUBBAG_UMUM_HUMAS_NAME || 'Kasubbag Umum dan Hubungan Masyarakat',
+    phone: process.env.KASUBBAG_UMUM_HUMAS_PHONE || '',
+  },
+
   // App settings
   app: {
     scrapeInterval: parseInt(process.env.SCRAPE_INTERVAL, 10) || 60000,

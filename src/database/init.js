@@ -30,7 +30,7 @@ function initDatabase() {
   const schema = fs.readFileSync(SCHEMA_PATH, 'utf-8');
   db.exec(schema);
 
-  // Auto-migrate: Add reminder columns if they don't exist
+  // Auto-migrate: Add reminder columns and admin jabatan column if they don't exist
   try {
     const columns = db.pragma('table_info(processed_tickets)');
     const hasLastNotifiedAt = columns.some(c => c.name === 'last_notified_at');
@@ -40,6 +40,21 @@ function initDatabase() {
       db.exec(`
         ALTER TABLE processed_tickets ADD COLUMN last_notified_at DATETIME;
         ALTER TABLE processed_tickets ADD COLUMN reminder_count INTEGER DEFAULT 0;
+      `);
+    }
+
+    const adminCols = db.pragma('table_info(admins)');
+    const hasJabatan = adminCols.some(c => c.name === 'jabatan');
+    if (!hasJabatan) {
+      log.info('Migrating database: Adding jabatan column to admins table');
+      db.exec("ALTER TABLE admins ADD COLUMN jabatan VARCHAR(50) DEFAULT 'admin';");
+    }
+    const hasNamaKtu = adminCols.some(c => c.name === 'nama_ktu');
+    if (!hasNamaKtu) {
+      log.info('Migrating database: Adding nama_ktu and no_hp_ktu columns to admins table');
+      db.exec(`
+        ALTER TABLE admins ADD COLUMN nama_ktu VARCHAR(255);
+        ALTER TABLE admins ADD COLUMN no_hp_ktu VARCHAR(50);
       `);
     }
   } catch (err) {

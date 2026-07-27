@@ -11,6 +11,7 @@ const log = createLogger('DETECTOR');
 function detectTicketsToNotify(scrapedTickets) {
   const newTickets = [];
   const reminderTickets = [];
+  const closedTickets = [];
 
   const reminderIntervalMinutes = parseInt(ConfigModel.get('reminder_interval_minutes') || '5', 10);
 
@@ -19,9 +20,18 @@ function detectTicketsToNotify(scrapedTickets) {
     if (!ticket.ticketId) continue;
     const processedData = TicketModel.isProcessed(ticket.ticketId);
     if (processedData) {
+      const oldStatus = (processedData.status || '').toLowerCase();
+      const newStatus = (ticket.status || '').toLowerCase();
+
       TicketModel.updateInfo(ticket);
-      if (processedData.status && ticket.status && processedData.status.toLowerCase() !== ticket.status.toLowerCase()) {
+      if (oldStatus !== newStatus) {
         log.info(`Ticket ${ticket.ticketId} status updated: ${processedData.status} ➔ ${ticket.status}`);
+        // If it just changed from Open to Closed/Resolved, trigger appreciation announcement
+        if (oldStatus === 'open' && (newStatus === 'closed' || newStatus === 'resolved')) {
+          log.info(`🎉 Ticket ${ticket.ticketId} resolved! Triggering appreciation notification...`);
+          const matchingAdmins = AdminModel.findByKantor(ticket.kantorPertanahan);
+          closedTickets.push({ ...ticket, matchingAdmins, oldStatus: processedData.status });
+        }
       }
     } else if (ticket.status && ticket.status.toLowerCase() !== 'open') {
       TicketModel.save(ticket);
@@ -36,6 +46,36 @@ function detectTicketsToNotify(scrapedTickets) {
 
   log.debug(`Found ${openTickets.length} open tickets from scrape`);
 
+function categorizeAdmins(allAdmins) {
+  const matchingAdmins = [];
+  const ktuAdmins = [];
+  (allAdmins || []).forEach(a => {
+    const nm = (a.nama || '').toLowerCase();
+    const jb = (a.jabatan || '').toLowerCase();
+
+    if (a.no_hp_ktu && a.no_hp_ktu.trim() !== '') {
+      ktuAdmins.push({
+        nama: a.nama_ktu || 'Kasubbag Tata Usaha',
+        no_hp: a.no_hp_ktu,
+        kantor_pertanahan: a.kantor_pertanahan,
+        jabatan: 'kasubbag_tu'
+      });
+    }
+
+    if (jb === 'kasubbag_tu' || nm.includes('kasubbag') || nm.includes('tata usaha') || nm.includes('ktu')) {
+      if (!ktuAdmins.some(k => k.no_hp === a.no_hp)) {
+        ktuAdmins.push(a);
+      }
+    } else {
+      matchingAdmins.push(a);
+    }
+  });
+  if (matchingAdmins.length === 0 && ktuAdmins.length > 0) {
+    matchingAdmins.push(...ktuAdmins);
+  }
+  return { matchingAdmins, ktuAdmins };
+}
+
   for (const ticket of openTickets) {
     // Check if this ticket was already processed
     const processedData = TicketModel.isProcessed(ticket.ticketId);
@@ -44,21 +84,28 @@ function detectTicketsToNotify(scrapedTickets) {
       // It is processed. Check if it needs a reminder.
       if (reminderIntervalMinutes > 0 && processedData.last_notified_at) {
         const lastNotifiedTime = new Date(processedData.last_notified_at).getTime();
+        const firstNotifiedTime = new Date(processedData.notified_at || processedData.last_notified_at).getTime();
         const now = Date.now();
         const minutesPassed = (now - lastNotifiedTime) / (1000 * 60);
+        const hoursOpen = (now - firstNotifiedTime) / (1000 * 60 * 60);
 
         if (minutesPassed >= reminderIntervalMinutes) {
-          log.info(`Ticket ${ticket.ticketId} still OPEN after ${Math.floor(minutesPassed)} minutes, triggering reminder.`);
+          const reminderCount = (processedData.reminder_count || 0) + 1;
+          const isOver24Hours = hoursOpen >= 24 || reminderCount >= 10;
+          const isEscalation = reminderCount >= 5 || isOver24Hours;
+          log.info(`Ticket ${ticket.ticketId} still OPEN after ${Math.floor(hoursOpen)} hours (${Math.floor(minutesPassed)}m since last reminder), triggering reminder #${reminderCount}${isOver24Hours ? ' (ESKALASI 1x24 JAM KE KASUBBAG TU & HUMAS!)' : isEscalation ? ' (ESKALASI)' : ''}.`);
           
-          const matchingAdmins = AdminModel.findByKantor(ticket.kantorPertanahan);
-          reminderTickets.push({ ...ticket, matchingAdmins, reminderCount: (processedData.reminder_count || 0) + 1 });
+          const allFound = AdminModel.findByKantor(ticket.kantorPertanahan);
+          const { matchingAdmins, ktuAdmins } = categorizeAdmins(allFound);
+          reminderTickets.push({ ...ticket, matchingAdmins, ktuAdmins, reminderCount, isEscalation, isOver24Hours });
         }
       }
       continue;
     }
 
     // This is a new ticket — find matching admin
-    const matchingAdmins = AdminModel.findByKantor(ticket.kantorPertanahan);
+    const allFound = AdminModel.findByKantor(ticket.kantorPertanahan);
+    const { matchingAdmins, ktuAdmins } = categorizeAdmins(allFound);
 
     if (matchingAdmins.length > 0) {
       log.info(`New open ticket found: ${ticket.ticketId}`, {
@@ -73,16 +120,17 @@ function detectTicketsToNotify(scrapedTickets) {
     newTickets.push({
       ...ticket,
       matchingAdmins,
+      ktuAdmins,
     });
   }
 
-  if (newTickets.length > 0 || reminderTickets.length > 0) {
-    log.info(`Detected ${newTickets.length} new open ticket(s) and ${reminderTickets.length} reminder(s) to notify`);
+  if (newTickets.length > 0 || reminderTickets.length > 0 || closedTickets.length > 0) {
+    log.info(`Detected ${newTickets.length} new open ticket(s), ${reminderTickets.length} reminder(s), and ${closedTickets.length} closed ticket(s) to notify`);
   } else {
     log.debug('No tickets to notify');
   }
 
-  return { newTickets, reminderTickets, allOpenTickets: openTickets };
+  return { newTickets, reminderTickets, closedTickets, allOpenTickets: openTickets };
 }
 
 /**

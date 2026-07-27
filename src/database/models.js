@@ -83,26 +83,26 @@ const AdminModel = {
   /**
    * Create a new admin
    */
-  create({ nama, kantor_pertanahan, no_hp }) {
+  create({ nama, kantor_pertanahan, no_hp, jabatan = 'admin', nama_ktu = null, no_hp_ktu = null }) {
     const db = getDb();
     const stmt = db.prepare(
-      'INSERT INTO admins (nama, kantor_pertanahan, no_hp) VALUES (?, ?, ?)'
+      'INSERT INTO admins (nama, kantor_pertanahan, no_hp, jabatan, nama_ktu, no_hp_ktu) VALUES (?, ?, ?, ?, ?, ?)'
     );
-    const result = stmt.run(nama, kantor_pertanahan, no_hp);
-    log.info('Admin created', { id: result.lastInsertRowid, nama, kantor_pertanahan });
+    const result = stmt.run(nama, kantor_pertanahan, no_hp, jabatan || 'admin', nama_ktu || null, no_hp_ktu || null);
+    log.info('Admin created', { id: result.lastInsertRowid, nama, kantor_pertanahan, nama_ktu });
     return result;
   },
 
   /**
    * Update an existing admin
    */
-  update(id, { nama, kantor_pertanahan, no_hp, is_active }) {
+  update(id, { nama, kantor_pertanahan, no_hp, jabatan = 'admin', nama_ktu = null, no_hp_ktu = null, is_active }) {
     const db = getDb();
     const stmt = db.prepare(
-      'UPDATE admins SET nama = ?, kantor_pertanahan = ?, no_hp = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+      'UPDATE admins SET nama = ?, kantor_pertanahan = ?, no_hp = ?, jabatan = ?, nama_ktu = ?, no_hp_ktu = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
     );
-    const result = stmt.run(nama, kantor_pertanahan, no_hp, is_active ? 1 : 0, id);
-    log.info('Admin updated', { id, nama });
+    const result = stmt.run(nama, kantor_pertanahan, no_hp, jabatan || 'admin', nama_ktu || null, no_hp_ktu || null, is_active ? 1 : 0, id);
+    log.info('Admin updated', { id, nama, nama_ktu });
     return result;
   },
 
@@ -228,6 +228,16 @@ const TicketModel = {
   },
 
   /**
+   * Get all processed tickets (for Excel / CSV export)
+   */
+  getAll() {
+    const db = getDb();
+    return db.prepare(
+      'SELECT * FROM processed_tickets ORDER BY notified_at DESC'
+    ).all();
+  },
+
+  /**
    * Get ticket count by status
    */
   getStats() {
@@ -295,6 +305,16 @@ const NotificationLogModel = {
       failed: failed.count,
       today: today.count,
     };
+  },
+
+  /**
+   * Prune notification logs older than specified days
+   */
+  pruneOldLogs(days = 60) {
+    const db = getDb();
+    return db.prepare(
+      "DELETE FROM notification_logs WHERE sent_at <= date('now', '-' || ? || ' days')"
+    ).run(days);
   },
 };
 
