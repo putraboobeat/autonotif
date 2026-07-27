@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Dashboard Admin - Auto Notifikasi Pengaduan WhatsApp">
   <title>Auto Notif Pengaduan — Dashboard</title>
-  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/style.css?v=2.1">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔔</text></svg>">
 </head>
 <body>
@@ -16,12 +16,12 @@
       <h2 style="font-size: 1.5rem; font-weight: 700; color: #f8fafc; margin-bottom: 8px; letter-spacing: -0.025em;">Portal Pengawasan BPN</h2>
       <p style="font-size: 0.88rem; color: #94a3b8; margin-bottom: 28px; line-height: 1.5;">Sistem Otomatisasi Notifikasi Pengaduan & Eskalasi Kantor Wilayah BPN Provinsi Aceh. Silahkan masukkan kata sandi akses utama.</p>
       
-      <form onsubmit="handleGateLogin(event)" style="display: flex; flex-direction: column; gap: 16px;">
+      <form onsubmit="handleGateLogin(event); return false;" style="display: flex; flex-direction: column; gap: 16px;">
         <div style="position: relative;">
-          <input type="password" id="gate-password" placeholder="Masukkan kata sandi..." required style="width: 100%; padding: 14px 18px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.18); background: rgba(15, 23, 42, 0.8); color: #fff; font-size: 15px; outline: none; transition: all 0.2s; box-shadow: inset 0 2px 4px rgba(0,0,0,0.3); text-align: center; letter-spacing: 1px;">
+          <input type="password" id="gate-password" placeholder="Masukkan kata sandi..." required onkeydown="if(event.key==='Enter'){ handleGateLogin(event); return false; }" style="width: 100%; padding: 14px 18px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.18); background: rgba(15, 23, 42, 0.8); color: #fff; font-size: 15px; outline: none; transition: all 0.2s; box-shadow: inset 0 2px 4px rgba(0,0,0,0.3); text-align: center; letter-spacing: 1px;">
         </div>
         <div id="gate-error" style="color: #f43f5e; font-size: 0.85rem; font-weight: 500; display: none;">❌ Kata sandi tidak benar! Silahkan periksa dan coba lagi.</div>
-        <button type="submit" style="width: 100%; padding: 14px; background: linear-gradient(135deg, #0284c7, #0369a1); color: white; font-weight: 700; font-size: 16px; border: none; border-radius: 12px; cursor: pointer; transition: transform 0.1s, box-shadow 0.2s; box-shadow: 0 10px 20px -5px rgba(2, 132, 199, 0.5);">🚀 MASUK KE DASHBOARD</button>
+        <button type="button" onclick="handleGateLogin(event)" style="width: 100%; padding: 14px; background: linear-gradient(135deg, #0284c7, #0369a1); color: white; font-weight: 700; font-size: 16px; border: none; border-radius: 12px; cursor: pointer; transition: transform 0.1s, box-shadow 0.2s; box-shadow: 0 10px 20px -5px rgba(2, 132, 199, 0.5);">🚀 MASUK KE DASHBOARD</button>
       </form>
 
       <div style="margin-top: 28px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 0.75rem; color: #64748b;">
@@ -485,6 +485,6 @@
   <!-- Toast Container -->
   <div class="toast-container" id="toast-container"></div>
 
-  <script src="/app.js"></script>
+  <script src="/app.js?v=2.1"></script>
 </body>
 </html>
