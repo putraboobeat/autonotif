@@ -123,6 +123,7 @@ function initTabs() {
       switch (tab.dataset.tab) {
         case 'admins': loadAdmins(); break;
         case 'tickets': loadTickets(); break;
+        case 'analytics': loadAnalytics(); break;
         case 'logs': loadLogs(); break;
         case 'settings': 
           loadSettings(); 
@@ -136,6 +137,7 @@ function initTabs() {
 function loadAllData() {
   loadStats();
   loadAdmins();
+  loadAnalytics();
   loadSettings();
   loadTemplates();
   checkAuthStatus();
@@ -1078,3 +1080,110 @@ document.addEventListener('keydown', (e) => {
     document.querySelectorAll('.modal-overlay.active').forEach((m) => m.classList.remove('active'));
   }
 });
+
+// ============================================
+// Level 6: Advanced SLA Analytics & Radar Kesiagaan
+// ============================================
+
+async function loadAnalytics() {
+  try {
+    const res = await fetch(`${API_BASE}/analytics/leaderboard`);
+    const data = await res.json();
+    if (!data.success) return;
+
+    // Update KPIs
+    if (document.getElementById('sla-total-val')) document.getElementById('sla-total-val').textContent = data.summary.totalTickets;
+    if (document.getElementById('sla-closed-val')) document.getElementById('sla-closed-val').textContent = `${data.summary.closedTickets}`;
+    if (document.getElementById('sla-rate-val')) document.getElementById('sla-rate-val').textContent = `${data.summary.globalResolutionRate}%`;
+    if (document.getElementById('sla-avg-val')) document.getElementById('sla-avg-val').textContent = `${data.summary.avgResolutionHours} Jam`;
+    if (document.getElementById('sla-escalated-val')) document.getElementById('sla-escalated-val').textContent = data.summary.escalatedTickets;
+
+    // Update Top Responders
+    const topContainer = document.getElementById('top-responders-container');
+    if (topContainer && data.topResponders) {
+      topContainer.innerHTML = data.topResponders.map((item, idx) => `
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border);">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 28px; height: 28px; border-radius: 50%; background: rgba(16, 185, 129, 0.2); color: #10b981; display: flex; align-items: center; justify-content: center; font-weight: bold;">#${idx + 1}</div>
+            <div>
+              <div style="font-weight: 600; color: var(--text-primary);">${item.kantor}</div>
+              <div style="font-size: 11px; color: var(--text-muted);">Selesai: ${item.closedTickets}/${item.totalTickets} (${item.resolutionRate}%)</div>
+            </div>
+          </div>
+          <span style="font-size: 11px; font-weight: 700; padding: 4px 8px; border-radius: 6px; background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">⚡ ${item.avgHours} Jam</span>
+        </div>
+      `).join('') || '<p class="text-muted">Belum ada data respons aduan.</p>';
+    }
+
+    // Update Attention Needed
+    const attnContainer = document.getElementById('attention-needed-container');
+    if (attnContainer && data.attentionNeeded) {
+      attnContainer.innerHTML = data.attentionNeeded.length > 0 ? data.attentionNeeded.map((item) => `
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; border-radius: 8px; background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.2);">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 28px; height: 28px; border-radius: 50%; background: rgba(239, 68, 68, 0.2); color: #ef4444; display: flex; align-items: center; justify-content: center; font-weight: bold;">!</div>
+            <div>
+              <div style="font-weight: 600; color: var(--text-primary);">${item.kantor}</div>
+              <div style="font-size: 11px; color: #ef4444;">Tertunda: ${item.openTickets} Open | ${item.escalatedTickets} Eskalasi</div>
+            </div>
+          </div>
+          <span style="font-size: 11px; font-weight: 700; padding: 4px 8px; border-radius: 6px; background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3);">⏱️ ${item.avgHours} Jam</span>
+        </div>
+      `).join('') : '<div style="padding: 16px; text-align: center; color: #10b981; font-weight: 600;">✨ Semua Kantor Pertanahan aman dari eskalasi keterlambatan!</div>';
+    }
+
+    // Update Matrix Table
+    const tableBody = document.getElementById('sla-matrix-table');
+    if (tableBody && data.allOffices) {
+      tableBody.innerHTML = data.allOffices.map((item, idx) => {
+        let statusColor = '#10b981';
+        if (item.statusBadge === 'CRITICAL') statusColor = '#ef4444';
+        else if (item.statusBadge === 'GOOD') statusColor = '#f59e0b';
+
+        return `
+          <tr>
+            <td>${idx + 1}</td>
+            <td><strong style="color: var(--text-primary);">${item.kantor}</strong></td>
+            <td style="text-align: center;">${item.totalTickets}</td>
+            <td style="text-align: center; color: #10b981; font-weight: 600;">${item.closedTickets}</td>
+            <td style="text-align: center; color: ${item.openTickets > 0 ? '#f59e0b' : 'inherit'}; font-weight: ${item.openTickets > 0 ? '700' : '400'};">${item.openTickets}</td>
+            <td style="text-align: center; color: ${item.escalatedTickets > 0 ? '#ef4444' : 'inherit'}; font-weight: ${item.escalatedTickets > 0 ? '700' : '400'};">${item.escalatedTickets}</td>
+            <td style="text-align: center; font-weight: 600;">${item.resolutionRate}%</td>
+            <td style="text-align: center;">${item.avgHours} Jam</td>
+            <td>
+              <span style="display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; background: ${statusColor}22; color: ${statusColor}; border: 1px solid ${statusColor}44;">
+                ${item.statusText}
+              </span>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+  } catch (err) {
+    console.error('Error loading SLA analytics:', err);
+  }
+}
+
+async function sendExecutiveReportWA() {
+  if (!confirm('Apakah Bapak/Ibu ingin mengirimkan ikhtisar Laporan SLA Eksekutif ke WhatsApp Pimpinan Kanwil sekarang?')) return;
+
+  try {
+    const btn = event.currentTarget;
+    const oldText = btn.innerHTML;
+    btn.innerHTML = '⏳ Mengirim...';
+    btn.disabled = true;
+
+    const res = await fetch(`${API_BASE}/analytics/report/send`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+    const data = await res.json();
+    btn.innerHTML = oldText;
+    btn.disabled = false;
+
+    if (data.success) {
+      alert(`✅ Berhasil! Laporan Pengawasan SLA telah dikirimkan ke WhatsApp (${data.targetPhone})`);
+    } else {
+      alert(`❌ Gagal mengirim: ${data.error || 'Terjadi kesalahan'}`);
+    }
+  } catch (err) {
+    alert(`❌ Terjadi kesalahan jaringan: ${err.message}`);
+  }
+}

@@ -113,6 +113,9 @@
       <button class="tab-btn" data-tab="tickets">
         <span class="tab-icon">📋</span> Tiket Terpantau
       </button>
+      <button class="tab-btn" data-tab="analytics" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(16, 185, 129, 0.15)); border: 1px solid rgba(59, 130, 246, 0.4);">
+        <span class="tab-icon">🚀</span> Radar SLA (Level 6)
+      </button>
       <button class="tab-btn" data-tab="logs">
         <span class="tab-icon">📨</span> Log Notifikasi
       </button>
@@ -206,6 +209,101 @@
                     <p>Tiket akan muncul setelah scraper berjalan</p>
                   </div>
                 </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Radar SLA (Level 6) -->
+    <div class="tab-content" id="tab-analytics">
+      <!-- KPI Stats Summary for SLA -->
+      <div class="stats-grid" style="margin-bottom: 24px;">
+        <div class="stat-card">
+          <div class="stat-icon">📈</div>
+          <div class="stat-value" id="sla-total-val">0</div>
+          <div class="stat-label">Total Aduan Masuk</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">✅</div>
+          <div class="stat-value" id="sla-closed-val" style="color: #10b981;">0</div>
+          <div class="stat-label">Selesai / RESOLVED</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">⚡</div>
+          <div class="stat-value" id="sla-rate-val" style="color: #38b6ff;">100%</div>
+          <div class="stat-label">Tingkat Resolusi</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">⏱️</div>
+          <div class="stat-value" id="sla-avg-val">0 Jam</div>
+          <div class="stat-label">Rata-Rata Waktu Respon</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🚨</div>
+          <div class="stat-value" id="sla-escalated-val" style="color: #ef4444;">0</div>
+          <div class="stat-label">Eskalasi (>24 Jam / Darurat)</div>
+        </div>
+      </div>
+
+      <!-- Leaderboard Cards (2 Columns) -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 24px; margin-bottom: 24px;">
+        <!-- Top Responders -->
+        <div class="card" style="display: flex; flex-direction: column;">
+          <div class="card-header" style="border-bottom: 1px solid var(--glass-border); padding-bottom: 16px;">
+            <h2 style="color: #10b981;">🏆 Top Responders (Tercepat & Responsif)</h2>
+            <span class="status-badge status-open" style="font-size: 11px;">5 Wilayah Terbaik</span>
+          </div>
+          <div class="card-body" id="top-responders-container" style="padding-top: 16px; display: flex; flex-direction: column; gap: 12px;">
+            <p class="text-muted">Memuat data performa kantor pertanahan...</p>
+          </div>
+        </div>
+
+        <!-- Attention Needed / Butuh Pembinaan -->
+        <div class="card" style="display: flex; flex-direction: column;">
+          <div class="card-header" style="border-bottom: 1px solid var(--glass-border); padding-bottom: 16px;">
+            <h2 style="color: #ef4444;">🚨 Butuh Pembinaan & Eskalasi</h2>
+            <span class="status-badge status-escalation" style="font-size: 11px;">Attention Required</span>
+          </div>
+          <div class="card-body" id="attention-needed-container" style="padding-top: 16px; display: flex; flex-direction: column; gap: 12px;">
+            <p class="text-muted">Memuat analisa keterlambatan dan eskalasi...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Full Matrix 24 Kantor Pertanahan -->
+      <div class="card">
+        <div class="card-header" style="flex-wrap: wrap; gap: 12px;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <h2>📊 Matriks Kinerja 24 Kantor Pertanahan di Aceh</h2>
+          </div>
+          <div class="actions-bar" style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <a href="/api/analytics/report/html" target="_blank" class="btn btn-ghost btn-sm">🖨️ Preview HTML</a>
+            <a href="/api/analytics/report/pdf" target="_blank" class="btn btn-primary btn-sm" style="background: linear-gradient(135deg, #2563eb, #1d4ed8);">📄 Laporan PDF (A4)</a>
+            <a href="/api/analytics/report/csv" target="_blank" class="btn btn-ghost btn-sm">📊 Export CSV</a>
+            <button class="btn btn-success btn-sm" style="font-weight: bold; background: linear-gradient(135deg, #10b981, #059669);" onclick="sendExecutiveReportWA()">📲 Drop Laporan ke WA Kanwil</button>
+            <button class="btn btn-ghost btn-sm" onclick="loadAnalytics()">↻ Refresh Radar</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>Kantor Pertanahan</th>
+                <th style="text-align: center;">Total Aduan</th>
+                <th style="text-align: center;">Selesai (Closed)</th>
+                <th style="text-align: center;">Tertunda (Open)</th>
+                <th style="text-align: center;">Eskalasi (>24 Jam)</th>
+                <th style="text-align: center;">Resolusi (%)</th>
+                <th style="text-align: center;">Avg Waktu Respon</th>
+                <th>Status Pembinaan</th>
+              </tr>
+            </thead>
+            <tbody id="sla-matrix-table">
+              <tr>
+                <td colspan="9" style="text-align: center;">Memuat analisis kinerja SLA Kantor Pertanahan...</td>
               </tr>
             </tbody>
           </table>

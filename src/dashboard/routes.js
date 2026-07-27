@@ -6,6 +6,8 @@ const { config } = require('../config');
 const { createLogger } = require('../utils/logger');
 const { getAuthStatus, startLoginInteractive, submitOtpInteractive } = require('../scraper/login-controller');
 const { getAllTemplates, renderTemplate } = require('../notifier/templates');
+const { getSlaMetrics } = require('../analytics/sla-service');
+const { generateCsvReport, generateHtmlReport, generatePdfReport, sendExecutiveReportToKanwil } = require('../analytics/report-generator');
 
 const log = createLogger('ROUTES');
 
@@ -440,6 +442,66 @@ function createRoutes() {
         return res.status(400).json({ success: false, error: result.error });
       }
       res.json({ success: true, data: result });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // ============================================
+  // Level 6: Advanced SLA Analytics & Reports
+  // ============================================
+
+  router.get('/analytics/leaderboard', (req, res) => {
+    try {
+      const data = getSlaMetrics();
+      res.json(data);
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  router.get('/analytics/report/html', (req, res) => {
+    try {
+      const html = generateHtmlReport();
+      res.send(html);
+    } catch (error) {
+      res.status(500).send(`Error generating HTML report: ${error.message}`);
+    }
+  });
+
+  router.get('/analytics/report/pdf', async (req, res) => {
+    try {
+      const result = await generatePdfReport();
+      if (result.success && result.filePath) {
+        res.download(result.filePath, 'Laporan_SLA_Pengawasan_BPN_Aceh.pdf');
+      } else {
+        res.status(500).json({ success: false, error: result.error });
+      }
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  router.get('/analytics/report/csv', (req, res) => {
+    try {
+      const result = generateCsvReport();
+      if (result.success) {
+        res.header('Content-Type', 'text/csv');
+        res.attachment('Laporan_SLA_Pengawasan_BPN_Aceh.csv');
+        res.send(result.content);
+      } else {
+        res.status(500).json({ success: false, error: result.error });
+      }
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  router.post('/analytics/report/send', async (req, res) => {
+    try {
+      const { phone } = req.body || {};
+      const result = await sendExecutiveReportToKanwil(phone);
+      res.json(result);
     } catch (error) {
       res.status(500).json({ success: false, error: error.message });
     }
