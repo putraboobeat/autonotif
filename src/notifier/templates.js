@@ -5,166 +5,188 @@ const TEMPLATE_DEFINITIONS = {
     title: '1. Notifikasi Tiket Baru (Group WhatsApp)',
     description: 'Pesan perdana ke Grup WhatsApp saat aduan baru terdeteksi di OCA Interaction.',
     placeholders: '{ticketId}, {customer}, {kantor}, {subjek}, {kategori}, {tanggal}, {mentions}',
-    defaultText: `📢 *[ADUAN BARU MASUK] PEMBERITAHUAN PENGADUAN BPN ACEH*
+    defaultText: `*Informasi Pengaduan Masuk*
 
-Halo rekan-rekan, terdapat aduan warga baru yang masuk ke sistem dan memerlukan penanganan segera:
+Assalamualaikum rekan-rekan,
 
-📋 *Ticket ID*: {ticketId}
-🏢 *Kantor Tujuan*: {kantor}
-👤 *Pelapor / Warga*: {customer}
-🔖 *Kategori*: {kategori}
-💬 *Subjek Aduan*: {subjek}
-📅 *Tanggal Masuk*: {tanggal}
+Mohon perhatiannya, baru saja masuk satu aduan dari masyarakat yang perlu segera ditindaklanjuti.
 
-🚨 *Mohon Atensi Admin Bertugas*: {mentions}
-Harap segera membuka dashboard OCA Interaction dan menindaklanjuti pengaduan ini demi pelayanan prima kepada masyarakat. Terima kasih! 🙏
+*No. Tiket*: {ticketId}
+*Kantor Tujuan*: {kantor}
+*Nama Pelapor*: {customer}
+*Kategori*: {kategori}
+*Perihal*: {subjek}
+*Tanggal Masuk*: {tanggal}
 
-_Sistem Pemantau Pengaduan Kanwil ATR/BPN Provinsi Aceh_`
+Kepada {mentions} selaku admin yang bertugas, mohon segera dibuka dan diproses melalui aplikasi OCA Interaction. Terima kasih atas kesigapannya.
+
+Salam,
+_Admin Kanwil ATR/BPN Provinsi Aceh_`
   },
 
   template_new_personal: {
     title: '2. Notifikasi Tiket Baru (Japri Personal Admin Kantah)',
-    description: 'Pesan pesan langsung (japri) ke WhatsApp Admin Kantor Pertanahan terkait.',
+    description: 'Pesan langsung (japri) ke WhatsApp Admin Kantor Pertanahan terkait.',
     placeholders: '{ticketId}, {customer}, {kantor}, {adminNama}, {subjek}, {kategori}, {tanggal}',
-    defaultText: `🔔 *[NOTIFIKASI PERSONAL] PENGADUAN WARGA BARU*
+    defaultText: `Assalamualaikum Pak/Bu *{adminNama}*,
 
-Selamat siang/sore Yth. Sdr/i *{adminNama}*,
-Sebagai Admin dari *{kantor}*, kami menginfokan bahwa terdapat satu tiket pengaduan baru yang diarahkan ke kantor Bapak/Ibu:
+Mohon maaf mengganggu waktunya. Kami ingin menginformasikan bahwa ada satu tiket pengaduan baru yang masuk dan diarahkan ke *{kantor}*:
 
-📋 *Ticket ID*: {ticketId}
-👤 *Nama Pelapor*: {customer}
-🔖 *Kategori*: {kategori}
-💬 *Subjek*: {subjek}
-📅 *Tanggal Masuk*: {tanggal}
+*No. Tiket*: {ticketId}
+*Nama Pelapor*: {customer}
+*Kategori*: {kategori}
+*Perihal*: {subjek}
+*Tanggal Masuk*: {tanggal}
 
-Mohon perkenan Bapak/Ibu untuk segera memproses dan merespons tiket tersebut pada aplikasi OCA Interaction. Kolaborasi dan kecepatan respons Anda sangat berarti bagi kemajuan layanan BPN Aceh. Terima kasih banyak atas kerjasamanya! 🫡✨`
+Mohon kiranya bisa segera ditindaklanjuti melalui aplikasi OCA Interaction ya. Kalau ada kendala, jangan sungkan menghubungi kami.
+
+Terima kasih banyak atas kerjasamanya.
+
+Salam,
+_Admin Kanwil ATR/BPN Prov. Aceh_`
   },
 
   template_new_kanwil: {
     title: '3. Laporan Rekap Tiket Baru (Japri Admin Kanwil)',
     description: 'Laporan pemantauan ke nomor Admin Kanwil (Pengawas Utama) setiap kali ada aduan baru.',
     placeholders: '{ticketId}, {customer}, {kantor}, {subjek}, {kategori}, {tanggal}',
-    defaultText: `🏛️ *[LAPORAN PENGAWAS KANWIL] TIKET MASUK TERBARU*
+    defaultText: `*Laporan Tiket Masuk*
 
-Yth. Admin Kanwil BPN Aceh,
-Sistem memantau aduan baru telah didaftarkan dengan rincian berikut:
+Pak/Bu, berikut informasi aduan baru yang tercatat di sistem:
 
-📋 *Ticket ID*: {ticketId}
-🏢 *Kantor Pertanahan*: {kantor}
-👤 *Pelapor*: {customer}
-🔖 *Subjek*: {subjek}
-📅 *Tanggal*: {tanggal}
+*No. Tiket*: {ticketId}
+*Kantor Pertanahan*: {kantor}
+*Pelapor*: {customer}
+*Perihal*: {subjek}
+*Tanggal*: {tanggal}
 
-Sistem telah meneruskan pesan peringatan instan kepada grup dan admin kantah yang bersangkutan.`
+Notifikasi sudah diteruskan ke admin kantah yang bersangkutan dan ke group.
+
+_Sistem Pemantauan Pengaduan Kanwil_`
   },
 
   template_reminder_group: {
     title: '4. Peringatan Rutin / Reminder (Group WhatsApp)',
     description: 'Pesan pengingat di Grup jika tiket masih berstatus OPEN setelah jangka waktu tertentu.',
     placeholders: '{ticketId}, {customer}, {kantor}, {subjek}, {reminderCount}, {mentions}',
-    defaultText: `⚠️ *[REMINDER KE-{reminderCount}: TIKET PENGADUAN BELUM SELESAI]* ⚠️
+    defaultText: `*Pengingat Tiket Belum Selesai (ke-{reminderCount})*
 
-Mohon perhatian rekan-rekan di *{kantor}*. Pengaduan berikut dipantau MASIH BERSTATUS OPEN dan belum dilakukan penutupan/penyelesaian:
+Assalamualaikum rekan-rekan di *{kantor}*,
 
-📋 *Ticket ID*: {ticketId}
-👤 *Pelapor*: {customer}
-💬 *Subjek*: {subjek}
+Mohon maaf kami ingatkan kembali, tiket pengaduan berikut masih tercatat belum diselesaikan di sistem:
 
-🚨 *Kepada Petugas*: {mentions}
-Waktu penanganan terus berjalan. Mari saling mengingatkan agar tiket ini segera diproses dan tidak berlanjut ke eskalasi pimpinan. Semangat melayani! 💪`
+*No. Tiket*: {ticketId}
+*Pelapor*: {customer}
+*Perihal*: {subjek}
+
+Kepada {mentions}, mohon bisa dibantu untuk segera ditindaklanjuti agar tidak berlarut-larut. Mari sama-sama kita jaga kualitas pelayanan.
+
+Terima kasih,
+_Admin Kanwil ATR/BPN Prov. Aceh_`
   },
 
   template_reminder_personal: {
     title: '5. Peringatan Rutin / Reminder (Japri Admin Kantah)',
-    description: 'Pesaningat langsung (japri) ke admin kantor jika aduan masih OPEN.',
+    description: 'Pesan pengingat langsung (japri) ke admin kantor jika aduan masih OPEN.',
     placeholders: '{ticketId}, {customer}, {kantor}, {adminNama}, {subjek}, {reminderCount}',
-    defaultText: `⚠️ *[REMINDER KE-{reminderCount}] PENGADUAN BELUM DI-CLOSE*
+    defaultText: `Assalamualaikum Pak/Bu *{adminNama}*,
 
-Yth. Sdr/i *{adminNama}* ({kantor}),
-Sistem memantau bahwa aduan dengan Ticket ID *{ticketId}* (Pelapor: {customer}, Subjek: {subjek}) masih berstatus OPEN di OCA Interaction.
+Mohon maaf mengganggu lagi. Ini pengingat ke-{reminderCount} terkait tiket No. *{ticketId}* dari pelapor {customer} dengan perihal "{subjek}" yang masih berstatus terbuka di OCA.
 
-Mohon kediaannya untuk luangkan waktu sejenak merespons atau mematikan (close) tiket tersebut agar tidak melewati batas waktu SLA layanan. Terima kasih banyak atas kerja keras Bapak/Ibu! 🙏`
+Kalau memungkinkan, mohon bisa segera direspons atau di-close ya Pak/Bu, agar tidak masuk ke tahap eskalasi.
+
+Terima kasih banyak atas perhatiannya.
+
+Salam,
+_Admin Kanwil ATR/BPN Prov. Aceh_`
   },
 
   template_reminder_kanwil: {
     title: '6. Peringatan Rutin (Japri Admin Kanwil)',
-    description: 'Pesan peringatan pemantauan untuk Admin Kanwil pada tiket yang berulang kali dingatkan.',
+    description: 'Pesan peringatan pemantauan untuk Admin Kanwil pada tiket yang berulang kali diingatkan.',
     placeholders: '{ticketId}, {customer}, {kantor}, {subjek}, {reminderCount}',
-    defaultText: `⚠️ *[INFO REMINDER KANWIL]*: Tiket #{ticketId} ({kantor} - {subjek}) masih berstatus OPEN. Saat ini sistem telah mengirimkan pengingat otomatis ke-{reminderCount}.`
+    defaultText: `*Info Reminder*: Tiket No. {ticketId} dari {kantor} perihal "{subjek}" masih berstatus terbuka. Sudah dikirimkan pengingat sebanyak {reminderCount} kali ke admin terkait.`
   },
 
   template_eskalasi_ktu: {
     title: '7. Eskalasi Darurat > 1 Hari (Japri Kasubbag Tata Usaha Kantah)',
     description: 'Laporan kritis langsung ke HP Kasubbag TU Kantor Pertanahan setempat jika admin abai > 24 jam.',
     placeholders: '{ticketId}, {customer}, {kantor}, {subjek}, {tanggal}, {ktuNama}',
-    defaultText: `🚨 *[ESKALASI DARURAT > 1 HARI: KASUBBAG TATA USAHA]* 🚨
+    defaultText: `Assalamualaikum Pak/Bu *{ktuNama}*,
 
-Kepada Yth. *{ktuNama}* (Kasubbag Tata Usaha *{kantor}*),
+Dengan hormat, kami dari Tim Pengawasan Kanwil ingin menyampaikan informasi bahwa terdapat satu tiket pengaduan di lingkungan *{kantor}* yang sudah melewati batas waktu 1x24 jam dan belum ditindaklanjuti oleh admin bertugas:
 
-Dengan hormat, izinkan kami melaporkan pemantauan sistem pengaduan: Terdapat aduan warga di lingkungan kantor Bapak/Ibu yang *TELAH LEWAT 1 HARI (24 JAM)* belum diselesaikan oleh Admin bertugas dan masih berstatus OPEN:
+*No. Tiket*: {ticketId}
+*Pelapor*: {customer}
+*Perihal*: {subjek}
+*Tanggal Masuk*: {tanggal}
 
-📋 *Ticket ID*: {ticketId}
-👤 *Warga / Pelapor*: {customer}
-🔖 *Subjek*: {subjek}
-📅 *Tanggal Masuk*: {tanggal}
+Kami mohon bantuan Bapak/Ibu selaku Kasubbag Tata Usaha untuk berkenan mengingatkan atau menginstruksikan admin yang bertanggung jawab agar segera memproses dan menutup tiket tersebut di OCA Interaction.
 
-🔥 _Mohon bantuan serta atensi dari Bapak/Ibu Kasubbag Tata Usaha berkenan menginstruksikan petugas Admin terkait untuk segera memproses penyelesaian dan closing tiket pada Dashboard OCA Interaction agar aduan tertangani dengan baik._
+Atas perhatian dan arahannya, kami ucapkan terima kasih.
 
-Atas kerjasama dan arahan Bapak/Ibu, kami ucapkan terima kasih banyak. 🙏`
+Salam hormat,
+_Tim Pengawasan Kanwil ATR/BPN Prov. Aceh_`
   },
 
   template_eskalasi_humas: {
     title: '8. Eskalasi Darurat > 1 Hari (Japri Kasubbag Umum & Humas Kanwil)',
     description: 'Laporan rekap kritis ke Kasubbag Umum & Humas tingkat Wilayah (Kanwil) saat ada pelanggaran waktu 24 jam.',
     placeholders: '{ticketId}, {customer}, {kantor}, {subjek}, {tanggal}, {reminderCount}',
-    defaultText: `🚨 *[ESKALASI DARURAT > 1 HARI: KASUBBAG UMUM & HUMAS KANWIL]* 🚨
+    defaultText: `Assalamualaikum Pak/Bu Kasubbag,
 
-Yth. Bapak/Ibu Kasubbag Umum dan Hubungan Masyarakat Kanwil,
+Berikut kami laporkan bahwa terdapat pengaduan masyarakat yang sudah melewati batas waktu 1x24 jam dan belum diselesaikan:
 
-Laporan Pemantauan Otomatis: Terdapat pengaduan masyarakat yang *TELAH MELEWATI BATAS WAKTU 1 HARI (24 JAM)* dan belum disatukan/closed:
+*No. Tiket*: {ticketId}
+*Kantor*: {kantor}
+*Pelapor*: {customer}
+*Perihal*: {subjek}
+*Tanggal Masuk*: {tanggal}
+*Total Pengingat*: {reminderCount} kali
 
-📋 *Ticket ID*: {ticketId}
-🏢 *Kantor Tujuan*: {kantor}
-👤 *Warga / Pelapor*: {customer}
-🔖 *Subjek*: {subjek}
-📅 *Tanggal Masuk*: {tanggal}
-⏰ *Total Reminder*: {reminderCount} kali peringatan sistem
+Kami sudah mengirimkan eskalasi juga ke Kasubbag Tata Usaha kantah terkait. Mohon arahan lebih lanjut dari Bapak/Ibu agar pelayanan tidak terhambat.
 
-🔥 _Sistem telah melakukan eskalasi kepada Kasubbag Tata Usaha Kantah bersangkutan. Mohon perkenan atensi dan arahan lebih lanjut agar pelayanan tidak terhambat._`
+Terima kasih,
+_Tim Pengawasan Kanwil ATR/BPN Prov. Aceh_`
   },
 
   template_closed_group: {
     title: '9. Apresiasi & Berhasil Closed (Group WhatsApp)',
-    description: 'Pesan ucapan terima kasih dan selamat di Grup ketika admin berhasil menyelesaikan aduan warga.',
+    description: 'Pesan ucapan terima kasih di Grup ketika admin berhasil menyelesaikan aduan warga.',
     placeholders: '{ticketId}, {customer}, {kantor}, {subjek}, {mentions}',
-    defaultText: `🎉 *[APRESIASI PELAYANAN: PENGADUAN BERHASIL DI-CLOSE]* 🎉
+    defaultText: `*Tiket Pengaduan Selesai*
 
-Kabar gembira! Pengaduan berikut telah tuntas diselesaikan oleh tim bertugas:
-📋 *Ticket ID*: {ticketId}
-🏢 *Kantor*: {kantor}
-👤 *Pelapor*: {customer}
-💬 *Subjek*: {subjek}
-👏 *Admin Penanggung Jawab*: {mentions}
+Alhamdulillah, pengaduan berikut sudah berhasil ditangani dan ditutup:
 
-Terima kasih yang sebesar-besarnya kepada Pimpinan dan Petugas Admin atas respons cepat dan dedikasi luar biasa. Terus pertahankan budaya pelayanan prima kepada masyarakat Aceh! 🏆🇮🇩`
+*No. Tiket*: {ticketId}
+*Kantor*: {kantor}
+*Pelapor*: {customer}
+*Perihal*: {subjek}
+*Ditangani oleh*: {mentions}
+
+Terima kasih banyak kepada rekan-rekan yang sudah sigap menindaklanjuti. Semoga kita bisa terus menjaga kecepatan dan kualitas pelayanan kepada masyarakat.
+
+Salam,
+_Admin Kanwil ATR/BPN Prov. Aceh_`
   },
 
   template_manual_resend: {
     title: '10. Peringatan Manual dari Dashboard (Tombol Kirim Ulang)',
     description: 'Pesan peringatan khusus ketika admin kanwil mengeklik tombol "Kirim Ulang Peringatan" dari Dashboard web.',
     placeholders: '{ticketId}, {customer}, {kantor}, {subjek}, {tanggal}, {adminNama}',
-    defaultText: `⚡ *[PERINGATAN KHUSUS DARI KANWIL BPN ACEH]* ⚡
+    defaultText: `Assalamualaikum Pak/Bu *{adminNama}*,
 
-Yth. Sdr/i *{adminNama}* (Admin *{kantor}*),
+Pesan ini dikirimkan langsung oleh Tim Kanwil melalui Dashboard Pengawasan. Kami ingin meminta perhatian khusus untuk tiket pengaduan berikut yang belum diselesaikan:
 
-Pesan ini ditarik dan dikirim secara langsung melalui Dashboard Pengawasan Kanwil. Kami meminta perhatian segera untuk menyelesaikan tiket pengaduan berikut:
+*No. Tiket*: {ticketId}
+*Pelapor*: {customer}
+*Perihal*: {subjek}
+*Tanggal Masuk*: {tanggal}
 
-📋 *Ticket ID*: {ticketId}
-👤 *Customer / Warga*: {customer}
-💬 *Subjek*: {subjek}
-📅 *Tanggal Masuk*: {tanggal}
+Mohon saat ini bisa langsung dibuka dan ditindaklanjuti melalui OCA Interaction ya. Kami sangat mengapresiasi kecepatan respons Bapak/Ibu.
 
-Mohon saat ini juga membuka portal OCA Interaction dan melayani pengaduan tersebut. Atas kerja sama dan kecekatan Bapak/Ibu kami hargai, terima kasih! 🙏`
+Terima kasih,
+_Admin Kanwil ATR/BPN Prov. Aceh_`
   }
 };
 

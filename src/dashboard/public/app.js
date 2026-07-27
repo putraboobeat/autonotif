@@ -107,13 +107,53 @@ function loadAllData() {
   loadSettings();
   loadTemplates();
   checkAuthStatus();
+  checkStarSenderStatus();
 }
 
 function startAutoRefresh() {
   refreshInterval = setInterval(() => {
     loadStats();
     checkAuthStatus();
+    checkStarSenderStatus();
   }, 15000); // Refresh stats every 15 seconds
+}
+
+// ============================================
+// StarSender API Realtime Status
+// ============================================
+
+async function checkStarSenderStatus() {
+  const badge = document.getElementById('starsender-status');
+  const text = document.getElementById('starsender-text');
+  if (!badge || !text) return;
+
+  try {
+    const result = await apiGet('/starsender/status');
+    if (result.success && result.data) {
+      const status = result.data.status;
+      badge.className = 'status-badge';
+      if (status === 'connected') {
+        badge.classList.add('running');
+        text.textContent = 'WA API: Aktif';
+        badge.title = 'StarSender terkoneksi — ' + (result.data.checkedAt || '');
+      } else if (status === 'no_key') {
+        badge.classList.add('stopped');
+        text.textContent = 'WA API: No Key';
+        badge.title = 'API Key StarSender belum dikonfigurasi';
+      } else if (status === 'error') {
+        badge.classList.add('stopped');
+        text.textContent = 'WA API: Error';
+        badge.title = result.data.message || 'Ada masalah pada API';
+      } else {
+        badge.classList.add('stopped');
+        text.textContent = 'WA API: Putus';
+        badge.title = result.data.message || 'Tidak dapat terhubung ke StarSender';
+      }
+    }
+  } catch (err) {
+    if (badge) badge.className = 'status-badge stopped';
+    if (text) text.textContent = 'WA API: Offline';
+  }
 }
 
 // ============================================

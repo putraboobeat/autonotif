@@ -13,6 +13,72 @@ function createRoutes() {
   const router = express.Router();
 
   // ============================================
+  // StarSender API Health Check (Realtime)
+  // ============================================
+
+  router.get('/starsender/status', async (req, res) => {
+    try {
+      const apiKey = (() => {
+        try {
+          require('dotenv').config({ override: true });
+          if (process.env.STARSENDER_API_KEY) config.starsender.apiKey = process.env.STARSENDER_API_KEY;
+        } catch {}
+        try {
+          const dbKey = ConfigModel.get('starsender_api_key');
+          if (dbKey) return dbKey;
+        } catch {}
+        return config.starsender.apiKey;
+      })();
+
+      if (!apiKey) {
+        return res.json({ success: true, data: { status: 'no_key', message: 'API Key belum dikonfigurasi' } });
+      }
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
+
+      const response = await fetch('https://api.starsender.online/api/device/info', {
+        method: 'GET',
+        headers: { 'Authorization': apiKey },
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+
+      const data = await response.json();
+
+      if (response.ok && data.success !== false) {
+        res.json({
+          success: true,
+          data: {
+            status: 'connected',
+            message: 'StarSender API terkoneksi dan aktif',
+            device: data.data || data,
+            checkedAt: new Date().toISOString(),
+          }
+        });
+      } else {
+        res.json({
+          success: true,
+          data: {
+            status: 'error',
+            message: data.message || 'API merespons tetapi ada masalah',
+            checkedAt: new Date().toISOString(),
+          }
+        });
+      }
+    } catch (error) {
+      res.json({
+        success: true,
+        data: {
+          status: 'disconnected',
+          message: error.name === 'AbortError' ? 'Timeout: API tidak merespons' : error.message,
+          checkedAt: new Date().toISOString(),
+        }
+      });
+    }
+  });
+
+  // ============================================
   // Dashboard Stats
   // ============================================
 
