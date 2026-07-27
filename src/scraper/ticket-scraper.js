@@ -84,6 +84,7 @@ async function scrapeTickets() {
       let subCategory = '';
       let subject = '';
       let createdDate = '';
+      let lastUpdate = '';
 
       // Ticket ID is usually in format TICKET-XXXXXXX
       for (let i = 0; i < cellTexts.length; i++) {
@@ -105,18 +106,29 @@ async function scrapeTickets() {
       }
 
       // More specific extraction based on column positions
-      // Typical order: [0=checkbox], [1=TicketID], [2=Customer], [3=Agent], [4=Converse], [5=Priority], [6=Status], [7=Category], [8=SubCategory], [9=Subject], [10=Created]
-      if (cells.length >= 10) {
+      // Typical order: [0=checkbox], [1=TicketID], [2=Customer], [3=Agent], [4=Converse], [5=Priority], [6=Status], [7=Category], [8=SubCategory], [9=Subject], [10=Created], [11=Last Update]
+      if (cells.length >= 12) {
         ticketId = ticketId || cellTexts[1] || '';
         customer = cellTexts[2] || '';
         agent = cellTexts[3] || '';
-        // cellTexts[4] is Conversation type (Inbox, etc.)
         priority = priority || cellTexts[5] || '';
         status = status || cellTexts[6] || '';
         category = cellTexts[7] || '';
         subCategory = cellTexts[8] || '';
         subject = cellTexts[9] || '';
-        createdDate = cellTexts[cells.length - 1] || '';
+        createdDate = cellTexts[10] || cellTexts[cells.length - 2] || '';
+        lastUpdate = cellTexts[11] || cellTexts[cells.length - 1] || createdDate || '';
+      } else if (cells.length >= 10) {
+        ticketId = ticketId || cellTexts[1] || '';
+        customer = cellTexts[2] || '';
+        agent = cellTexts[3] || '';
+        priority = priority || cellTexts[5] || '';
+        status = status || cellTexts[6] || '';
+        category = cellTexts[7] || '';
+        subCategory = cellTexts[8] || '';
+        subject = cellTexts[9] || '';
+        createdDate = cells.length >= 11 ? cellTexts[cells.length - 2] : cellTexts[cells.length - 1] || '';
+        lastUpdate = cellTexts[cells.length - 1] || createdDate || '';
       } else if (cells.length >= 7) {
         // Fallback for fewer columns
         ticketId = ticketId || cellTexts[0] || '';
@@ -125,7 +137,8 @@ async function scrapeTickets() {
         priority = priority || cellTexts[3] || '';
         status = status || cellTexts[4] || '';
         category = cellTexts[5] || '';
-        createdDate = cellTexts[cells.length - 1] || '';
+        createdDate = cells.length >= 8 ? cellTexts[cells.length - 2] : cellTexts[cells.length - 1] || '';
+        lastUpdate = cellTexts[cells.length - 1] || createdDate || '';
       }
 
       if (ticketId) {
@@ -139,6 +152,7 @@ async function scrapeTickets() {
           subCategory,
           subject,
           createdDate,
+          lastUpdate,
         });
       }
     });
@@ -261,6 +275,7 @@ async function scrapeAllOpenTickets() {
           let subCategory = '';
           let subject = '';
           let createdDate = '';
+          let lastUpdate = '';
 
           for (const text of cellTexts) {
             if (text.match(/TICKET-\d+/)) ticketId = text.match(/TICKET-\d+/)[0];
@@ -268,7 +283,7 @@ async function scrapeAllOpenTickets() {
             if (['Low', 'Medium', 'High', 'Urgent'].includes(text)) priority = text;
           }
 
-          if (cells.length >= 10) {
+          if (cells.length >= 12) {
             ticketId = ticketId || cellTexts[1] || '';
             customer = cellTexts[2] || '';
             agent = cellTexts[3] || '';
@@ -277,11 +292,32 @@ async function scrapeAllOpenTickets() {
             category = cellTexts[7] || '';
             subCategory = cellTexts[8] || '';
             subject = cellTexts[9] || '';
-            createdDate = cellTexts[cells.length - 1] || '';
+            createdDate = cellTexts[10] || cellTexts[cells.length - 2] || '';
+            lastUpdate = cellTexts[11] || cellTexts[cells.length - 1] || createdDate || '';
+          } else if (cells.length >= 10) {
+            ticketId = ticketId || cellTexts[1] || '';
+            customer = cellTexts[2] || '';
+            agent = cellTexts[3] || '';
+            priority = priority || cellTexts[5] || '';
+            status = status || cellTexts[6] || '';
+            category = cellTexts[7] || '';
+            subCategory = cellTexts[8] || '';
+            subject = cellTexts[9] || '';
+            createdDate = cells.length >= 11 ? cellTexts[cells.length - 2] : cellTexts[cells.length - 1] || '';
+            lastUpdate = cellTexts[cells.length - 1] || createdDate || '';
+          } else if (cells.length >= 7) {
+            ticketId = ticketId || cellTexts[0] || '';
+            customer = cellTexts[1] || '';
+            agent = cellTexts[2] || '';
+            priority = priority || cellTexts[3] || '';
+            status = status || cellTexts[4] || '';
+            category = cellTexts[5] || '';
+            createdDate = cells.length >= 8 ? cellTexts[cells.length - 2] : cellTexts[cells.length - 1] || '';
+            lastUpdate = cellTexts[cells.length - 1] || createdDate || '';
           }
 
           if (ticketId) {
-            ticketData.push({ ticketId, customer, agent, status, priority, category, subCategory, subject, createdDate });
+            ticketData.push({ ticketId, customer, agent, status, priority, category, subCategory, subject, createdDate, lastUpdate });
           }
         });
 

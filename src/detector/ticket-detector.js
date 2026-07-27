@@ -153,6 +153,7 @@ function markTicketProcessed(ticket, { notifiedGroup = false, notifiedAdmin = fa
         subCategory: ticket.subCategory,
         subject: ticket.subject,
         createdDate: ticket.createdDate,
+        lastUpdate: ticket.lastUpdate,
         notifiedGroup,
         notifiedAdmin,
       });

@@ -13,184 +13,114 @@ function formatMention(phone) {
 }
 
 /**
+ * Helper to format field and add "(belum diinput detail oleh admin kantah)" if empty or "-"
+ */
+function formatField(val, isDetail = false) {
+  if (val === undefined || val === null || val === '') {
+    return isDetail ? '- (belum diinput detail oleh admin kantah)' : '-';
+  }
+  const str = String(val).trim();
+  if (str === '' || str === '-' || str === '--') {
+    return isDetail ? '- (belum diinput detail oleh admin kantah)' : '-';
+  }
+  return str;
+}
+
+/**
  * Build group notification message
  */
 function buildGroupMessage(ticket, groupName, allOpenTickets) {
-  const lines = [
-    '🔔 *NOTIFIKASI PENGADUAN BARU*',
-    '',
-    `Ada pengaduan masuk di group *${groupName || 'WhatsApp'}*:`,
-    `👤 *Customer*: ${ticket.customer || '-'}`,
-    `🏢 *Kantor*: ${ticket.kantorPertanahan || '-'}`,
-  ];
+  const mentions = (ticket.matchingAdmins || [])
+    .map((a) => formatMention(a.no_hp))
+    .filter(Boolean)
+    .join(' ') || 'Admin Kantah Terkait';
 
-  if (ticket.agent) {
-    lines.push(`📁 *Agent*: ${ticket.agent.split('\n')[0]}`);
-  }
-
-  lines.push(
-    `⚡ *Status*: ${ticket.status}`,
-    `📌 *Priority*: ${ticket.priority || '-'}`,
-  );
-
-  if (ticket.category) {
-    lines.push(`📂 *Kategori*: ${ticket.category}`);
-  }
-
-  if (ticket.subCategory) {
-    lines.push(`📎 *Sub Kategori*: ${ticket.subCategory}`);
-  }
-
-  if (ticket.subject) {
-    lines.push(`📝 *Subject*: ${ticket.subject}`);
-  }
-
-  lines.push(
-    `📅 *Tanggal*: ${ticket.createdDate || '-'}`,
-    '',
-  );
-
-  if (ticket.matchingAdmins && ticket.matchingAdmins.length > 0) {
-    const mentions = ticket.matchingAdmins
-      .map((a) => `${a.nama} (${formatMention(a.no_hp)})`)
-      .join('\n• ');
-    const tagOnly = ticket.matchingAdmins
-      .map((a) => formatMention(a.no_hp))
-      .filter(Boolean)
-      .join(' ');
-    lines.push(
-      `✅ *Admin Terkait*: \n• ${mentions}`,
-      '',
-      `👉 Mohon segera dicek & ditindaklanjuti: ${tagOnly}`
-    );
-  } else {
-    lines.push('⚠️ Belum ada admin terdaftar untuk kantor ini.');
-  }
+  let msg = renderTemplate('template_new_group', {
+    ticketId: ticket.ticketId,
+    customer: ticket.customer,
+    kantor: ticket.kantorPertanahan,
+    subjek: ticket.subject || ticket.category,
+    kategori: ticket.category,
+    tanggal: ticket.createdDate,
+    lastUpdate: ticket.lastUpdate,
+    mentions: mentions
+  });
 
   if (allOpenTickets && allOpenTickets.length > 0) {
-    lines.push('', `📊 *Total Tiket Belum Selesai (OPEN) Saat Ini*: ${allOpenTickets.length} tiket.`);
+    msg += `\n\n*Catatan Pengawasan*: Saat ini terdapat total ${allOpenTickets.length} pengaduan masyarakat berstatus OPEN yang masih menunggu penyelesaian.`;
   }
 
-  return lines.join('\n');
+  return msg;
 }
 
 /**
  * Build personal notification message for admin
  */
 function buildPersonalMessage(ticket, admin) {
-  const lines = [
-    '🔔 *NOTIFIKASI PENGADUAN*',
-    '',
-    `Halo *${admin.nama}*,`,
-    '',
-    `Ada tiket pengaduan baru yang ditujukan ke *${admin.kantor_pertanahan}*:`,
-    '',
-    `📋 *Ticket ID*: ${ticket.ticketId}`,
-    `👤 *Customer*: ${ticket.customer || '-'}`,
-    `⚡ *Priority*: ${ticket.priority || '-'}`,
-  ];
-
-  if (ticket.category) {
-    lines.push(`📂 *Kategori*: ${ticket.category}`);
-  }
-
-  if (ticket.subject) {
-    lines.push(`📝 *Subject*: ${ticket.subject}`);
-  }
-
-  lines.push(
-    `📅 *Tanggal*: ${ticket.createdDate || '-'}`,
-    '',
-    'Silahkan segera ditangani melalui:',
-    '🔗 https://interaction.ocaindonesia.co.id/',
-    '',
-    'Terima kasih 🙏',
-  );
-
-  return lines.join('\n');
+  return renderTemplate('template_new_personal', {
+    ticketId: ticket.ticketId,
+    customer: ticket.customer,
+    kantor: admin.kantor_pertanahan || ticket.kantorPertanahan,
+    adminNama: admin.nama,
+    subjek: ticket.subject || ticket.category,
+    kategori: ticket.category,
+    tanggal: ticket.createdDate,
+    lastUpdate: ticket.lastUpdate
+  });
 }
 
 /**
  * Build notification message for Admin Kanwil (receives ALL complaints)
  */
 function buildKanwilMessage(ticket, adminName) {
-  const lines = [
-    `🔔 *NOTIFIKASI PENGADUAN BARU*`,
-    '',
-    `Kepada Yth. Admin Kanwil ${adminName || ''},`,
-    '',
-    `Terdapat pengaduan baru masuk pada sistem OCA Interaction untuk *Kantor Pertanahan ${ticket.kantorPertanahan || '-'}*.`,
-    '',
-    `📋 *Ticket ID*: ${ticket.ticketId}`,
-    `👤 *Customer*: ${ticket.customer || '-'}`,
-    `🏢 *Kantor*: ${ticket.kantorPertanahan || '-'}`,
-    `🔖 *Kategori*: ${ticket.category || '-'}`,
-    `💬 *Subjek*: ${ticket.subject || '-'}`,
-    `📅 *Tanggal*: ${ticket.createdDate || '-'}`,
-    '',
-    `Harap pantau tindak lanjut dari admin kantor terkait.`,
-    '',
-    `_Pesan Otomatis dari Sistem_`
-  ];
-  return lines.join('\n');
+  return renderTemplate('template_new_kanwil', {
+    ticketId: ticket.ticketId,
+    customer: ticket.customer,
+    kantor: ticket.kantorPertanahan,
+    subjek: ticket.subject || ticket.category,
+    kategori: ticket.category,
+    tanggal: ticket.createdDate,
+    lastUpdate: ticket.lastUpdate
+  });
 }
 
 /**
  * Build group reminder notification message
  */
 function buildGroupReminderMessage(ticket, groupName, reminderCount) {
-  const isEscalation = ticket.isEscalation || reminderCount >= 5;
-  const lines = [
-    isEscalation ? '🚨 *[ESKALASI KANWIL] PERINGATAN PENGADUAN DARURAT* 🚨' : '⚠️ *REMINDER: PENGADUAN BELUM DISELESAIKAN* ⚠️',
-    '',
-    `Pengaduan di group *${groupName || 'WhatsApp'}* ini masih berstatus OPEN (Reminder ke-${reminderCount}):`,
-    `📋 *Ticket ID*: ${ticket.ticketId}`,
-    `👤 *Customer*: ${ticket.customer || '-'}`,
-    `🏢 *Kantor*: ${ticket.kantorPertanahan || '-'}`,
-    '',
-    isEscalation 
-      ? `🔥 *PENGADUAN INI TELAH MELEWATI >${reminderCount}X PENGINGAT!* Mohon perhatian serius dari pimpinan & admin bertugas.` 
-      : `Harap segera ditindaklanjuti pada Dashboard OCA Interaction.`,
-    ''
-  ];
+  const mentions = (ticket.matchingAdmins || [])
+    .map((a) => formatMention(a.no_hp))
+    .filter(Boolean)
+    .join(' ') || 'Admin Kantah Terkait';
 
-  if (ticket.matchingAdmins && ticket.matchingAdmins.length > 0) {
-    const tagOnly = ticket.matchingAdmins
-      .map((a) => formatMention(a.no_hp))
-      .filter(Boolean)
-      .join(' ');
-    lines.push(`🚨 *PERINGATAN UNTUK*: ${tagOnly}`, '');
-  }
-
-  lines.push(`_Pesan Otomatis dari Sistem_`);
-  return lines.join('\n');
+  return renderTemplate('template_reminder_group', {
+    ticketId: ticket.ticketId,
+    customer: ticket.customer,
+    kantor: ticket.kantorPertanahan,
+    subjek: ticket.subject || ticket.category,
+    kategori: ticket.category,
+    tanggal: ticket.createdDate,
+    lastUpdate: ticket.lastUpdate,
+    reminderCount: reminderCount,
+    mentions: mentions
+  });
 }
 
 /**
  * Build personal reminder notification message
  */
 function buildPersonalReminderMessage(ticket, adminData, reminderCount) {
-  const isEscalation = ticket.isEscalation || reminderCount >= 5;
-  const lines = [
-    isEscalation ? `🚨 *[ESKALASI] PERINGATAN DARURAT: ${adminData.kantor_pertanahan}* 🚨` : `⚠️ *REMINDER PENGADUAN: ${adminData.kantor_pertanahan}* ⚠️`,
-    '',
-    `Kepada Yth. Sdr/i *${adminData.nama}*,`,
-    '',
-    `Pengaduan berikut masih berstatus OPEN dan belum diselesaikan (Reminder ke-${reminderCount}):`,
-    '',
-    `📋 *Ticket ID*: ${ticket.ticketId}`,
-    `👤 *Customer*: ${ticket.customer || '-'}`,
-    `🔖 *Kategori*: ${ticket.category || '-'}`,
-    `💬 *Subjek*: ${ticket.subject || '-'}`,
-    `📅 *Tanggal Masuk*: ${ticket.createdDate || '-'}`,
-    '',
-    isEscalation 
-      ? `🔥 *MOHON SEGERA DIPROSES DATANYA SEKARANG JUGA DI OCA!*` 
-      : `Harap segera memproses pengaduan ini di OCA Interaction.`,
-    '',
-    `_Pesan Otomatis dari Sistem_`
-  ];
-  return lines.join('\n');
+  return renderTemplate('template_reminder_personal', {
+    ticketId: ticket.ticketId,
+    customer: ticket.customer,
+    kantor: adminData.kantor_pertanahan || ticket.kantorPertanahan,
+    adminNama: adminData.nama,
+    subjek: ticket.subject || ticket.category,
+    kategori: ticket.category,
+    tanggal: ticket.createdDate,
+    lastUpdate: ticket.lastUpdate,
+    reminderCount: reminderCount
+  });
 }
 
 /**
@@ -199,12 +129,17 @@ function buildPersonalReminderMessage(ticket, adminData, reminderCount) {
 function buildTestMessage() {
   const now = new Date().toLocaleString('id-ID');
   return [
-    '🧪 *TEST NOTIFIKASI*',
+    '*Informasi Uji Coba Sistem*',
     '',
-    `Ini adalah pesan test dari sistem Auto Notif Pengaduan.`,
-    `Waktu: ${now}`,
+    `Assalamualaikum rekan-rekan,`,
     '',
-    'Jika Anda menerima pesan ini, sistem berjalan dengan baik ✅',
+    `Pesan ini merupakan pengiriman uji coba dari sistem pemantauan pengaduan masyarakat ATR/BPN Provinsi Aceh.`,
+    `Waktu Tes: ${now}`,
+    '',
+    'Jika pesan ini diterima dengan baik, seluruh integrasi notifikasi berjalan lancar dan siap memantau layanan.',
+    '',
+    'Salam,',
+    '_Admin Kanwil ATR/BPN Provinsi Aceh_'
   ].join('\n');
 }
 
@@ -214,9 +149,11 @@ function buildTestMessage() {
 function buildGroupReminderSummaryMessage(openTickets, groupName) {
   const { AdminModel } = require('../database/models');
   const lines = [
-    '⚠️ *REMINDER: DAFTAR PENGADUAN BELUM DISELESAIKAN (OPEN)* ⚠️',
+    '*Daftar Rekapitulasi Pengaduan Masyarakat Belum Selesai (OPEN)*',
     '',
-    `Berikut adalah daftar tiket pengaduan di group *${groupName || 'WhatsApp'}* yang belum diselesaikan / closed:`,
+    `Assalamualaikum rekan-rekan di grup *${groupName || 'WhatsApp'}*,`,
+    '',
+    'Berikut adalah daftar tiket pengaduan masyarakat yang masih tercatat berstatus OPEN pada aplikasi OCA Interaction dan memerlukan perhatian bersama:',
     ''
   ];
 
@@ -224,20 +161,23 @@ function buildGroupReminderSummaryMessage(openTickets, groupName) {
 
   openTickets.forEach((ticket, idx) => {
     const admins = AdminModel.findByKantor(ticket.kantorPertanahan) || [];
-    const adminNames = admins.map(a => `${a.nama} (${formatMention(a.no_hp)})`).join(', ') || 'Belum terdaftar';
+    const adminNames = admins.map(a => `${a.nama} (${formatMention(a.no_hp)})`).join(', ') || 'Admin wilayah terkait';
     admins.forEach(a => {
       const m = formatMention(a.no_hp);
       if (m) allMentions.add(m);
     });
 
-    const badge = ticket.isEscalation ? '🔥 [ESKALASI] ' : '';
+    const badge = ticket.isEscalation ? '[ESKALASI KANWIL] ' : '';
 
     lines.push(
-      `*${idx + 1}. ${badge}Tiket ID*: ${ticket.ticketId}`,
-      `   🏢 *Kantor*: ${ticket.kantorPertanahan || '-'}`,
-      `   👤 *Customer*: ${ticket.customer || '-'}`,
-      `   🔖 *Subjek*: ${ticket.subject || ticket.category || '-'}`,
-      `   👨‍💻 *Admin Terkait*: ${adminNames}`,
+      `*${idx + 1}. ${badge}No. Tiket*: ${ticket.ticketId}`,
+      `   *Kantor*: ${formatField(ticket.kantorPertanahan)}`,
+      `   *Pelapor*: ${formatField(ticket.customer)}`,
+      `   *Kategori*: ${formatField(ticket.category, true)}`,
+      `   *Subjek*: ${formatField(ticket.subject || ticket.category, true)}`,
+      `   *Tanggal Masuk*: ${formatField(ticket.createdDate, true)}`,
+      `   *Last Update*: ${formatField(ticket.lastUpdate || ticket.createdDate, true)}`,
+      `   *Admin Terkait*: ${adminNames}`,
       ''
     );
   });
@@ -245,13 +185,17 @@ function buildGroupReminderSummaryMessage(openTickets, groupName) {
   const tagsList = Array.from(allMentions).join(' ');
   if (tagsList) {
     lines.push(
-      `🚨 *MOHON SEGERA DITINDAKLANJUTI KEPADA ADMIN KANTAH & KANWIL*:`,
-      `${tagsList}`,
+      `Kepada rekan-rekan ${tagsList}, mohon kiranya dapat segera ditindaklanjuti dan diselesaikan melalui OCA Interaction agar pelayanan terbaik tetap terjaga.`,
       ''
     );
   }
 
-  lines.push(`_Pesan Otomatis dari Sistem Auto Notif Pengaduan_`);
+  lines.push(
+    'Terima kasih atas dedikasi dan perhatian seluruh rekan-rekan.',
+    '',
+    'Salam,',
+    '_Admin Kanwil ATR/BPN Provinsi Aceh_'
+  );
   return lines.join('\n');
 }
 
@@ -259,10 +203,28 @@ function buildGroupReminderSummaryMessage(openTickets, groupName) {
  * Build group notification for newly resolved/closed tickets
  */
 function buildClosedTicketGroupMessage(closedTickets) {
+  if (closedTickets.length === 1) {
+    const ticket = closedTickets[0];
+    const admins = ticket.matchingAdmins || [];
+    const mentions = admins.map(a => formatMention(a.no_hp)).filter(Boolean).join(' ') || 'Admin Kantah Terkait';
+    return renderTemplate('template_closed_group', {
+      ticketId: ticket.ticketId,
+      customer: ticket.customer,
+      kantor: ticket.kantorPertanahan,
+      subjek: ticket.subject || ticket.category,
+      kategori: ticket.category,
+      tanggal: ticket.createdDate,
+      lastUpdate: ticket.lastUpdate || ticket.createdDate,
+      mentions: mentions
+    });
+  }
+
   const lines = [
-    '✅ *APRESIASI PENYELESAIAN PENGADUAN* 🎉',
+    '*Informasi Penyelesaian Pengaduan*',
     '',
-    `Sistem memantau terdapat *${closedTickets.length} tiket pengaduan* yang baru saja bertukar status menjadi *CLOSED / RESOLVED* di OCA Interaction:`,
+    'Alhamdulillah rekan-rekan,',
+    '',
+    `Sistem memantau terdapat *${closedTickets.length} pengaduan masyarakat* yang baru saja berhasil ditangani dan diubah statusnya menjadi CLOSED pada OCA Interaction:`,
     ''
   ];
 
@@ -270,10 +232,7 @@ function buildClosedTicketGroupMessage(closedTickets) {
 
   closedTickets.forEach((ticket, idx) => {
     const admins = ticket.matchingAdmins || [];
-    const tagList = admins
-      .map(a => formatMention(a.no_hp))
-      .filter(Boolean)
-      .join(' ');
+    const tagList = admins.map(a => formatMention(a.no_hp)).filter(Boolean).join(' ');
     if (tagList) {
       admins.forEach(a => {
         const m = formatMention(a.no_hp);
@@ -282,18 +241,23 @@ function buildClosedTicketGroupMessage(closedTickets) {
     }
 
     lines.push(
-      `*${idx + 1}. Tiket ID*: ${ticket.ticketId} (${ticket.status})`,
-      `   🏢 *Kantor*: ${ticket.kantorPertanahan || '-'}`,
-      `   👤 *Customer*: ${ticket.customer || '-'}`,
-      `   💬 *Subjek*: ${ticket.subject || ticket.category || '-'}`,
-      `   👏 *Penanggung Jawab*: ${tagList || 'Admin Wilayah'}`,
+      `*${idx + 1}. No. Tiket*: ${ticket.ticketId}`,
+      `   *Kantor*: ${formatField(ticket.kantorPertanahan)}`,
+      `   *Pelapor*: ${formatField(ticket.customer)}`,
+      `   *Kategori*: ${formatField(ticket.category, true)}`,
+      `   *Subjek*: ${formatField(ticket.subject || ticket.category, true)}`,
+      `   *Tanggal Masuk*: ${formatField(ticket.createdDate, true)}`,
+      `   *Last Update*: ${formatField(ticket.lastUpdate || ticket.createdDate, true)}`,
+      `   *Penanggung Jawab*: ${tagList || 'Admin Wilayah Terkait'}`,
       ''
     );
   });
 
   lines.push(
-    '🙏 _Terima kasih atas respons cepat dan pelayanan prima kepada masyarakat!_',
-    '_Pesan Otomatis dari Sistem Auto Notif Pengaduan_'
+    'Terima kasih banyak atas kecepatan dan kualitas layanan dari rekan-rekan yang bertugas. Mari terus perpanjang rekam jejak pelayanan prima kita.',
+    '',
+    'Salam,',
+    '_Admin Kanwil ATR/BPN Provinsi Aceh_'
   );
 
   return lines.join('\n');

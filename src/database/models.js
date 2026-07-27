@@ -142,8 +142,8 @@ const TicketModel = {
     const db = getDb();
     const stmt = db.prepare(`
       INSERT INTO processed_tickets 
-      (ticket_id, customer, agent, kantor_pertanahan, status, priority, category, sub_category, subject, created_date, notified_group, notified_admin, last_notified_at, reminder_count)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+      (ticket_id, customer, agent, kantor_pertanahan, status, priority, category, sub_category, subject, created_date, last_update, notified_group, notified_admin, last_notified_at, reminder_count)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
       ON CONFLICT(ticket_id) DO UPDATE SET
         status = excluded.status,
         priority = excluded.priority,
@@ -152,7 +152,8 @@ const TicketModel = {
         kantor_pertanahan = excluded.kantor_pertanahan,
         category = excluded.category,
         sub_category = excluded.sub_category,
-        subject = excluded.subject
+        subject = excluded.subject,
+        last_update = excluded.last_update
     `);
     return stmt.run(
       ticket.ticketId,
@@ -165,6 +166,7 @@ const TicketModel = {
       ticket.subCategory,
       ticket.subject,
       ticket.createdDate,
+      ticket.lastUpdate || ticket.createdDate || '-',
       ticket.notifiedGroup ? 1 : 0,
       ticket.notifiedAdmin ? 1 : 0,
       new Date().toISOString()
@@ -178,7 +180,7 @@ const TicketModel = {
     const db = getDb();
     const stmt = db.prepare(`
       UPDATE processed_tickets 
-      SET status = ?, priority = ?, customer = ?, agent = ?, kantor_pertanahan = ?, category = ?, sub_category = ?, subject = ?
+      SET status = ?, priority = ?, customer = ?, agent = ?, kantor_pertanahan = ?, category = ?, sub_category = ?, subject = ?, last_update = ?
       WHERE ticket_id = ?
     `);
     return stmt.run(
@@ -190,6 +192,7 @@ const TicketModel = {
       ticket.category || '',
       ticket.subCategory || '',
       ticket.subject || '',
+      ticket.lastUpdate || ticket.createdDate || '-',
       ticket.ticketId
     );
   },

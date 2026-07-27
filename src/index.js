@@ -153,7 +153,16 @@ async function scrapeCycle() {
 
         // Kirim reminder juga ke Admin Utama (Kanwil dari .env)
         if (config.kanwil.phone) {
-          const kanwilRemMsg = `⚠️ *REMINDER KANWIL*: Tiket #${ticket.ticketId} (${ticket.kantorPertanahan}) masih berstatus OPEN dan belum diselesaikan (Reminder ke-${rc}).`;
+          const kanwilRemMsg = renderTemplate('template_reminder_kanwil', {
+            ticketId: ticket.ticketId,
+            kantor: ticket.kantorPertanahan,
+            customer: ticket.customer,
+            kategori: ticket.category,
+            subjek: ticket.subject || ticket.category,
+            tanggal: ticket.createdDate,
+            lastUpdate: ticket.lastUpdate,
+            reminderCount: rc
+          });
           await sendPersonalMessage(config.kanwil.phone, kanwilRemMsg);
         }
 
@@ -166,8 +175,10 @@ async function scrapeCycle() {
               ticketId: ticket.ticketId,
               kantor: ticket.kantorPertanahan,
               customer: ticket.customer,
+              kategori: ticket.category,
               subjek: ticket.subject || ticket.category,
               tanggal: ticket.createdDate,
+              lastUpdate: ticket.lastUpdate,
               reminderCount: rc
             });
 
@@ -192,8 +203,10 @@ async function scrapeCycle() {
               ticketId: ticket.ticketId,
               customer: ticket.customer,
               kantor: ktu.kantor_pertanahan || ticket.kantorPertanahan,
+              kategori: ticket.category,
               subjek: ticket.subject || ticket.category,
               tanggal: ticket.createdDate,
+              lastUpdate: ticket.lastUpdate,
               ktuNama: ktu.nama
             });
 

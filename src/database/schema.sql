@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS processed_tickets (
     sub_category VARCHAR(100),
     subject VARCHAR(255),
     created_date VARCHAR(100),
+    last_update VARCHAR(100),
     notified_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     notified_group INTEGER DEFAULT 0,
     notified_admin INTEGER DEFAULT 0

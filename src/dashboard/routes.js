@@ -229,8 +229,10 @@ function createRoutes() {
             ticketId: ticket.ticket_id,
             customer: ticket.customer,
             kantor: ticket.kantor_pertanahan,
+            kategori: ticket.category,
             subjek: ticket.subject || ticket.category,
             tanggal: ticket.created_date || ticket.created_at,
+            lastUpdate: ticket.last_update || ticket.created_date || ticket.created_at,
             adminNama: admin.nama
           });
           const result = await sendPersonalMessage(admin.no_hp, msg);

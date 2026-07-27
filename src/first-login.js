@@ -251,6 +251,7 @@ async function firstLogin() {
           let subCategory = '';
           let subject = '';
           let createdDate = '';
+          let lastUpdate = '';
 
           // Find ticket ID
           for (const text of cellTexts) {
@@ -259,7 +260,7 @@ async function firstLogin() {
             if (['Low', 'Medium', 'High', 'Urgent'].includes(text)) priority = text;
           }
 
-          if (cells.length >= 10) {
+          if (cells.length >= 12) {
             ticketId = ticketId || cellTexts[1] || '';
             customer = cellTexts[2] || '';
             agent = cellTexts[3] || '';
@@ -268,7 +269,19 @@ async function firstLogin() {
             category = cellTexts[7] || '';
             subCategory = cellTexts[8] || '';
             subject = cellTexts[9] || '';
-            createdDate = cellTexts[cells.length - 1] || '';
+            createdDate = cellTexts[10] || cellTexts[cells.length - 2] || '';
+            lastUpdate = cellTexts[11] || cellTexts[cells.length - 1] || createdDate || '';
+          } else if (cells.length >= 10) {
+            ticketId = ticketId || cellTexts[1] || '';
+            customer = cellTexts[2] || '';
+            agent = cellTexts[3] || '';
+            priority = priority || cellTexts[5] || '';
+            status = status || cellTexts[6] || '';
+            category = cellTexts[7] || '';
+            subCategory = cellTexts[8] || '';
+            subject = cellTexts[9] || '';
+            createdDate = cells.length >= 11 ? cellTexts[cells.length - 2] : cellTexts[cells.length - 1] || '';
+            lastUpdate = cellTexts[cells.length - 1] || createdDate || '';
           } else if (cells.length >= 7) {
             ticketId = ticketId || cellTexts[0] || '';
             customer = cellTexts[1] || '';
@@ -276,11 +289,12 @@ async function firstLogin() {
             priority = priority || cellTexts[3] || '';
             status = status || cellTexts[4] || '';
             category = cellTexts[5] || '';
-            createdDate = cellTexts[cells.length - 1] || '';
+            createdDate = cells.length >= 8 ? cellTexts[cells.length - 2] : cellTexts[cells.length - 1] || '';
+            lastUpdate = cellTexts[cells.length - 1] || createdDate || '';
           }
 
           if (ticketId) {
-            data.push({ ticketId, customer, agent, status, priority, category, subCategory, subject, createdDate });
+            data.push({ ticketId, customer, agent, status, priority, category, subCategory, subject, createdDate, lastUpdate });
           }
         });
 

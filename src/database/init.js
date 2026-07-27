@@ -43,6 +43,12 @@ function initDatabase() {
       `);
     }
 
+    const hasLastUpdate = columns.some(c => c.name === 'last_update');
+    if (!hasLastUpdate) {
+      log.info('Migrating database: Adding last_update column to processed_tickets');
+      db.exec("ALTER TABLE processed_tickets ADD COLUMN last_update VARCHAR(100);");
+    }
+
     const adminCols = db.pragma('table_info(admins)');
     const hasJabatan = adminCols.some(c => c.name === 'jabatan');
     if (!hasJabatan) {
