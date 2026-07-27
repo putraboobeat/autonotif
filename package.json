@@ -1,0 +1,33 @@
+{
+  "name": "auto-notif-pengaduan",
+  "version": "1.0.0",
+  "description": "Sistem otomatis notifikasi WhatsApp untuk tiket pengaduan OCA Interaction",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node src/index.js",
+    "first-login": "node src/first-login.js",
+    "dashboard": "node src/dashboard/server.js",
+    "test:db": "node src/tests/database.test.js",
+    "test:sender": "node src/tests/starsender.test.js",
+    "test:message": "node src/tests/message-builder.test.js"
+  },
+  "keywords": [
+    "whatsapp",
+    "notification",
+    "pengaduan",
+    "oca",
+    "starsender"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "better-sqlite3": "^11.7.0",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "puppeteer": "^24.2.1",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "totp-generator": "^2.0.1"
+  }
+}

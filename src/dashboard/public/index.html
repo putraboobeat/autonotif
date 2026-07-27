@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Dashboard Admin - Auto Notifikasi Pengaduan WhatsApp">
+  <title>Auto Notif Pengaduan — Dashboard</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔔</text></svg>">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="header-icon">🔔</div>
+        <div class="header-title">
+          <h1>Auto Notif Pengaduan</h1>
+          <p>Monitoring Tiket OCA Interaction → WhatsApp</p>
+        </div>
+      </div>
+      <div class="header-right">
+        <div id="scraper-status" class="status-badge stopped">
+          <span class="status-dot"></span>
+          <span id="status-text">Stopped</span>
+        </div>
+        <span class="timestamp" id="last-scrape">-</span>
+      </div>
+    </header>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Tiket Diproses</div>
+        <div class="stat-value" id="stat-total-tickets">0</div>
+        <div class="stat-sub" id="stat-today-tickets">Hari ini: 0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Notifikasi Terkirim</div>
+        <div class="stat-value" id="stat-total-notif">0</div>
+        <div class="stat-sub" id="stat-today-notif">Hari ini: 0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Berhasil</div>
+        <div class="stat-value" id="stat-sent">0</div>
+        <div class="stat-sub">Status: sent</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Gagal</div>
+        <div class="stat-value" id="stat-failed">0</div>
+        <div class="stat-sub">Status: failed</div>
+      </div>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="tab-nav">
+      <button class="tab-btn active" data-tab="admins">
+        <span class="tab-icon">👥</span> Data Admin
+      </button>
+      <button class="tab-btn" data-tab="tickets">
+        <span class="tab-icon">📋</span> Tiket Terpantau
+      </button>
+      <button class="tab-btn" data-tab="logs">
+        <span class="tab-icon">📨</span> Log Notifikasi
+      </button>
+      <button class="tab-btn" data-tab="settings">
+        <span class="tab-icon">⚙️</span> Pengaturan
+      </button>
+    </div>
+
+    <!-- Tab: Data Admin -->
+    <div class="tab-content active" id="tab-admins">
+      <div class="card">
+        <div class="card-header">
+          <h2>👥 Data Admin Kantor Pertanahan</h2>
+          <button class="btn btn-primary btn-sm" onclick="openAdminModal()">
+            + Tambah Admin
+          </button>
+        </div>
+        <div class="card-body">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>Nama</th>
+                <th>Kantor Pertanahan</th>
+                <th>No HP</th>
+                <th>Status</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="admin-table-body">
+              <tr class="empty-row">
+                <td colspan="6">
+                  <div class="empty-state">
+                    <div class="empty-icon">👥</div>
+                    <h3>Belum ada data admin</h3>
+                    <p>Klik "+ Tambah Admin" untuk menambahkan data admin kantor pertanahan</p>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Tiket Terpantau -->
+    <div class="tab-content" id="tab-tickets">
+      <div class="card">
+        <div class="card-header">
+          <h2>📋 Tiket Terpantau</h2>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-primary btn-sm" id="btn-refresh-tickets" onclick="refreshLiveTickets(this)">⚡ Ambil Data & Update Status Terbaru</button>
+            <button class="btn btn-ghost btn-sm" onclick="loadTickets()">↻ Refresh Tabel</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Ticket ID</th>
+                <th>Customer</th>
+                <th>Kantor Pertanahan</th>
+                <th>Status</th>
+                <th>Priority</th>
+                <th>Notif Group</th>
+                <th>Notif Admin</th>
+                <th>Waktu</th>
+              </tr>
+            </thead>
+            <tbody id="ticket-table-body">
+              <tr class="empty-row">
+                <td colspan="8">
+                  <div class="empty-state">
+                    <div class="empty-icon">📋</div>
+                    <h3>Belum ada tiket terpantau</h3>
+                    <p>Tiket akan muncul setelah scraper berjalan</p>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Log Notifikasi -->
+    <div class="tab-content" id="tab-logs">
+      <div class="card">
+        <div class="card-header">
+          <h2>📨 Log Notifikasi</h2>
+          <div class="actions-bar">
+            <button class="btn btn-success btn-sm" onclick="openTestModal()">🧪 Test Notifikasi</button>
+            <button class="btn btn-ghost btn-sm" onclick="loadLogs()">↻ Refresh</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Ticket ID</th>
+                <th>Tipe</th>
+                <th>Tujuan</th>
+                <th>Status</th>
+                <th>Waktu</th>
+              </tr>
+            </thead>
+            <tbody id="log-table-body">
+              <tr class="empty-row">
+                <td colspan="5">
+                  <div class="empty-state">
+                    <div class="empty-icon">📨</div>
+                    <h3>Belum ada log notifikasi</h3>
+                    <p>Log akan muncul setelah notifikasi terkirim</p>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Pengaturan -->
+    <div class="tab-content" id="tab-settings">
+      <div class="card">
+        <div class="card-header">
+          <h2>⚙️ Pengaturan Sistem</h2>
+        </div>
+        <div class="card-body">
+          <div class="settings-row">
+            <div class="settings-info">
+              <h4>Koneksi OCA Interaction</h4>
+              <p id="oca-status-text">Status: Mengecek...</p>
+            </div>
+            <div>
+              <button id="btn-oca-login" class="btn btn-primary btn-sm" onclick="openLoginModal()" style="display:none;">Login OCA</button>
+              <span id="badge-oca-logged" class="badge badge-success" style="display:none;">Terhubung</span>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-info">
+              <h4>ID/Nama Group WhatsApp</h4>
+              <p>Tujuan notifikasi group (bisa nama atau ID jika pakai StarSender)</p>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <input type="text" class="form-input" id="setting-wa-group" placeholder="Nama Group">
+              <button class="btn btn-primary btn-sm" onclick="saveWaGroup()">Simpan</button>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-info">
+              <h4>Interval Reminder Pengaduan</h4>
+              <p>Otomatis kirim ulang notifikasi jika tiket tidak diselesaikan (dalam menit, 0 = matikan)</p>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <input type="number" class="form-input" id="setting-reminder-interval" min="0" placeholder="0">
+              <button class="btn btn-primary btn-sm" onclick="saveReminderInterval()">Simpan</button>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-info">
+              <h4>Notifikasi Aktif</h4>
+              <p>Aktifkan atau nonaktifkan semua notifikasi WhatsApp</p>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="setting-notification" checked onchange="updateSetting('notification_enabled', this.checked)">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-info">
+              <h4>Notifikasi Group</h4>
+              <p>Kirim notifikasi ke group WhatsApp</p>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="setting-group" checked onchange="updateSetting('group_notification_enabled', this.checked)">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-info">
+              <h4>Notifikasi Personal</h4>
+              <p>Kirim notifikasi ke admin individual via WA</p>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="setting-personal" checked onchange="updateSetting('personal_notification_enabled', this.checked)">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="settings-row" style="border-top: 2px dashed rgba(255,255,255,0.1); padding-top: 16px; margin-top: 8px;">
+            <div class="settings-info">
+              <h4>Tes Ping Admin Kanwil</h4>
+              <p>Kirim pesan WhatsApp percobaan langsung ke nomor Admin Kanwil</p>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="pingKanwil()">Ping Kanwil</button>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-info">
+              <h4>Tes Ping Group WhatsApp</h4>
+              <p>Kirim pesan WhatsApp percobaan langsung ke Group pengaduan</p>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="pingGroup()">Ping Group</button>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-info">
+              <h4>Cek & Resend Peringatan Sekarang</h4>
+              <p>Eksekusi pemeriksaan tiket baru dan pengiriman reminder detik ini (tanpa menunggu jadwal putaran)</p>
+            </div>
+            <button class="btn btn-primary btn-sm" style="background-color: var(--warning, #f59e0b); color: #000; font-weight: bold;" onclick="forceCheckNow()">⚡ Cek Sekarang</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: OCA Login -->
+  <div class="modal-overlay" id="login-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>🔐 Login OCA Interaction</h3>
+        <button class="modal-close" onclick="closeLoginModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="login-step-1">
+          <p style="margin-bottom: 16px; font-size: 0.9rem; color: var(--text-secondary);">Masukkan kredensial OCA Anda. Proses ini akan berjalan di background.</p>
+          <div class="form-group">
+            <label class="form-label">Email / Username</label>
+            <input type="text" class="form-input" id="login-email" placeholder="email@example.com">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <input type="password" class="form-input" id="login-password" placeholder="••••••••">
+          </div>
+        </div>
+        
+        <div id="login-step-otp" style="display: none;">
+          <div class="empty-state" style="padding: 20px;">
+            <div class="empty-icon">📱</div>
+            <h3 style="color: var(--warning);">OTP Dibutuhkan!</h3>
+            <p style="margin-bottom: 16px;">Sistem OCA mengirimkan kode OTP/Verifikasi. Silakan cek email/HP Anda dan masukkan kode di bawah.</p>
+            <div class="form-group">
+              <input type="text" class="form-input" id="login-otp" placeholder="Masukkan kode OTP" style="text-align: center; font-size: 1.2rem; letter-spacing: 2px;">
+            </div>
+          </div>
+        </div>
+        
+        <div id="login-loading" style="display: none; text-align: center; padding: 40px 20px;">
+          <span class="loading-spinner" style="width: 40px; height: 40px; border-width: 4px; margin-bottom: 16px;"></span>
+          <p id="login-loading-text">Sedang memproses...</p>
+        </div>
+      </div>
+      <div class="modal-footer" id="login-footer">
+        <button class="btn btn-ghost" onclick="closeLoginModal()">Batal</button>
+        <button class="btn btn-primary" id="btn-submit-login" onclick="submitOcaLogin()">Login</button>
+        <button class="btn btn-primary" id="btn-submit-otp" onclick="submitOcaOtp()" style="display: none;">Verifikasi OTP</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Add/Edit Admin -->
+  <div class="modal-overlay" id="admin-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="admin-modal-title">Tambah Admin</h3>
+        <button class="modal-close" onclick="closeAdminModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="admin-edit-id" value="">
+        <div class="form-group">
+          <label class="form-label">Nama Admin</label>
+          <input type="text" class="form-input" id="admin-nama" placeholder="Masukkan nama admin">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Kantor Pertanahan</label>
+          <select class="form-input" id="admin-kantor" style="background-color: #1e293b; color: #fff;">
+            <option value="">-- Pilih Kantor Pertanahan --</option>
+            <option value="Kanwil ATR/BPN Prov Aceh">Kanwil ATR/BPN Prov Aceh (Admin Utama / Kanwil)</option>
+            <option value="Kantah Kab Aceh Besar - Prov Aceh">Kantah Kab Aceh Besar - Prov Aceh</option>
+            <option value="Kantah Kab Aceh Jaya - Prov Aceh">Kantah Kab Aceh Jaya - Prov Aceh</option>
+            <option value="Kantah Kab Aceh Tengah - Prov Aceh">Kantah Kab Aceh Tengah - Prov Aceh</option>
+            <option value="Kantah Kab Simeuleu - Prov Aceh">Kantah Kab Simeuleu - Prov Aceh</option>
+            <option value="Kantah Kota Subulussalam - Prov Aceh">Kantah Kota Subulussalam - Prov Aceh</option>
+            <option value="Kantah Kab Aceh Singkil - Prov Aceh">Kantah Kab Aceh Singkil - Prov Aceh</option>
+            <option value="Kantah Kab Aceh Timur - Prov Aceh">Kantah Kab Aceh Timur - Prov Aceh</option>
+            <option value="Kantah Kab Gayo Lues - Prov Aceh">Kantah Kab Gayo Lues - Prov Aceh</option>
+            <option value="Kantah Kota Banda Aceh - Prov Aceh">Kantah Kota Banda Aceh - Prov Aceh</option>
+            <option value="Kantah Kab Aceh Tamiang - Prov Aceh">Kantah Kab Aceh Tamiang - Prov Aceh</option>
+            <option value="Kantah Kab Nagan Raya - Prov Aceh">Kantah Kab Nagan Raya - Prov Aceh</option>
+            <option value="Kantah Kota Langsa - Prov Aceh">Kantah Kota Langsa - Prov Aceh</option>
+            <option value="Kantah Kota Sabang - Prov Aceh">Kantah Kota Sabang - Prov Aceh</option>
+            <option value="Kantah Kab Aceh Barat - Prov Aceh">Kantah Kab Aceh Barat - Prov Aceh</option>
+            <option value="Kantah Kab Aceh Barat Daya - Prov Aceh">Kantah Kab Aceh Barat Daya - Prov Aceh</option>
+            <option value="Kantah Kab Aceh Selatan - Prov Aceh">Kantah Kab Aceh Selatan - Prov Aceh</option>
+            <option value="Kantah Kab Aceh Tenggara - Prov Aceh">Kantah Kab Aceh Tenggara - Prov Aceh</option>
+            <option value="Kantah Kab Aceh Utara - Prov Aceh">Kantah Kab Aceh Utara - Prov Aceh</option>
+            <option value="Kantah Kab Bener Meriah - Prov Aceh">Kantah Kab Bener Meriah - Prov Aceh</option>
+            <option value="Kantah Kab Bireuen - Prov Aceh">Kantah Kab Bireuen - Prov Aceh</option>
+            <option value="Kantah Kab Pidie - Prov Aceh">Kantah Kab Pidie - Prov Aceh</option>
+            <option value="Kantah Kab Pidie Jaya - Prov Aceh">Kantah Kab Pidie Jaya - Prov Aceh</option>
+            <option value="Kantah Kota Lhokseumawe - Prov Aceh">Kantah Kota Lhokseumawe - Prov Aceh</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">No HP (WhatsApp)</label>
+          <input type="text" class="form-input" id="admin-hp" placeholder="08xxxxxxxxxx">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeAdminModal()">Batal</button>
+        <button class="btn btn-primary" onclick="saveAdmin()">Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Test Notification -->
+  <div class="modal-overlay" id="test-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>🧪 Test Notifikasi</h3>
+        <button class="modal-close" onclick="closeTestModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Tipe</label>
+          <select class="form-input" id="test-type" onchange="toggleTestTarget()">
+            <option value="group">Group WhatsApp</option>
+            <option value="personal">Personal (Nomor HP)</option>
+          </select>
+        </div>
+        <div class="form-group" id="test-target-group" style="display:block">
+          <label class="form-label">Nama Group (biarkan kosong untuk default)</label>
+          <input type="text" class="form-input" id="test-group-name" placeholder="Nama group WhatsApp">
+        </div>
+        <div class="form-group" id="test-target-personal" style="display:none">
+          <label class="form-label">Nomor HP Tujuan</label>
+          <input type="text" class="form-input" id="test-phone" placeholder="08xxxxxxxxxx">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeTestModal()">Batal</button>
+        <button class="btn btn-success" id="test-send-btn" onclick="sendTestNotification()">🚀 Kirim Test</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

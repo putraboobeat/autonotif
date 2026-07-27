@@ -1,0 +1,314 @@
+const express = require('express');
+const { AdminModel, TicketModel, NotificationLogModel, ConfigModel } = require('../database/models');
+const { sendPersonalMessage, sendGroupMessage } = require('../notifier/starsender');
+const { buildTestMessage } = require('../notifier/message-builder');
+const { config } = require('../config');
+const { createLogger } = require('../utils/logger');
+const { getAuthStatus, startLoginInteractive, submitOtpInteractive } = require('../scraper/login-controller');
+
+const log = createLogger('ROUTES');
+
+function createRoutes() {
+  const router = express.Router();
+
+  // ============================================
+  // Dashboard Stats
+  // ============================================
+
+  router.get('/stats', (req, res) => {
+    try {
+      const ticketStats = TicketModel.getStats();
+      const notifStats = NotificationLogModel.getStats();
+      const sysConfig = ConfigModel.getAll();
+
+      res.json({
+        success: true,
+        data: {
+          tickets: ticketStats,
+          notifications: notifStats,
+          scraper: {
+            status: sysConfig.scraper_status || 'unknown',
+            lastScrape: sysConfig.last_scrape_time || '-',
+            interval: config.app.scrapeInterval,
+          },
+          settings: {
+            notificationEnabled: sysConfig.notification_enabled === '1',
+            groupEnabled: sysConfig.group_notification_enabled === '1',
+            personalEnabled: sysConfig.personal_notification_enabled === '1',
+            waGroupId: sysConfig.wa_group_id || '',
+            reminderInterval: sysConfig.reminder_interval_minutes || '0',
+          },
+        },
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // ============================================
+  // Admin CRUD
+  // ============================================
+
+  // Get all admins
+  router.get('/admins', (req, res) => {
+    try {
+      const admins = AdminModel.getAll();
+      res.json({ success: true, data: admins });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // Get admin by ID
+  router.get('/admins/:id', (req, res) => {
+    try {
+      const admin = AdminModel.getById(parseInt(req.params.id));
+      if (!admin) {
+        return res.status(404).json({ success: false, error: 'Admin not found' });
+      }
+      res.json({ success: true, data: admin });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // Create admin
+  router.post('/admins', (req, res) => {
+    try {
+      const { nama, kantor_pertanahan, no_hp } = req.body;
+      if (!nama || !kantor_pertanahan || !no_hp) {
+        return res.status(400).json({ success: false, error: 'Nama, kantor pertanahan, dan no HP wajib diisi' });
+      }
+      const result = AdminModel.create({ nama, kantor_pertanahan, no_hp });
+      res.json({ success: true, data: { id: result.lastInsertRowid } });
+    } catch (error) {
+      if (error.message.includes('UNIQUE constraint')) {
+        return res.status(400).json({ success: false, error: 'Kantor pertanahan sudah terdaftar' });
+      }
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // Update admin
+  router.put('/admins/:id', (req, res) => {
+    try {
+      const { nama, kantor_pertanahan, no_hp, is_active } = req.body;
+      AdminModel.update(parseInt(req.params.id), {
+        nama,
+        kantor_pertanahan,
+        no_hp,
+        is_active: is_active !== undefined ? is_active : true,
+      });
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // Delete admin
+  router.delete('/admins/:id', (req, res) => {
+    try {
+      AdminModel.delete(parseInt(req.params.id));
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // ============================================
+  // Processed Tickets
+  // ============================================
+
+  router.get('/tickets', (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit) || 50;
+      const tickets = TicketModel.getRecent(limit);
+      res.json({ success: true, data: tickets });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  router.post('/tickets/refresh-live', async (req, res) => {
+    try {
+      if (typeof global.triggerManualScrape === 'function') {
+        await global.triggerManualScrape();
+        const limit = parseInt(req.query.limit) || 50;
+        const tickets = TicketModel.getRecent(limit);
+        res.json({ success: true, data: tickets, message: 'Data dan status tiket berhasil diperbarui secara live dari OCA!' });
+      } else {
+        res.status(503).json({ success: false, error: 'Sistem scraper belum siap' });
+      }
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // ============================================
+  // Notification Logs
+  // ============================================
+
+  router.get('/logs', (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit) || 100;
+      const logs = NotificationLogModel.getRecent(limit);
+      res.json({ success: true, data: logs });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // ============================================
+  // Settings
+  // ============================================
+
+  router.post('/settings', (req, res) => {
+    try {
+      const { key, value } = req.body;
+      if (!key) {
+        return res.status(400).json({ success: false, error: 'Key is required' });
+      }
+      ConfigModel.set(key, String(value));
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  router.get('/settings', (req, res) => {
+    try {
+      const settings = ConfigModel.getAll();
+      settings.wa_group_id = settings.wa_group_id || '';
+      res.json({ success: true, data: settings });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // ============================================
+  // Test Notification
+  // ============================================
+
+  router.post('/test-notification', async (req, res) => {
+    try {
+      const { type, target } = req.body;
+      const message = buildTestMessage();
+
+      let result;
+      if (type === 'group') {
+        result = await sendGroupMessage(target || config.wa.groupName, message);
+      } else if (type === 'personal') {
+        if (!target) {
+          return res.status(400).json({ success: false, error: 'Nomor HP tujuan diperlukan' });
+        }
+        result = await sendPersonalMessage(target, message);
+      } else {
+        return res.status(400).json({ success: false, error: 'Type harus "group" atau "personal"' });
+      }
+
+      // Log the test
+      NotificationLogModel.create({
+        ticketId: 'TEST',
+        targetType: type,
+        targetName: type === 'group' ? (target || config.wa.groupName) : 'Test',
+        targetNumber: type === 'personal' ? target : '',
+        message,
+        status: result.success ? 'sent' : 'failed',
+        response: JSON.stringify(result),
+      });
+
+      res.json({ success: result.success, data: result });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  router.post('/test-kanwil', async (req, res) => {
+    try {
+      if (!config.kanwil.phone) {
+        return res.status(400).json({ success: false, error: 'Nomor HP Admin Kanwil belum dikonfigurasi di .env (KANWIL_ADMIN_PHONE)' });
+      }
+      const message = `🔔 *TEST PING KANWIL*\n\nHalo ${config.kanwil.name || 'Admin Kanwil'},\nIni adalah pesan tes ping dari sistem *Auto Notif Pengaduan*.\n\n_Jika pesan ini sampai, koneksi WhatsApp Bot untuk Admin Kanwil berfungsi normal._`;
+      const result = await sendPersonalMessage(config.kanwil.phone, message);
+      res.json({ success: result.success, data: result, error: result.error });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  router.post('/test-group', async (req, res) => {
+    try {
+      const waGroupId = ConfigModel.get('wa_group_id') || config.wa.groupName;
+      if (!waGroupId) {
+        return res.status(400).json({ success: false, error: 'ID atau Nama Group WhatsApp belum dikonfigurasi' });
+      }
+      const message = `🔔 *TEST PING GROUP*\n\nIni adalah pesan tes ping ke Group dari sistem *Auto Notif Pengaduan*.\n\n_Jika pesan ini sampai, koneksi WhatsApp Bot ke group berfungsi normal._`;
+      const result = await sendGroupMessage(waGroupId, message);
+      res.json({ success: result.success, data: result, error: result.error });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  router.post('/force-check', async (req, res) => {
+    try {
+      if (typeof global.triggerManualScrape === 'function') {
+        global.triggerManualScrape();
+        res.json({ success: true, message: 'Pengecekan tiket & pengingat (reminder) sedang dijalankan di latar belakang!' });
+      } else {
+        res.status(503).json({ success: false, error: 'Sistem scraper belum siap' });
+      }
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // ============================================
+  // Auth & Interactive Login
+  // ============================================
+
+  // Check auth status
+  router.get('/auth/status', async (req, res) => {
+    try {
+      const status = await getAuthStatus();
+      res.json({ success: true, data: status });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // Start login
+  router.post('/auth/login', async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      if (!email || !password) {
+        return res.status(400).json({ success: false, error: 'Email and password required' });
+      }
+      const result = await startLoginInteractive(email, password);
+      res.json({ success: true, data: result });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // Submit OTP
+  router.post('/auth/otp', async (req, res) => {
+    try {
+      const { otp } = req.body;
+      if (!otp) {
+        return res.status(400).json({ success: false, error: 'OTP code required' });
+      }
+      const result = await submitOtpInteractive(otp);
+      if (result.error) {
+        return res.status(400).json({ success: false, error: result.error });
+      }
+      res.json({ success: true, data: result });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  return router;
+}
+
+module.exports = { createRoutes };
