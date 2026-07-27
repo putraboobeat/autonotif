@@ -92,7 +92,10 @@ function initTabs() {
         case 'admins': loadAdmins(); break;
         case 'tickets': loadTickets(); break;
         case 'logs': loadLogs(); break;
-        case 'settings': loadSettings(); break;
+        case 'settings': 
+          loadSettings(); 
+          loadTemplates(); 
+          break;
       }
     });
   });
@@ -101,6 +104,8 @@ function initTabs() {
 function loadAllData() {
   loadStats();
   loadAdmins();
+  loadSettings();
+  loadTemplates();
   checkAuthStatus();
 }
 
