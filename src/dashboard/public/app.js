@@ -27,30 +27,28 @@ function checkGateAuth() {
 }
 
 function handleGateLogin(event) {
-  event.preventDefault();
-  const input = document.getElementById('gate-password')?.value || '';
+  if (event) event.preventDefault();
+  const inputEl = document.getElementById('gate-password');
+  const input = (inputEl?.value || '').trim();
   const errorEl = document.getElementById('gate-error');
   if (input === SECRET_GATE_KEY) {
     localStorage.setItem('bpn_portal_auth', SECRET_GATE_KEY);
     if (errorEl) errorEl.style.display = 'none';
     const gate = document.getElementById('auth-gate');
-    if (gate) {
-      gate.style.opacity = '0';
-      setTimeout(() => {
-        checkGateAuth();
-        loadAllData();
-        startAutoRefresh();
-        showToast('🔓 Selamat datang di Dashboard Kanwil BPN Aceh!', 'success');
-      }, 350);
-    }
+    if (gate) gate.style.display = 'none';
+    const main = document.getElementById('main-app');
+    if (main) main.style.display = 'block';
+    loadAllData();
+    startAutoRefresh();
+    showToast('🔓 Selamat datang di Dashboard Kanwil BPN Aceh!', 'success');
   } else {
     if (errorEl) errorEl.style.display = 'block';
-    const inputEl = document.getElementById('gate-password');
     if (inputEl) {
       inputEl.value = '';
       inputEl.focus();
     }
   }
+  return false;
 }
 
 function handleGateLogout() {
