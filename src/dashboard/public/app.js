@@ -6,6 +6,37 @@ const API_BASE = '/api';
 let refreshInterval = null;
 
 // ============================================
+// Dual Theme System (Cerah & Gelap / Light & Dark)
+// ============================================
+function initTheme() {
+  const savedTheme = localStorage.getItem('bpn_portal_theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  updateThemeButtons(savedTheme);
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', current);
+  localStorage.setItem('bpn_portal_theme', current);
+  updateThemeButtons(current);
+  showToast(current === 'light' ? '🌞 Mode Cerah Aktif' : '🌙 Mode Gelap Aktif', 'info');
+}
+
+function updateThemeButtons(theme) {
+  const texts = document.querySelectorAll('.theme-toggle-text');
+  const icons = document.querySelectorAll('.theme-toggle-icon');
+  if (theme === 'light') {
+    texts.forEach(t => t.textContent = 'Gelap');
+    icons.forEach(i => i.textContent = '🌙');
+  } else {
+    texts.forEach(t => t.textContent = 'Cerah');
+    icons.forEach(i => i.textContent = '🌞');
+  }
+}
+// Run immediately on script evaluation
+initTheme();
+
+// ============================================
 // Auth Gate Protection (Password Only)
 // ============================================
 
@@ -66,6 +97,7 @@ function handleGateLogout() {
 // ============================================
 
 document.addEventListener('DOMContentLoaded', () => {
+  initTheme();
   initTabs();
   const isAuthenticated = checkGateAuth();
   if (isAuthenticated) {
