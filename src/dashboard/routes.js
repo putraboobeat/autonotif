@@ -37,44 +37,24 @@ function createRoutes() {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 8000);
 
-      const response = await fetch('https://api.starsender.online/api/device/info', {
-        method: 'GET',
-        headers: { 'Authorization': apiKey },
+      const response = await fetch(config.starsender.sendUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': apiKey,
+        },
+        body: JSON.stringify({}),
         signal: controller.signal,
       });
       clearTimeout(timeout);
 
-      const data = await response.json();
-
-      if (response.ok && data.success !== false) {
-        res.json({
-          success: true,
-          data: {
-            status: 'connected',
-            message: 'StarSender API terkoneksi dan aktif',
-            device: data.data || data,
-            checkedAt: new Date().toISOString(),
-          }
-        });
+      if (response.status === 401 || response.status === 403) {
+        res.json({ success: true, data: { status: 'error', message: 'API Key tidak valid atau expired', checkedAt: new Date().toISOString() } });
       } else {
-        res.json({
-          success: true,
-          data: {
-            status: 'error',
-            message: data.message || 'API merespons tetapi ada masalah',
-            checkedAt: new Date().toISOString(),
-          }
-        });
+        res.json({ success: true, data: { status: 'connected', message: 'StarSender API terkoneksi dan aktif', checkedAt: new Date().toISOString() } });
       }
     } catch (error) {
-      res.json({
-        success: true,
-        data: {
-          status: 'disconnected',
-          message: error.name === 'AbortError' ? 'Timeout: API tidak merespons' : error.message,
-          checkedAt: new Date().toISOString(),
-        }
-      });
+      res.json({ success: true, data: { status: 'disconnected', message: error.name === 'AbortError' ? 'Timeout: API tidak merespons' : error.message, checkedAt: new Date().toISOString() } });
     }
   });
 

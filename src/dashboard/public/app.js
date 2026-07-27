@@ -261,27 +261,44 @@ async function checkAuthStatus() {
       const btnLogin = document.getElementById('btn-oca-login');
       const badgeLogged = document.getElementById('badge-oca-logged');
       
+      // Update header badge OCA
+      const ocaBadge = document.getElementById('oca-status');
+      const ocaText = document.getElementById('oca-text');
+
       if (res.data.status === 'LOGGED_IN') {
-        statusText.textContent = 'Status: Terhubung';
-        statusText.style.color = 'var(--success)';
-        btnLogin.style.display = 'none';
-        badgeLogged.style.display = 'inline-block';
+        if (statusText) statusText.textContent = 'Status: Terhubung';
+        if (statusText) statusText.style.color = 'var(--success)';
+        if (btnLogin) btnLogin.style.display = 'none';
+        if (badgeLogged) badgeLogged.style.display = 'inline-block';
+        if (ocaBadge) { ocaBadge.className = 'status-badge running'; }
+        if (ocaText) { ocaText.textContent = 'OCA: Login'; }
+        if (ocaBadge) ocaBadge.title = 'OCA Interaction: Sesi aktif dan terhubung';
       } else if (res.data.status === 'LOGIN_IN_PROGRESS' || res.data.status === 'NEED_OTP') {
-        statusText.textContent = 'Status: Proses Login...';
-        statusText.style.color = 'var(--warning)';
-        btnLogin.style.display = 'inline-block';
-        btnLogin.textContent = 'Lanjutkan Login';
-        badgeLogged.style.display = 'none';
+        if (statusText) statusText.textContent = 'Status: Proses Login...';
+        if (statusText) statusText.style.color = 'var(--warning)';
+        if (btnLogin) btnLogin.style.display = 'inline-block';
+        if (btnLogin) btnLogin.textContent = 'Lanjutkan Login';
+        if (badgeLogged) badgeLogged.style.display = 'none';
+        if (ocaBadge) { ocaBadge.className = 'status-badge'; ocaBadge.style.borderColor = 'rgba(250, 204, 21, 0.4)'; ocaBadge.style.background = 'rgba(250, 204, 21, 0.1)'; }
+        if (ocaText) { ocaText.textContent = 'OCA: Proses...'; ocaText.style.color = '#facc15'; }
+        if (ocaBadge) ocaBadge.title = 'OCA Interaction: Sedang proses login';
       } else {
-        statusText.textContent = 'Status: Terputus';
-        statusText.style.color = 'var(--danger)';
-        btnLogin.style.display = 'inline-block';
-        btnLogin.textContent = 'Login OCA';
-        badgeLogged.style.display = 'none';
+        if (statusText) statusText.textContent = 'Status: Terputus';
+        if (statusText) statusText.style.color = 'var(--danger)';
+        if (btnLogin) btnLogin.style.display = 'inline-block';
+        if (btnLogin) btnLogin.textContent = 'Login OCA';
+        if (badgeLogged) badgeLogged.style.display = 'none';
+        if (ocaBadge) { ocaBadge.className = 'status-badge stopped'; }
+        if (ocaText) { ocaText.textContent = 'OCA: Logout'; }
+        if (ocaBadge) ocaBadge.title = 'OCA Interaction: Belum login / sesi berakhir';
       }
     }
   } catch (e) {
     console.error('Failed to check auth status', e);
+    const ocaBadge = document.getElementById('oca-status');
+    const ocaText = document.getElementById('oca-text');
+    if (ocaBadge) ocaBadge.className = 'status-badge stopped';
+    if (ocaText) ocaText.textContent = 'OCA: Error';
   }
 }
 
