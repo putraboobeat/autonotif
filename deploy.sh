@@ -26,20 +26,26 @@ if ! command -v pm2 &> /dev/null; then
     npm install -g pm2
 fi
 
-# Jika app sudah berjalan di pm2, restart; bila belum, start dari awal
+# Bersihkan proses ganda 'autonotif' jika terlanjur berduplikasi
 if pm2 describe autonotif > /dev/null 2>&1; then
-    echo "🔄 Mengulang (restart) layanan 'autonotif' di PM2..."
-    pm2 restart autonotif
-else
-    echo "▶️  Mendaftarkan dan menjalankan layanan 'autonotif' di PM2..."
-    pm2 start src/index.js --name autonotif
+    echo "🧹 Menghapus duplikasi proses 'autonotif' yang ganda..."
+    pm2 delete autonotif > /dev/null 2>&1
 fi
 
-pm2 save
+# Jika app sudah berjalan di pm2 dengan nama asli, restart; bila belum, start dari awal
+if pm2 describe auto-notif-pengaduan > /dev/null 2>&1; then
+    echo "🔄 Mengulang (restart) layanan 'auto-notif-pengaduan' di PM2..."
+    pm2 restart auto-notif-pengaduan --update-env
+else
+    echo "▶️  Mendaftarkan dan menjalankan layanan 'auto-notif-pengaduan' di PM2..."
+    pm2 start src/index.js --name auto-notif-pengaduan
+fi
+
+pm2 save --force
 
 echo ""
 echo "========================================================"
 echo "✅ [4/4] DEPLOYMENT SELESAI BERHASIL! Sistem Anda Kini Versi Terbaru!"
 echo "========================================================"
-echo "💡 Tips: Ketik 'pm2 logs autonotif' jika ingin menonton live log pesan."
+echo "💡 Tips: Ketik 'pm2 logs auto-notif-pengaduan' jika ingin menonton live log pesan."
 echo "========================================================"
