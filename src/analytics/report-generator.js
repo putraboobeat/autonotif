@@ -7,7 +7,7 @@ const path = require('path');
 const puppeteer = require('puppeteer');
 const { getSlaMetrics } = require('./sla-service');
 const { sendPersonalMessage } = require('../notifier/starsender');
-const config = require('../config/env');
+const { config } = require('../config');
 const { createLogger } = require('../utils/logger');
 
 const log = createLogger('REPORT_GEN');
