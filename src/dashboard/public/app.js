@@ -6,13 +6,74 @@ const API_BASE = '/api';
 let refreshInterval = null;
 
 // ============================================
+// Auth Gate Protection (Password Only)
+// ============================================
+
+const SECRET_GATE_KEY = 'punyaumum2024';
+
+function checkGateAuth() {
+  const token = localStorage.getItem('bpn_portal_auth');
+  const gate = document.getElementById('auth-gate');
+  const main = document.getElementById('main-app');
+  if (token === SECRET_GATE_KEY) {
+    if (gate) gate.style.display = 'none';
+    if (main) main.style.display = 'block';
+    return true;
+  } else {
+    if (gate) gate.style.display = 'flex';
+    if (main) main.style.display = 'none';
+    return false;
+  }
+}
+
+function handleGateLogin(event) {
+  event.preventDefault();
+  const input = document.getElementById('gate-password')?.value || '';
+  const errorEl = document.getElementById('gate-error');
+  if (input === SECRET_GATE_KEY) {
+    localStorage.setItem('bpn_portal_auth', SECRET_GATE_KEY);
+    if (errorEl) errorEl.style.display = 'none';
+    const gate = document.getElementById('auth-gate');
+    if (gate) {
+      gate.style.opacity = '0';
+      setTimeout(() => {
+        checkGateAuth();
+        loadAllData();
+        startAutoRefresh();
+        showToast('🔓 Selamat datang di Dashboard Kanwil BPN Aceh!', 'success');
+      }, 350);
+    }
+  } else {
+    if (errorEl) errorEl.style.display = 'block';
+    const inputEl = document.getElementById('gate-password');
+    if (inputEl) {
+      inputEl.value = '';
+      inputEl.focus();
+    }
+  }
+}
+
+function handleGateLogout() {
+  if (!confirm('Apakah Anda yakin ingin mengunci dashboard dan keluar dari sesi Anda?')) return;
+  localStorage.removeItem('bpn_portal_auth');
+  if (refreshInterval) clearInterval(refreshInterval);
+  const gate = document.getElementById('auth-gate');
+  if (gate) gate.style.opacity = '1';
+  checkGateAuth();
+  showToast('🔒 Dashboard dikunci. Sesi berakhir.', 'info');
+}
+
+// ============================================
 // Initialization
 // ============================================
 
 document.addEventListener('DOMContentLoaded', () => {
   initTabs();
-  loadAllData();
-  startAutoRefresh();
+  const isAuthenticated = checkGateAuth();
+  if (isAuthenticated) {
+    loadAllData();
+    startAutoRefresh();
+  }
 });
 
 function initTabs() {
