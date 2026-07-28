@@ -45,6 +45,18 @@ async function launchBrowser() {
     timeout: 60000,
   });
 
+  await setupPage();
+
+  log.info('Browser launched successfully');
+  return { browser, page };
+}
+
+async function setupPage() {
+  if (!browser || !browser.isConnected()) {
+    await launchBrowser();
+    return page;
+  }
+
   page = await browser.newPage();
     
   // Auto-accept any javascript alerts or prompts
@@ -76,9 +88,18 @@ async function launchBrowser() {
 
   // Automatically load existing cookies on startup
   await loadCookies();
+  return page;
+}
 
-  log.info('Browser launched successfully');
-  return { browser, page };
+/**
+ * Recreate browser page (useful to recover from 'detached Frame' or crash errors)
+ */
+async function recreatePage() {
+  log.warn('Recreating browser page to clean up detached frame or session error...');
+  if (page && !page.isClosed()) {
+    await page.close().catch(() => {});
+  }
+  return await setupPage();
 }
 
 /**
@@ -171,6 +192,7 @@ function isBrowserAlive() {
 module.exports = {
   launchBrowser,
   getPage,
+  recreatePage,
   getBrowser,
   saveCookies,
   loadCookies,

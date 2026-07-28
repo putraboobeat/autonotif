@@ -1,5 +1,5 @@
 const { createLogger } = require('../utils/logger');
-const { getPage, saveCookies } = require('./browser');
+const { getPage, saveCookies, recreatePage } = require('./browser');
 const { isLoggedIn } = require('./login');
 const { sleep } = require('../utils/helpers');
 const { config } = require('../config');
@@ -20,18 +20,26 @@ let authError = null;
 let loginPage = null; // Store reference to the page where login is happening
 
 /**
- * Get current authentication status
+ * Check current authentication status without blocking for long
  */
 async function getAuthStatus() {
   const page = getPage();
   if (page) {
-    // If not in middle of interactive login, double check actual status
-    if (currentStatus !== AuthStatus.NEED_OTP && currentStatus !== AuthStatus.LOGIN_IN_PROGRESS) {
+    try {
       const logged = await isLoggedIn(page);
-      currentStatus = logged ? AuthStatus.LOGGED_IN : AuthStatus.NOT_LOGGED_IN;
+      if (logged) {
+        currentStatus = AuthStatus.LOGGED_IN;
+      } else if (currentStatus === AuthStatus.LOGGED_IN) {
+        currentStatus = AuthStatus.NOT_LOGGED_IN;
+      }
+    } catch (error) {
+      log.debug('Error checking status, assuming not logged in', { error: error.message });
+      if (error.message.includes('detached Frame') || error.message.includes('closed')) {
+        await recreatePage().catch(() => {});
+      }
+      currentStatus = AuthStatus.NOT_LOGGED_IN;
     }
   }
-  
   return {
     status: currentStatus,
     error: authError,
@@ -39,7 +47,7 @@ async function getAuthStatus() {
 }
 
 /**
- * Start the login process using credentials
+ * Start interactive login process (Step 1: Email & Password)
  */
 async function startLoginInteractive(email, password) {
   if (currentStatus === AuthStatus.LOGIN_IN_PROGRESS || currentStatus === AuthStatus.NEED_OTP) {
@@ -50,6 +58,10 @@ async function startLoginInteractive(email, password) {
   authError = null;
   loginPage = getPage();
 
+  if (!loginPage || loginPage.isClosed()) {
+    loginPage = await recreatePage();
+  }
+
   if (!loginPage) {
     currentStatus = AuthStatus.ERROR;
     authError = 'Browser page is not available';
@@ -58,8 +70,12 @@ async function startLoginInteractive(email, password) {
 
   // We run the Puppeteer automation in the background but return status quickly to API
   // This allows the API request to not timeout while Puppeteer works
-  _runPuppeteerLogin(email, password).catch(err => {
+  _runPuppeteerLogin(email, password).catch(async (err) => {
     log.error('Background login task failed', { error: err.message });
+    if (err.message.includes('detached Frame') || err.message.includes('closed')) {
+      log.warn('Cleaning up corrupted browser session due to detached frame...');
+      await recreatePage().catch(() => {});
+    }
     currentStatus = AuthStatus.ERROR;
     authError = err.message;
   });
@@ -73,10 +89,23 @@ async function startLoginInteractive(email, password) {
 async function _runPuppeteerLogin(email, password) {
   log.info('Running interactive login...');
   
-  await loginPage.goto('https://interaction.ocaindonesia.co.id', {
-    waitUntil: 'networkidle2',
-    timeout: 60000,
-  });
+  try {
+    await loginPage.goto('https://interaction.ocaindonesia.co.id', {
+      waitUntil: 'networkidle2',
+      timeout: 60000,
+    });
+  } catch (err) {
+    if (err.message.includes('detached Frame') || err.message.includes('closed')) {
+      log.warn('Encountered detached frame during goto, recreating page and retrying...');
+      loginPage = await recreatePage();
+      await loginPage.goto('https://interaction.ocaindonesia.co.id', {
+        waitUntil: 'networkidle2',
+        timeout: 60000,
+      });
+    } else {
+      throw err;
+    }
+  }
 
   await sleep(3000);
 
