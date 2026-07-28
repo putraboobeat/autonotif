@@ -452,10 +452,14 @@ async function checkAuthStatusForModal() {
 // Admin Management
 // ============================================
 
+let allLoadedAdmins = [];
+
 async function loadAdmins() {
   try {
     const result = await apiGet('/admins');
     if (!result.success) return;
+
+    allLoadedAdmins = result.data || [];
 
     const tbody = document.getElementById('admin-table-body');
 
@@ -503,6 +507,7 @@ async function loadAdmins() {
 }
 
 function openAdminModal(admin = null) {
+  closeSendMsgModal();
   document.getElementById('admin-modal-title').textContent = admin ? 'Edit Admin & Kasubbag TU' : 'Tambah Admin & Kasubbag TU';
   document.getElementById('admin-edit-id').value = admin ? admin.id : '';
   document.getElementById('admin-nama').value = admin ? admin.nama : '';
@@ -581,14 +586,12 @@ async function saveAdmin() {
   }
 }
 
-async function editAdmin(id) {
-  try {
-    const result = await apiGet(`/admins/${id}`);
-    if (result.success) {
-      openAdminModal(result.data);
-    }
-  } catch (error) {
-    showToast('Gagal memuat data admin', 'error');
+function editAdmin(id) {
+  const admin = allLoadedAdmins.find(a => a.id === id);
+  if (admin) {
+    openAdminModal(admin);
+  } else {
+    showToast('Data admin tidak ditemukan, coba refresh halaman', 'error');
   }
 }
 
@@ -608,22 +611,21 @@ async function deleteAdmin(id, nama) {
   }
 }
 
-async function openSendMsgModal(id) {
-  try {
-    const result = await apiGet(`/admins/${id}`);
-    if (!result.success) {
-      return showToast('Gagal memuat data admin', 'error');
-    }
-    const admin = result.data;
-    document.getElementById('send-msg-admin-id').value = admin.id;
-    const recipientText = `${admin.kantor_pertanahan} — ${admin.nama || 'Petugas Admin'}` + (admin.no_hp ? ` (${admin.no_hp})` : '');
-    document.getElementById('send-msg-recipient').value = recipientText;
-    
-    // Default text sesuai arahan dan etika pelayanan Kantor Wilayah ATR/BPN
-    const adminName = admin.nama || 'Bapak/Ibu';
-    const kantorName = admin.kantor_pertanahan || 'Kantor Pertanahan';
-    
-    const defaultMsg = `Assalamualaikum Pak/Bu *${adminName}*,
+function openSendMsgModal(id) {
+  closeAdminModal();
+  const admin = allLoadedAdmins.find(a => a.id === id);
+  if (!admin) {
+    return showToast('Data admin tidak ditemukan, coba refresh halaman', 'error');
+  }
+  document.getElementById('send-msg-admin-id').value = admin.id;
+  const recipientText = `${admin.kantor_pertanahan} — ${admin.nama || 'Petugas Admin'}` + (admin.no_hp ? ` (${admin.no_hp})` : '');
+  document.getElementById('send-msg-recipient').value = recipientText;
+  
+  // Default text sesuai arahan dan etika pelayanan Kantor Wilayah ATR/BPN
+  const adminName = admin.nama || 'Bapak/Ibu';
+  const kantorName = admin.kantor_pertanahan || 'Kantor Pertanahan';
+  
+  const defaultMsg = `Assalamualaikum Pak/Bu *${adminName}*,
 
 Perkenalkan, ini adalah nomor WhatsApp layanan informasi dan pengawasan otomatis dari *Humas Kanwil BPN Provinsi Aceh*.
 
@@ -632,15 +634,12 @@ Kami menginformasikan bahwa segala notifikasi, pengingat penanganan tiket, serta
 Mohon kiranya kepada Bapak/Ibu untuk menyimpan (*save*) kontak ini di HP/WhatsApp Anda agar setiap notifikasi penting pengaduan dari Kanwil dapat masuk dengan lancar dan tidak terindikasi spam oleh WhatsApp.
 
 Atas perhatian, kerja sama yang baik, dan dedikasi Bapak/Ibu dalam memberikan pelayanan terbaik kepada masyarakat, kami ucapkan terima kasih banyak.`;
-    
-    document.getElementById('send-msg-text').value = defaultMsg;
-    document.getElementById('send-msg-target-type').value = 'all';
-    const feedback = document.getElementById('send-msg-feedback');
-    if (feedback) feedback.style.display = 'none';
-    document.getElementById('send-msg-modal').classList.add('active');
-  } catch (error) {
-    showToast('Gagal memuat data admin: ' + error.message, 'error');
-  }
+  
+  document.getElementById('send-msg-text').value = defaultMsg;
+  document.getElementById('send-msg-target-type').value = 'all';
+  const feedback = document.getElementById('send-msg-feedback');
+  if (feedback) feedback.style.display = 'none';
+  document.getElementById('send-msg-modal').classList.add('active');
 }
 
 function closeSendMsgModal() {
