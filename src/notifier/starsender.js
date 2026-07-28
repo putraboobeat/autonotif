@@ -215,20 +215,6 @@ async function sendPersonalMessage(phoneNumber, message, options = {}) {
   const resolvedProvider = options.forceProvider || resolveProvider(formattedPhone);
   const fallbackProvider = resolvedProvider === 'gowa' ? 'starsender' : 'gowa';
 
-  // ICE-BREAKER: Memancing pembukuan sesi E2E WhatsApp untuk nomor baru
-  if (options && options.useIceBreaker) {
-    const greetingName = options.recipientName ? `Pak/Bu ${options.recipientName.split(' ')[0]}` : 'Bapak/Ibu';
-    const iceBreakerMsg = `Assalamualaikum ${greetingName}, selamat pagi/siang. Mohon izin bersurat dari *Humas Kanwil BPN Provinsi Aceh* 🙏`;
-
-    log.info(`[ICE-BREAKER] Sending handshake via ${resolvedProvider.toUpperCase()} to ${formattedPhone}...`);
-    try {
-      await retry(() => executeGatewaySend(formattedPhone, iceBreakerMsg, false, resolvedProvider), 2, 1500);
-      // Jeda alami layaknya manusia mengetik (3.5 - 5 detik)
-      await humanlikeSleep(3500, 5000);
-    } catch (e) {
-      log.warn(`[ICE-BREAKER] Handshake warning: ${e.message}, proceeding with main message.`);
-    }
-  }
 
   const protectedMessage = applyAntiBanProtection(message);
   log.info(`[SEND] Sending personal message to ${formattedPhone} via ${resolvedProvider.toUpperCase()}...`);
