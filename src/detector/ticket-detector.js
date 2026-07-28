@@ -104,17 +104,14 @@ function categorizeAdmins(allAdmins) {
     }
 
     // This is a new ticket — find matching admin
-    const allFound = AdminModel.findByKantor(ticket.kantorPertanahan);
+    const resolvedKantor = ticket.kantorPertanahan || '';
+    const allFound = AdminModel.findByKantor(resolvedKantor);
     const { matchingAdmins, ktuAdmins } = categorizeAdmins(allFound);
 
     if (matchingAdmins.length > 0) {
-      log.info(`New open ticket found: ${ticket.ticketId}`, {
-        customer: ticket.customer,
-        kantor: ticket.kantorPertanahan,
-        admins: matchingAdmins.map((a) => a.nama),
-      });
+      log.info(`🔒 KANTAH LOCK — Tiket baru ${ticket.ticketId} => "${resolvedKantor}" (dari Agent: "${(ticket.agent || '').split('\n')[0]}") — ${matchingAdmins.length} admin cocok: [${matchingAdmins.map((a) => a.nama).join(', ')}]`);
     } else {
-      log.warn(`New open ticket ${ticket.ticketId} — no matching admin found for: "${ticket.kantorPertanahan}"`);
+      log.warn(`⚠️ KANTAH LOCK — Tiket baru ${ticket.ticketId} => "${resolvedKantor}" (dari Agent: "${(ticket.agent || '').split('\n')[0]}") — TIDAK ADA ADMIN COCOK!`);
     }
 
     newTickets.push({

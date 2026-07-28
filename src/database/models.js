@@ -176,9 +176,17 @@ const TicketModel = {
 
   /**
    * Update ticket status and metadata (e.g. when closed or modified on OCA)
+   * IMPORTANT: kantor_pertanahan is LOCKED after first save — never overwritten
+   * to prevent kantah assignment from drifting on subsequent scrapes.
    */
   updateInfo(ticket) {
     const db = getDb();
+    // Cek apakah kantor_pertanahan sudah terisi di database
+    const existing = db.prepare('SELECT kantor_pertanahan FROM processed_tickets WHERE ticket_id = ?').get(ticket.ticketId);
+    const existingKantor = existing ? (existing.kantor_pertanahan || '').trim() : '';
+    // Hanya update kantor jika sebelumnya kosong
+    const finalKantor = existingKantor !== '' ? existingKantor : (ticket.kantorPertanahan || '');
+
     const stmt = db.prepare(`
       UPDATE processed_tickets 
       SET status = ?, priority = ?, customer = ?, agent = ?, kantor_pertanahan = ?, category = ?, sub_category = ?, subject = ?, last_update = ?
@@ -189,7 +197,7 @@ const TicketModel = {
       ticket.priority || '',
       ticket.customer || '',
       ticket.agent || '',
-      ticket.kantorPertanahan || '',
+      finalKantor,
       ticket.category || '',
       ticket.subCategory || '',
       ticket.subject || '',

@@ -325,8 +325,8 @@ async function scrapeAllOpenTickets() {
       });
 
       const enriched = pageTickets.map((ticket) => {
-        const agentLines = ticket.agent.split('\n').map((l) => l.trim()).filter(Boolean);
-        return { ...ticket, kantorPertanahan: agentLines[0] || '' };
+        const kantorPertanahan = resolveKantorName(ticket.agent);
+        return { ...ticket, kantorPertanahan };
       });
 
       allTickets.push(...enriched);
