@@ -572,10 +572,43 @@
           <label class="form-label">No HP WhatsApp Kasubbag TU (Opsional)</label>
           <input type="text" class="form-input" id="admin-hp-ktu" placeholder="08xxxxxxxxxx">
         </div>
-      </div>
       <div class="modal-footer">
         <button class="btn btn-ghost" onclick="closeAdminModal()">Batal</button>
         <button class="btn btn-primary" onclick="saveAdmin()">Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Kirim Pesan Custom ke Admin -->
+  <div class="modal-overlay" id="send-msg-modal">
+    <div class="modal" style="max-width: 600px;">
+      <div class="modal-header">
+        <h3 id="send-msg-title">💬 Kirim Pesan WhatsApp ke Admin</h3>
+        <button class="modal-close" onclick="closeSendMsgModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="send-msg-admin-id" value="">
+        <div class="form-group">
+          <label class="form-label">Penerima Pesan</label>
+          <input type="text" class="form-input" id="send-msg-recipient" readonly style="background: rgba(255,255,255,0.05); font-weight: bold; color: #38bdf8;">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Pilih Target Pengiriman di Kantor Terkait</label>
+          <select class="form-input" id="send-msg-target-type" style="cursor: pointer;">
+            <option value="all">Keduanya (Petugas Admin & Kasubbag TU jika ada)</option>
+            <option value="admin">Petugas Admin Saja</option>
+            <option value="ktu">Kasubbag TU Saja</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Teks Pesan (Dapat Diubah & Disesuaikan)</label>
+          <textarea class="form-input" id="send-msg-text" rows="10" style="font-family: inherit; line-height: 1.5; padding: 12px; font-size: 14px; resize: vertical;"></textarea>
+          <small style="display: block; margin-top: 6px; color: rgba(255,255,255,0.65); font-size: 12px;">💡 Catatan: Sistem secara otomatis menyertakan proteksi Anti-Banned & Kode Ref Verifikasi HumasKanwil pada bagian paling akhir pesan saat dikirm.</small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeSendMsgModal()">Batal</button>
+        <button class="btn btn-success" id="send-msg-submit-btn" onclick="submitSendMessage()">🚀 Kirim Pesan Sekarang</button>
       </div>
     </div>
   </div>

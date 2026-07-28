@@ -175,6 +175,72 @@ function createRoutes() {
     }
   });
 
+  // Kirim pesan WhatsApp custom ke kontak admin kantor pertanahan / KTU
+  router.post('/admins/:id/send-message', async (req, res) => {
+    try {
+      const adminId = parseInt(req.params.id);
+      const { message, targetType = 'all' } = req.body;
+
+      if (!message || typeof message !== 'string' || !message.trim()) {
+        return res.status(400).json({ success: false, error: 'Teks pesan tidak boleh kosong' });
+      }
+
+      const admin = AdminModel.getById(adminId);
+      if (!admin) {
+        return res.status(404).json({ success: false, error: 'Data admin tidak ditemukan' });
+      }
+
+      let sentCount = 0;
+      const results = [];
+
+      // Kirim ke Petugas Admin
+      if ((targetType === 'all' || targetType === 'admin') && admin.no_hp) {
+        const cleanPhone = formatPhoneNumber(admin.no_hp);
+        if (cleanPhone) {
+          const resAdmin = await sendPersonalMessage(cleanPhone, message.trim());
+          NotificationLogModel.create({
+            ticketId: 'CUSTOM-MSG',
+            targetType: 'custom_admin_msg',
+            targetName: `${admin.nama || 'Admin'} (${admin.kantor_pertanahan})`,
+            targetNumber: cleanPhone,
+            message: message.trim(),
+            status: resAdmin && resAdmin.success ? 'sent' : 'failed',
+            response: JSON.stringify(resAdmin),
+          });
+          if (resAdmin && resAdmin.success) sentCount++;
+          results.push({ target: 'Petugas Admin', name: admin.nama, phone: cleanPhone, result: resAdmin });
+        }
+      }
+
+      // Kirim ke Kasubbag TU
+      if ((targetType === 'all' || targetType === 'ktu') && admin.no_hp_ktu) {
+        const cleanKtuPhone = formatPhoneNumber(admin.no_hp_ktu);
+        if (cleanKtuPhone) {
+          const resKtu = await sendPersonalMessage(cleanKtuPhone, message.trim());
+          NotificationLogModel.create({
+            ticketId: 'CUSTOM-MSG',
+            targetType: 'custom_ktu_msg',
+            targetName: `${admin.nama_ktu || 'Kasubbag TU'} (${admin.kantor_pertanahan})`,
+            targetNumber: cleanKtuPhone,
+            message: message.trim(),
+            status: resKtu && resKtu.success ? 'sent' : 'failed',
+            response: JSON.stringify(resKtu),
+          });
+          if (resKtu && resKtu.success) sentCount++;
+          results.push({ target: 'Kasubbag TU', name: admin.nama_ktu, phone: cleanKtuPhone, result: resKtu });
+        }
+      }
+
+      if (sentCount > 0) {
+        res.json({ success: true, message: `Pesan berhasil terkirim ke ${sentCount} kontak di ${admin.kantor_pertanahan}!`, details: results });
+      } else {
+        res.status(400).json({ success: false, error: `Gagal mengirim atau tidak ada nomor telepon yang valid pada target yang dipilih untuk ${admin.kantor_pertanahan}.`, details: results });
+      }
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
   // ============================================
   // Processed Tickets
   // ============================================

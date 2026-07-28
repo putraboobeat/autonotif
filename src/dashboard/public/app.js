@@ -488,7 +488,8 @@ async function loadAdmins() {
           </span>
         </td>
         <td>
-          <div class="actions-bar">
+          <div class="actions-bar" style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+            <button class="btn btn-primary btn-sm" onclick="openSendMsgModal(${admin.id})" title="Kirim Pesan WhatsApp" style="display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; font-size: 12px; background-color: #0284c7; border-color: #0284c7; color: #fff; font-weight: 500;">💬 Kirim Pesan</button>
             <button class="btn btn-ghost btn-sm btn-icon" onclick="editAdmin(${admin.id})" title="Edit">✏️</button>
             <button class="btn btn-danger btn-sm btn-icon" onclick="deleteAdmin(${admin.id}, '${escapeHtml(admin.kantor_pertanahan)}')" title="Hapus">🗑️</button>
           </div>
@@ -573,6 +574,73 @@ async function deleteAdmin(id, nama) {
     }
   } catch (error) {
     showToast('Error: ' + error.message, 'error');
+  }
+}
+
+async function openSendMsgModal(id) {
+  try {
+    const result = await apiGet(`/admins/${id}`);
+    if (!result.success) {
+      return showToast('Gagal memuat data admin', 'error');
+    }
+    const admin = result.data;
+    document.getElementById('send-msg-admin-id').value = admin.id;
+    const recipientText = `${admin.kantor_pertanahan} — ${admin.nama || 'Petugas Admin'}` + (admin.no_hp ? ` (${admin.no_hp})` : '');
+    document.getElementById('send-msg-recipient').value = recipientText;
+    
+    // Default text sesuai arahan dan etika pelayanan Kantor Wilayah ATR/BPN
+    const adminName = admin.nama || 'Bapak/Ibu';
+    const kantorName = admin.kantor_pertanahan || 'Kantor Pertanahan';
+    
+    const defaultMsg = `Assalamualaikum Pak/Bu *${adminName}*,
+
+Perkenalkan, ini adalah nomor WhatsApp layanan informasi dan pengawasan otomatis dari *Humas Kanwil BPN Provinsi Aceh*.
+
+Kami menginformasikan bahwa segala notifikasi, pengingat penanganan tiket, serta rekapitulasi monitoring pengaduan masyarakat (OCA Interaction) yang diarahkan ke *${kantorName}* akan disampaikan secara berkala melalui nomor obrolan (chat) ini.
+
+Mohon kiranya kepada Bapak/Ibu untuk menyimpan (*save*) kontak ini di HP/WhatsApp Anda agar setiap notifikasi penting pengaduan dari Kanwil dapat masuk dengan lancar dan tidak terindikasi spam oleh WhatsApp.
+
+Atas perhatian, kerja sama yang baik, dan dedikasi Bapak/Ibu dalam memberikan pelayanan terbaik kepada masyarakat, kami ucapkan terima kasih banyak.`;
+    
+    document.getElementById('send-msg-text').value = defaultMsg;
+    document.getElementById('send-msg-target-type').value = 'all';
+    document.getElementById('send-msg-modal').classList.add('active');
+  } catch (error) {
+    showToast('Gagal memuat data admin: ' + error.message, 'error');
+  }
+}
+
+function closeSendMsgModal() {
+  document.getElementById('send-msg-modal').classList.remove('active');
+}
+
+async function submitSendMessage() {
+  const adminId = document.getElementById('send-msg-admin-id').value;
+  const message = document.getElementById('send-msg-text').value;
+  const targetType = document.getElementById('send-msg-target-type').value;
+
+  if (!message || message.trim() === '') {
+    return showToast('Teks pesan tidak boleh kosong!', 'error');
+  }
+
+  const btn = document.getElementById('send-msg-submit-btn');
+  const oldText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '⏳ Mengirim Pesan...';
+
+  try {
+    const result = await apiPost(`/admins/${adminId}/send-message`, { message, targetType });
+    if (result.success) {
+      showToast(result.message || 'Pesan berhasil dikirim!', 'success');
+      closeSendMsgModal();
+    } else {
+      showToast(result.error || 'Gagal mengirim pesan ke admin', 'error');
+    }
+  } catch (error) {
+    showToast('Terjadi kesalahan: ' + error.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = oldText;
   }
 }
 
