@@ -229,7 +229,10 @@ async function sendPersonalMessage(phoneNumber, message, options = {}) {
     log.warn(`[SEND] ❌ ${resolvedProvider.toUpperCase()} failed for ${formattedPhone}: ${primaryError.message}`);
 
     // === ATTEMPT 2: Fallback ke provider lain ===
-    if (config.gateway.fallbackEnabled && isGowaAvailable()) {
+    // Jangan fallback ke StarSender jika pengiriman utama (GoWA) gagal.
+    // StarSender selalu memberikan "fake success" untuk nomor baru yang gagal terkirim,
+    // sehingga akan menutupi pesan error asli dan menggagalkan fitur "Kirim Manual" (Click-to-chat).
+    if (fallbackProvider === 'gowa' && config.gateway.fallbackEnabled && isGowaAvailable()) {
       log.info(`[FALLBACK] Retrying ${formattedPhone} via ${fallbackProvider.toUpperCase()}...`);
       try {
         const fallbackResult = await retry(() => executeGatewaySend(formattedPhone, protectedMessage, false, fallbackProvider), 2, 2000);
