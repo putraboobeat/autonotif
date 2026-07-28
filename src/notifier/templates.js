@@ -242,7 +242,7 @@ function renderTemplate(key, data = {}) {
   const replacements = {
     '{ticketId}': data.ticketId || data.ticket_id || '-',
     '{customer}': data.customer || '-',
-    '{kantor}': data.kantor || data.kantorPertanahan || data.kantor_pertanahan || 'Kanwil ATR/BPN Prov Aceh',
+    '{kantor}': data.kantor || data.kantorPertanahan || data.kantor_pertanahan || 'Kanwil BPN Prov Aceh',
     '{subjek}': formatField(data.subjek || data.subject || data.category, true),
     '{kategori}': formatField(data.kategori || data.category, true),
     '{tanggal}': formatField(data.tanggal || data.createdDate || data.created_date || data.created_at, true),
@@ -259,8 +259,8 @@ function renderTemplate(key, data = {}) {
 
   // Bersihkan tulisan Admin Kanwil dari template lama agar tidak duplikat dengan footer HumasKanwil
   text = text
-    .replace(/(\r?\n)*_?(Salam( hormat)?,|Terima kasih,)\r?\n_?(Admin|Tim Pengawasan) Kanwil ATR\/BPN Prov(insi|\.)? Aceh_?/gi, '')
-    .replace(/(\r?\n)*_?(Admin|Tim Pengawasan) Kanwil ATR\/BPN Prov(insi|\.)? Aceh_?/gi, '')
+    .replace(/(\r?\n)*_?(Salam( hormat)?,|Terima kasih,)\r?\n_?(Admin|Tim Pengawasan) Kanwil (?:ATR\/)?BPN Prov(insi|\.)? Aceh_?/gi, '')
+    .replace(/(\r?\n)*_?(Admin|Tim Pengawasan) Kanwil (?:ATR\/)?BPN Prov(insi|\.)? Aceh_?/gi, '')
     .trim();
 
   return text;

@@ -621,7 +621,7 @@ function openSendMsgModal(id) {
   const recipientText = `${admin.kantor_pertanahan} — ${admin.nama || 'Petugas Admin'}` + (admin.no_hp ? ` (${admin.no_hp})` : '');
   document.getElementById('send-msg-recipient').value = recipientText;
   
-  // Default text sesuai arahan dan etika pelayanan Kantor Wilayah ATR/BPN
+  // Default text sesuai arahan dan etika pelayanan Kantor Wilayah BPN
   const adminName = admin.nama || 'Bapak/Ibu';
   const kantorName = admin.kantor_pertanahan || 'Kantor Pertanahan';
   

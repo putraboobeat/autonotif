@@ -193,7 +193,7 @@ function resolveKantorName(rawText) {
   if (text.includes('bener meriah') || text.includes('bener') || text.includes('meriah')) return 'Kantah Kab Bener Meriah - Prov Aceh';
   if (text.includes('bireuen') || text.includes('biereun')) return 'Kantah Kab Bireuen - Prov Aceh';
   if (text.includes('lhokseumawe') || text.includes('lhok')) return 'Kantah Kota Lhokseumawe - Prov Aceh';
-  if (text.includes('kanwil') || text.includes('provinsi aceh') || text.includes('prov aceh')) return 'Kanwil ATR/BPN Prov Aceh';
+  if (text.includes('kanwil') || text.includes('provinsi aceh') || text.includes('prov aceh')) return 'Kanwil BPN Prov Aceh';
 
   // Fallback if no known keyword matches: return clean first line
   const lines = rawText.split('\n').map((l) => l.trim()).filter(Boolean);

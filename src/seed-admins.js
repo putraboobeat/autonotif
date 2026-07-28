@@ -6,7 +6,7 @@ const { initDatabase } = require('./database/init');
 const { AdminModel } = require('./database/models');
 
 const admins = [
-  { nama: 'Putra Muharril', kantor_pertanahan: 'Kanwil ATR/BPN Prov Aceh', no_hp: '85225726372' },
+  { nama: 'Putra Muharril', kantor_pertanahan: 'Kanwil BPN Prov Aceh', no_hp: '85225726372' },
   { nama: 'Yasrul', kantor_pertanahan: 'Kantah Kab Aceh Barat Daya - Prov Aceh', no_hp: '82165659616' },
   { nama: 'Mariani', kantor_pertanahan: 'Kantah Kab Aceh Barat - Prov Aceh', no_hp: '82183036296' },
   { nama: 'Maulidarianti', kantor_pertanahan: 'Kantah Kab Aceh Besar - Prov Aceh', no_hp: '82168603941' },

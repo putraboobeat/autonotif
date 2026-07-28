@@ -90,7 +90,7 @@ function initDatabase() {
     for (const adm of adminRows) {
       let k = (adm.kantor_pertanahan || '').trim();
       let clean = k;
-      if (/kanwil|provinsi\s+aceh/i.test(k)) clean = 'Kanwil ATR/BPN Prov Aceh';
+      if (/kanwil|provinsi\s+aceh/i.test(k)) clean = 'Kanwil BPN Prov Aceh';
       else if (/aceh\s+barat\s+daya|abdya/i.test(k)) clean = 'Kantah Kab Aceh Barat Daya - Prov Aceh';
       else if (/aceh\s+barat/i.test(k) && !/daya/i.test(k)) clean = 'Kantah Kab Aceh Barat - Prov Aceh';
       else if (/aceh\s+besar/i.test(k)) clean = 'Kantah Kab Aceh Besar - Prov Aceh';
@@ -121,6 +121,14 @@ function initDatabase() {
     }
   } catch (err) {
     log.error('Kantor normalization failed', { error: err.message });
+  }
+
+  // Auto-migrate existing 'Kanwil ATR/BPN' entries to 'Kanwil BPN' across tables
+  try {
+    db.exec("UPDATE processed_tickets SET kantor_pertanahan = REPLACE(kantor_pertanahan, 'Kanwil ATR/BPN', 'Kanwil BPN') WHERE kantor_pertanahan LIKE '%Kanwil ATR/BPN%';");
+    db.exec("UPDATE admins SET kantor_pertanahan = REPLACE(kantor_pertanahan, 'Kanwil ATR/BPN', 'Kanwil BPN') WHERE kantor_pertanahan LIKE '%Kanwil ATR/BPN%';");
+  } catch (err) {
+    log.error('Kanwil naming migration failed', { error: err.message });
   }
 
   log.info('Database initialized successfully', { path: DB_PATH });

@@ -1,6 +1,6 @@
 /**
  * Executive Report Generator (Level 6: Advanced SLA Analytics)
- * Generates official PDF and CSV reports for Kanwil ATR/BPN Provinsi Aceh.
+ * Generates official PDF and CSV reports for Kanwil BPN Provinsi Aceh.
  */
 const fs = require('fs');
 const path = require('path');
@@ -200,7 +200,7 @@ function generateHtmlReport(metrics = null) {
   </table>
 
   <div class="footer">
-    Dokumen ini dihasilkan secara otomatis oleh <strong>Sistem Auto Notif Pengaduan Kanwil ATR/BPN Provinsi Aceh</strong> (Level 6 Intelligent Oversight).
+    Dokumen ini dihasilkan secara otomatis oleh <strong>Sistem Auto Notif Pengaduan Kanwil BPN Provinsi Aceh</strong> (Level 6 Intelligent Oversight).
   </div>
 </body>
 </html>`;
@@ -248,7 +248,7 @@ function buildExecutiveSummaryMessage(metrics = null) {
   const now = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 
   const lines = [
-    `*Laporan Pengawasan & Kinerja Pelayanan (SLA) Kanwil ATR/BPN Prov. Aceh*`,
+    `*Laporan Pengawasan & Kinerja Pelayanan (SLA) Kanwil BPN Prov. Aceh*`,
     `Tanggal: ${now}`,
     '',
     `Assalamualaikum Bapak/Ibu Pimpinan,`,
@@ -286,7 +286,7 @@ function buildExecutiveSummaryMessage(metrics = null) {
     `Laporan lengkap dalam format PDF & CSV kini tersedia melalui Dashboard Pengawasan Level 6.`,
     '',
     `Terima kasih,`,
-    `_Sistem Auto Notif Pengaduan Kanwil ATR/BPN Prov. Aceh_`
+    `_Sistem Auto Notif Pengaduan Kanwil BPN Prov. Aceh_`
   );
 
   return lines.join('\n');

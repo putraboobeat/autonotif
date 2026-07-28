@@ -131,7 +131,7 @@ function buildTestMessage() {
     '',
     `Assalamualaikum rekan-rekan,`,
     '',
-    `Pesan ini merupakan pengiriman uji coba dari sistem pemantauan pengaduan masyarakat ATR/BPN Provinsi Aceh.`,
+    `Pesan ini merupakan pengiriman uji coba dari sistem pemantauan pengaduan masyarakat Kanwil BPN Provinsi Aceh.`,
     `Waktu Tes: ${now}`,
     '',
     'Jika pesan ini diterima dengan baik, seluruh integrasi notifikasi berjalan lancar dan siap memantau layanan.'

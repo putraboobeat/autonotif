@@ -48,7 +48,7 @@ function getSlaMetrics() {
     const now = new Date();
 
     allTickets.forEach(t => {
-      const kantor = t.kantor_pertanahan || 'Kanwil ATR/BPN Prov. Aceh (Umum)';
+      const kantor = t.kantor_pertanahan || 'Kanwil BPN Prov. Aceh (Umum)';
       if (!officeMap.has(kantor)) {
         officeMap.set(kantor, {
           kantor: kantor,
