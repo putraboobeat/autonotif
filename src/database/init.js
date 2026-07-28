@@ -83,6 +83,46 @@ function initDatabase() {
     log.error('Phone normalization failed', { error: err.message });
   }
 
+  // Auto-normalize existing admin kantor_pertanahan names in database to standard dropdown format
+  try {
+    const adminRows = db.prepare('SELECT id, kantor_pertanahan FROM admins').all();
+    const updateKantorStmt = db.prepare('UPDATE admins SET kantor_pertanahan = ? WHERE id = ?');
+    for (const adm of adminRows) {
+      let k = (adm.kantor_pertanahan || '').trim();
+      let clean = k;
+      if (/kanwil|provinsi\s+aceh/i.test(k)) clean = 'Kanwil ATR/BPN Prov Aceh';
+      else if (/aceh\s+barat\s+daya|abdya/i.test(k)) clean = 'Kantah Kab Aceh Barat Daya - Prov Aceh';
+      else if (/aceh\s+barat/i.test(k) && !/daya/i.test(k)) clean = 'Kantah Kab Aceh Barat - Prov Aceh';
+      else if (/aceh\s+besar/i.test(k)) clean = 'Kantah Kab Aceh Besar - Prov Aceh';
+      else if (/aceh\s+jaya/i.test(k) && !/pidie/i.test(k)) clean = 'Kantah Kab Aceh Jaya - Prov Aceh';
+      else if (/aceh\s+selatan/i.test(k)) clean = 'Kantah Kab Aceh Selatan - Prov Aceh';
+      else if (/aceh\s+singkil/i.test(k)) clean = 'Kantah Kab Aceh Singkil - Prov Aceh';
+      else if (/aceh\s+tamiang/i.test(k)) clean = 'Kantah Kab Aceh Tamiang - Prov Aceh';
+      else if (/aceh\s+tenggara/i.test(k)) clean = 'Kantah Kab Aceh Tenggara - Prov Aceh';
+      else if (/aceh\s+tengah/i.test(k)) clean = 'Kantah Kab Aceh Tengah - Prov Aceh';
+      else if (/aceh\s+timur/i.test(k)) clean = 'Kantah Kab Aceh Timur - Prov Aceh';
+      else if (/aceh\s+utara/i.test(k)) clean = 'Kantah Kab Aceh Utara - Prov Aceh';
+      else if (/bener\s+meriah/i.test(k)) clean = 'Kantah Kab Bener Meriah - Prov Aceh';
+      else if (/bireuen|biereun/i.test(k)) clean = 'Kantah Kab Bireuen - Prov Aceh';
+      else if (/gayo\s+lues/i.test(k)) clean = 'Kantah Kab Gayo Lues - Prov Aceh';
+      else if (/nagan\s+raya/i.test(k)) clean = 'Kantah Kab Nagan Raya - Prov Aceh';
+      else if (/pidie\s+jaya|pijay/i.test(k)) clean = 'Kantah Kab Pidie Jaya - Prov Aceh';
+      else if (/pidie/i.test(k) && !/jaya/i.test(k)) clean = 'Kantah Kab Pidie - Prov Aceh';
+      else if (/simeu/i.test(k)) clean = 'Kantah Kab Simeuleu - Prov Aceh';
+      else if (/lhokseumawe/i.test(k)) clean = 'Kantah Kota Lhokseumawe - Prov Aceh';
+      else if (/subulussalam/i.test(k)) clean = 'Kantah Kota Subulussalam - Prov Aceh';
+      else if (/langsa/i.test(k)) clean = 'Kantah Kota Langsa - Prov Aceh';
+      else if (/sabang/i.test(k)) clean = 'Kantah Kota Sabang - Prov Aceh';
+      else if (/banda\s+aceh/i.test(k)) clean = 'Kantah Kota Banda Aceh - Prov Aceh';
+
+      if (clean !== k) {
+        updateKantorStmt.run(clean, adm.id);
+      }
+    }
+  } catch (err) {
+    log.error('Kantor normalization failed', { error: err.message });
+  }
+
   log.info('Database initialized successfully', { path: DB_PATH });
   return db;
 }
