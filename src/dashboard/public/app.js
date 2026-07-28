@@ -506,10 +506,41 @@ function openAdminModal(admin = null) {
   document.getElementById('admin-modal-title').textContent = admin ? 'Edit Admin & Kasubbag TU' : 'Tambah Admin & Kasubbag TU';
   document.getElementById('admin-edit-id').value = admin ? admin.id : '';
   document.getElementById('admin-nama').value = admin ? admin.nama : '';
-  document.getElementById('admin-kantor').value = admin ? admin.kantor_pertanahan : '';
   document.getElementById('admin-hp').value = admin ? admin.no_hp : '';
   document.getElementById('admin-nama-ktu').value = admin ? (admin.nama_ktu || '') : '';
   document.getElementById('admin-hp-ktu').value = admin ? (admin.no_hp_ktu || '') : '';
+
+  // Fuzzy match kantor_pertanahan dari database ke option value di <select>
+  const kantorSelect = document.getElementById('admin-kantor');
+  kantorSelect.value = '';
+  if (admin && admin.kantor_pertanahan) {
+    const savedKantor = admin.kantor_pertanahan;
+    // 1. Coba exact match dulu
+    kantorSelect.value = savedKantor;
+    if (kantorSelect.value === savedKantor) {
+      // Match langsung
+    } else {
+      // 2. Fuzzy: normalisasi dan cocokkan keyword inti
+      const normalize = (s) => (s || '').toLowerCase()
+        .replace(/\s*-\s*prov.*$/i, '')
+        .replace(/kantor\s+pertanahan/g, '')
+        .replace(/kantah/g, '').replace(/kabupaten/g, '').replace(/kab\./g, '').replace(/kab\s+/g, '')
+        .replace(/kota/g, '').replace(/atr\/bpn/g, '').replace(/provinsi/g, '').replace(/prov/g, '')
+        .replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+      const target = normalize(savedKantor);
+      let bestMatch = '';
+      for (const opt of kantorSelect.options) {
+        if (!opt.value) continue;
+        const optNorm = normalize(opt.value);
+        if (optNorm === target || (target && optNorm.includes(target)) || (target && target.includes(optNorm))) {
+          bestMatch = opt.value;
+          break;
+        }
+      }
+      if (bestMatch) kantorSelect.value = bestMatch;
+    }
+  }
+
   document.getElementById('admin-modal').classList.add('active');
 }
 
