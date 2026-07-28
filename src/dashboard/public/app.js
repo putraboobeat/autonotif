@@ -1188,7 +1188,7 @@ function formatTime(date) {
 
 function formatWaNumber(phone) {
   if (!phone) return '';
-  let p = phone.replace(/\D/g, '');
+  let p = String(phone).replace(/\D/g, '');
   if (p.startsWith('0')) p = '62' + p.substring(1);
   return p;
 }
