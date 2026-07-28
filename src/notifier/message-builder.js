@@ -4,7 +4,7 @@
 const { renderTemplate } = require('./templates');
 const { formatPhoneNumber } = require('../utils/helpers');
 
-// Format tag/mention WhatsApp (Since API mentions are unreliable, use names)
+// Format tag/mention WhatsApp (Kombinasi nama dan tag @ agar bisa menjadi biru)
 function formatMention(admin) {
   if (!admin) return '';
   const phone = admin.no_hp || '';
@@ -13,7 +13,7 @@ function formatMention(admin) {
   
   let p = clean;
   if (p.startsWith('0')) p = '62' + p.substring(1);
-  return `${admin.nama} (wa.me/${p})`;
+  return `${admin.nama} (@${p})`;
 }
 
 /**
