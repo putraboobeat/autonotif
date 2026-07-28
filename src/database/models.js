@@ -42,6 +42,7 @@ const AdminModel = {
     if (!allAdmins.length) return [];
     
     const normalize = (s) => (s || '').toString().toLowerCase()
+      .replace(/(\s*-\s*prov.*)$/i, '')
       .replace(/kantor\s+pertanahan/g, '')
       .replace(/kantah/g, '')
       .replace(/kabupaten/g, '')

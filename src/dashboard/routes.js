@@ -233,9 +233,70 @@ function createRoutes() {
       }
 
       const admins = AdminModel.findByKantor(ticket.kantor_pertanahan);
+      const notifiedNumbers = new Set();
+      let totalSent = 0;
+
       if (admins && admins.length > 0) {
         for (const admin of admins) {
-          const msg = renderTemplate('template_manual_resend', {
+          const cleanPhone = formatPhoneNumber(admin.no_hp);
+          if (cleanPhone && !notifiedNumbers.has(cleanPhone)) {
+            const msg = renderTemplate('template_manual_resend', {
+              ticketId: ticket.ticket_id,
+              customer: ticket.customer,
+              kantor: ticket.kantor_pertanahan,
+              kategori: ticket.category,
+              subjek: ticket.subject || ticket.category,
+              tanggal: ticket.created_date || ticket.created_at,
+              lastUpdate: ticket.last_update || ticket.created_date || ticket.created_at,
+              adminNama: admin.nama
+            });
+            const result = await sendPersonalMessage(cleanPhone, msg);
+            notifiedNumbers.add(cleanPhone);
+            totalSent++;
+            NotificationLogModel.create({
+              ticketId: ticket.ticket_id,
+              targetType: 'personal_manual',
+              targetName: admin.nama,
+              targetNumber: cleanPhone,
+              message: msg,
+              status: result && result.success ? 'sent' : 'failed',
+              response: JSON.stringify(result),
+            });
+          }
+
+          const cleanKtuPhone = formatPhoneNumber(admin.no_hp_ktu);
+          if (cleanKtuPhone && !notifiedNumbers.has(cleanKtuPhone)) {
+            const ktuMsg = renderTemplate('template_manual_resend', {
+              ticketId: ticket.ticket_id,
+              customer: ticket.customer,
+              kantor: ticket.kantor_pertanahan,
+              kategori: ticket.category,
+              subjek: ticket.subject || ticket.category,
+              tanggal: ticket.created_date || ticket.created_at,
+              lastUpdate: ticket.last_update || ticket.created_date || ticket.created_at,
+              adminNama: admin.nama_ktu || 'Kasubbag Tata Usaha'
+            });
+            const ktuResult = await sendPersonalMessage(cleanKtuPhone, ktuMsg);
+            notifiedNumbers.add(cleanKtuPhone);
+            totalSent++;
+            NotificationLogModel.create({
+              ticketId: ticket.ticket_id,
+              targetType: 'personal_manual_ktu',
+              targetName: admin.nama_ktu || 'Kasubbag TU',
+              targetNumber: cleanKtuPhone,
+              message: ktuMsg,
+              status: ktuResult && ktuResult.success ? 'sent' : 'failed',
+              response: JSON.stringify(ktuResult),
+            });
+          }
+        }
+      }
+
+      // Pastikan terkirim juga ke Admin Utama (Kanwil dari .env)
+      if (config.kanwil && config.kanwil.phone) {
+        const cleanKanwilPhone = formatPhoneNumber(config.kanwil.phone);
+        if (cleanKanwilPhone && !notifiedNumbers.has(cleanKanwilPhone)) {
+          const kanwilMsg = renderTemplate('template_manual_resend', {
             ticketId: ticket.ticket_id,
             customer: ticket.customer,
             kantor: ticket.kantor_pertanahan,
@@ -243,22 +304,27 @@ function createRoutes() {
             subjek: ticket.subject || ticket.category,
             tanggal: ticket.created_date || ticket.created_at,
             lastUpdate: ticket.last_update || ticket.created_date || ticket.created_at,
-            adminNama: admin.nama
+            adminNama: 'Admin Utama (Kanwil)'
           });
-          const result = await sendPersonalMessage(admin.no_hp, msg);
+          const kanwilResult = await sendPersonalMessage(cleanKanwilPhone, kanwilMsg);
+          notifiedNumbers.add(cleanKanwilPhone);
+          totalSent++;
           NotificationLogModel.create({
             ticketId: ticket.ticket_id,
-            targetType: 'personal_manual',
-            targetName: admin.nama,
-            targetNumber: admin.no_hp,
-            message: msg,
-            status: result && result.success ? 'sent' : 'failed',
-            response: JSON.stringify(result),
+            targetType: 'personal_manual_kanwil',
+            targetName: 'Admin Utama (Kanwil)',
+            targetNumber: cleanKanwilPhone,
+            message: kanwilMsg,
+            status: kanwilResult && kanwilResult.success ? 'sent' : 'failed',
+            response: JSON.stringify(kanwilResult),
           });
         }
-        res.json({ success: true, message: `Peringatan langsung berhasil ditembakkan ke WhatsApp Admin ${ticket.kantor_pertanahan}!` });
+      }
+
+      if (totalSent > 0) {
+        res.json({ success: true, message: `Peringatan berhasil dikirim ke Admin tujuan (${ticket.kantor_pertanahan}) dan Admin Utama!` });
       } else {
-        res.status(400).json({ success: false, error: `Belum ada admin terdaftar untuk kantor ${ticket.kantor_pertanahan}` });
+        res.status(400).json({ success: false, error: `Belum ada admin atau nomor HP valid untuk kantor ${ticket.kantor_pertanahan}` });
       }
     } catch (error) {
       res.status(500).json({ success: false, error: error.message });

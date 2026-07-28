@@ -134,10 +134,7 @@ function buildTestMessage() {
     `Pesan ini merupakan pengiriman uji coba dari sistem pemantauan pengaduan masyarakat ATR/BPN Provinsi Aceh.`,
     `Waktu Tes: ${now}`,
     '',
-    'Jika pesan ini diterima dengan baik, seluruh integrasi notifikasi berjalan lancar dan siap memantau layanan.',
-    '',
-    'Salam,',
-    '_Admin Kanwil ATR/BPN Provinsi Aceh_'
+    'Jika pesan ini diterima dengan baik, seluruh integrasi notifikasi berjalan lancar dan siap memantau layanan.'
   ].join('\n');
 }
 
@@ -189,10 +186,7 @@ function buildGroupReminderSummaryMessage(openTickets, groupName) {
   }
 
   lines.push(
-    'Terima kasih atas dedikasi dan perhatian seluruh rekan-rekan.',
-    '',
-    'Salam,',
-    '_Admin Kanwil ATR/BPN Provinsi Aceh_'
+    'Terima kasih atas dedikasi dan perhatian seluruh rekan-rekan.'
   );
   return lines.join('\n');
 }
@@ -252,10 +246,7 @@ function buildClosedTicketGroupMessage(closedTickets) {
   });
 
   lines.push(
-    'Terima kasih banyak atas kecepatan dan kualitas layanan dari rekan-rekan yang bertugas. Mari terus perpanjang rekam jejak pelayanan prima kita.',
-    '',
-    'Salam,',
-    '_Admin Kanwil ATR/BPN Provinsi Aceh_'
+    'Terima kasih banyak atas kecepatan dan kualitas layanan dari rekan-rekan yang bertugas. Mari terus perpanjang rekam jejak pelayanan prima kita.'
   );
 
   return lines.join('\n');

@@ -19,10 +19,7 @@ Mohon perhatiannya, baru saja masuk satu aduan dari masyarakat yang perlu segera
 *Tanggal Masuk*: {tanggal}
 *Last Update*: {lastUpdate}
 
-Kepada {mentions} selaku admin yang bertugas, mohon segera dibuka dan diproses melalui aplikasi OCA Interaction. Terima kasih atas kesigapannya.
-
-Salam,
-_Admin Kanwil ATR/BPN Provinsi Aceh_`
+Kepada {mentions} selaku admin yang bertugas, mohon segera dibuka dan diproses melalui aplikasi OCA Interaction. Terima kasih atas kesigapannya.`
   },
 
   template_new_personal: {
@@ -42,10 +39,7 @@ Mohon maaf mengganggu waktunya. Kami ingin menginformasikan bahwa ada satu tiket
 
 Mohon kiranya bisa segera ditindaklanjuti melalui aplikasi OCA Interaction ya. Kalau ada kendala, jangan sungkan menghubungi kami.
 
-Terima kasih banyak atas kerjasamanya.
-
-Salam,
-_Admin Kanwil ATR/BPN Prov. Aceh_`
+Terima kasih banyak atas kerjasamanya.`
   },
 
   template_new_kanwil: {
@@ -86,10 +80,7 @@ Mohon maaf kami ingatkan kembali, tiket pengaduan berikut masih tercatat belum d
 *Tanggal Masuk*: {tanggal}
 *Last Update*: {lastUpdate}
 
-Kepada {mentions}, mohon bisa dibantu untuk segera ditindaklanjuti agar tidak berlarut-larut. Mari sama-sama kita jaga kualitas pelayanan.
-
-Terima kasih,
-_Admin Kanwil ATR/BPN Prov. Aceh_`
+Kepada {mentions}, mohon bisa dibantu untuk segera ditindaklanjuti agar tidak berlarut-larut. Mari sama-sama kita jaga kualitas pelayanan. Terima kasih.`
   },
 
   template_reminder_personal: {
@@ -109,10 +100,7 @@ Mohon maaf mengganggu lagi. Ini pengingat ke-{reminderCount} terkait pengaduan y
 
 Kalau memungkinkan, mohon bisa segera direspons atau di-close ya Pak/Bu, agar tidak masuk ke tahap eskalasi.
 
-Terima kasih banyak atas perhatiannya.
-
-Salam,
-_Admin Kanwil ATR/BPN Prov. Aceh_`
+Terima kasih banyak atas perhatiannya.`
   },
 
   template_reminder_kanwil: {
@@ -145,10 +133,7 @@ Dengan hormat, kami dari Tim Pengawasan Kanwil ingin menyampaikan informasi bahw
 
 Kami mohon bantuan Bapak/Ibu selaku Kasubbag Tata Usaha untuk berkenan mengingatkan atau menginstruksikan admin yang bertanggung jawab agar segera memproses dan menutup tiket tersebut di OCA Interaction.
 
-Atas perhatian dan arahannya, kami ucapkan terima kasih.
-
-Salam hormat,
-_Tim Pengawasan Kanwil ATR/BPN Prov. Aceh_`
+Atas perhatian dan arahannya, kami ucapkan terima kasih.`
   },
 
   template_eskalasi_humas: {
@@ -170,8 +155,7 @@ Berikut kami laporkan bahwa terdapat pengaduan masyarakat yang sudah melewati ba
 
 Kami sudah mengirimkan eskalasi juga ke Kasubbag Tata Usaha kantah terkait. Mohon arahan lebih lanjut dari Bapak/Ibu agar pelayanan tidak terhambat.
 
-Terima kasih,
-_Tim Pengawasan Kanwil ATR/BPN Prov. Aceh_`
+Terima kasih.`
   },
 
   template_closed_group: {
@@ -191,10 +175,7 @@ Alhamdulillah, pengaduan berikut sudah berhasil ditangani dan ditutup:
 *Last Update*: {lastUpdate}
 *Ditangani oleh*: {mentions}
 
-Terima kasih banyak kepada rekan-rekan yang sudah sigap menindaklanjuti. Semoga kita bisa terus menjaga kecepatan dan kualitas pelayanan kepada masyarakat.
-
-Salam,
-_Admin Kanwil ATR/BPN Prov. Aceh_`
+Terima kasih banyak kepada rekan-rekan yang sudah sigap menindaklanjuti. Semoga kita bisa terus menjaga kecepatan dan kualitas pelayanan kepada masyarakat.`
   },
 
   template_manual_resend: {
@@ -212,10 +193,7 @@ Pesan ini dikirimkan langsung oleh Tim Kanwil melalui Dashboard Pengawasan. Kami
 *Tanggal Masuk*: {tanggal}
 *Last Update*: {lastUpdate}
 
-Mohon saat ini bisa langsung dibuka dan ditindaklanjuti melalui OCA Interaction ya. Kami sangat mengapresiasi kecepatan respons Bapak/Ibu.
-
-Terima kasih,
-_Admin Kanwil ATR/BPN Prov. Aceh_`
+Mohon saat ini bisa langsung dibuka dan ditindaklanjuti melalui OCA Interaction ya. Kami sangat mengapresiasi kecepatan respons Bapak/Ibu.`
   }
 };
 
@@ -278,6 +256,12 @@ function renderTemplate(key, data = {}) {
   for (const [placeholder, val] of Object.entries(replacements)) {
     text = text.split(placeholder).join(val);
   }
+
+  // Bersihkan tulisan Admin Kanwil dari template lama agar tidak duplikat dengan footer HumasKanwil
+  text = text
+    .replace(/(\r?\n)*_?(Salam( hormat)?,|Terima kasih,)\r?\n_?(Admin|Tim Pengawasan) Kanwil ATR\/BPN Prov(insi|\.)? Aceh_?/gi, '')
+    .replace(/(\r?\n)*_?(Admin|Tim Pengawasan) Kanwil ATR\/BPN Prov(insi|\.)? Aceh_?/gi, '')
+    .trim();
 
   return text;
 }
