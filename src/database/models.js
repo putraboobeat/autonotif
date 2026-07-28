@@ -60,10 +60,6 @@ const AdminModel = {
     const target = normalize(kantorName);
     
     const results = allAdmins.filter(admin => {
-      // Selalu sertakan Admin Utama / Kanwil dalam setiap notifikasi pengaduan
-      if (admin.kantor_pertanahan.toLowerCase().includes('kanwil') || admin.kantor_pertanahan.toLowerCase().includes('admin utama')) {
-        return true;
-      }
       if (!target) return false;
       
       const source = normalize(admin.kantor_pertanahan);

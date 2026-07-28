@@ -4,10 +4,16 @@
 const { renderTemplate } = require('./templates');
 const { formatPhoneNumber } = require('../utils/helpers');
 
-function formatMention(phone) {
-  if (!phone) return '';
-  const clean = formatPhoneNumber(phone);
-  return clean ? `@${clean}` : '';
+// Format tag/mention WhatsApp (Since API mentions are unreliable, use names)
+function formatMention(admin) {
+  if (!admin) return '';
+  const phone = admin.no_hp || '';
+  const clean = String(phone).replace(/\D/g, '');
+  if (!clean) return admin.nama || 'Admin';
+  
+  let p = clean;
+  if (p.startsWith('0')) p = '62' + p.substring(1);
+  return `${admin.nama} (wa.me/${p})`;
 }
 
 /**
@@ -29,9 +35,9 @@ function formatField(val, isDetail = false) {
  */
 function buildGroupMessage(ticket, groupName, allOpenTickets) {
   const mentions = (ticket.matchingAdmins || [])
-    .map((a) => formatMention(a.no_hp))
+    .map((a) => formatMention(a))
     .filter(Boolean)
-    .join(' ') || 'Admin Kantah Terkait';
+    .join(', ') || 'Admin Kantah Terkait';
 
   let msg = renderTemplate('template_new_group', {
     ticketId: ticket.ticketId,
@@ -87,9 +93,9 @@ function buildKanwilMessage(ticket, adminName) {
  */
 function buildGroupReminderMessage(ticket, groupName, reminderCount) {
   const mentions = (ticket.matchingAdmins || [])
-    .map((a) => formatMention(a.no_hp))
+    .map((a) => formatMention(a))
     .filter(Boolean)
-    .join(' ') || 'Admin Kantah Terkait';
+    .join(', ') || 'Admin Kantah Terkait';
 
   return renderTemplate('template_reminder_group', {
     ticketId: ticket.ticketId,
@@ -156,9 +162,9 @@ function buildGroupReminderSummaryMessage(openTickets, groupName) {
 
   openTickets.forEach((ticket, idx) => {
     const admins = AdminModel.findByKantor(ticket.kantorPertanahan) || [];
-    const adminNames = admins.map(a => `${a.nama} (${formatMention(a.no_hp)})`).join(', ') || 'Admin wilayah terkait';
-    admins.forEach(a => {
-      const m = formatMention(a.no_hp);
+    const adminNames = admins.map(a => formatMention(a)).join(', ') || 'Admin wilayah terkait';
+    admins.forEach((a) => {
+      const m = formatMention(a);
       if (m) allMentions.add(m);
     });
 
@@ -198,7 +204,7 @@ function buildClosedTicketGroupMessage(closedTickets) {
   if (closedTickets.length === 1) {
     const ticket = closedTickets[0];
     const admins = ticket.matchingAdmins || [];
-    const mentions = admins.map(a => formatMention(a.no_hp)).filter(Boolean).join(' ') || 'Admin Kantah Terkait';
+    const mentions = admins.map(a => formatMention(a)).filter(Boolean).join(', ') || 'Admin Kantah Terkait';
     return renderTemplate('template_closed_group', {
       ticketId: ticket.ticketId,
       customer: ticket.customer,
@@ -224,13 +230,14 @@ function buildClosedTicketGroupMessage(closedTickets) {
 
   closedTickets.forEach((ticket, idx) => {
     const admins = ticket.matchingAdmins || [];
-    const tagList = admins.map(a => formatMention(a.no_hp)).filter(Boolean).join(' ');
-    if (tagList) {
-      admins.forEach(a => {
-        const m = formatMention(a.no_hp);
+    const tagList = admins.map(a => formatMention(a)).filter(Boolean).join(', ');
+    
+    admins.forEach((a) => {
+      if (a.no_hp) {
+        const m = formatMention(a);
         if (m) allMentions.add(m);
-      });
-    }
+      }
+    });
 
     lines.push(
       `*${idx + 1}. No. Tiket*: ${ticket.ticketId}`,
