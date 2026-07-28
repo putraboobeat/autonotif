@@ -885,7 +885,10 @@ function renderLogs() {
       <td><strong>${escapeHtml(log.ticket_id)}</strong></td>
       <td><span class="badge ${log.target_type === 'group' ? 'badge-info' : 'badge-warning'}">${log.target_type}</span></td>
       <td>${escapeHtml(log.target_name || log.target_number || '-')}</td>
-      <td><span class="badge ${log.status === 'sent' ? 'badge-success' : 'badge-danger'}">${log.status}</span></td>
+      <td>
+        <span class="badge ${log.status === 'sent' ? 'badge-success' : 'badge-danger'}">${log.status}</span>
+        ${log.status === 'failed' ? `<br><a href="https://wa.me/${formatWaNumber(log.target_number)}?text=${encodeURIComponent(log.message || '')}" target="_blank" class="btn btn-sm btn-primary" style="margin-top: 5px; font-size: 11px; padding: 2px 6px;">Kirim Manual</a>` : ''}
+      </td>
       <td class="timestamp">${formatDateTime(log.sent_at)}</td>
     </tr>
   `).join('');
@@ -1181,6 +1184,13 @@ function formatTime(date) {
     minute: '2-digit',
     second: '2-digit',
   });
+}
+
+function formatWaNumber(phone) {
+  if (!phone) return '';
+  let p = phone.replace(/\D/g, '');
+  if (p.startsWith('0')) p = '62' + p.substring(1);
+  return p;
 }
 
 function formatDateTime(dateStr) {
