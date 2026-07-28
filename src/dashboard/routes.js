@@ -234,7 +234,12 @@ function createRoutes() {
       if (sentCount > 0) {
         res.json({ success: true, message: `Pesan berhasil terkirim ke ${sentCount} kontak di ${admin.kantor_pertanahan}!`, details: results });
       } else {
-        res.status(400).json({ success: false, error: `Gagal mengirim atau tidak ada nomor telepon yang valid pada target yang dipilih untuk ${admin.kantor_pertanahan}.`, details: results });
+        const errorDetails = results.map(r => `${r.target} (${r.phone}): ${r.result && r.result.error ? r.result.error : 'Gagal'}`).join(' | ');
+        res.status(400).json({ 
+          success: false, 
+          error: errorDetails ? `Gagal mengirim ke StarSender API: ${errorDetails}` : `Tidak ada nomor telepon yang valid pada target yang dipilih untuk ${admin.kantor_pertanahan}.`, 
+          details: results 
+        });
       }
     } catch (error) {
       res.status(500).json({ success: false, error: error.message });

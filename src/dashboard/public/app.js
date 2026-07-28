@@ -635,6 +635,8 @@ Atas perhatian, kerja sama yang baik, dan dedikasi Bapak/Ibu dalam memberikan pe
     
     document.getElementById('send-msg-text').value = defaultMsg;
     document.getElementById('send-msg-target-type').value = 'all';
+    const feedback = document.getElementById('send-msg-feedback');
+    if (feedback) feedback.style.display = 'none';
     document.getElementById('send-msg-modal').classList.add('active');
   } catch (error) {
     showToast('Gagal memuat data admin: ' + error.message, 'error');
@@ -649,8 +651,18 @@ async function submitSendMessage() {
   const adminId = document.getElementById('send-msg-admin-id').value;
   const message = document.getElementById('send-msg-text').value;
   const targetType = document.getElementById('send-msg-target-type').value;
+  const feedback = document.getElementById('send-msg-feedback');
+
+  if (feedback) feedback.style.display = 'none';
 
   if (!message || message.trim() === '') {
+    if (feedback) {
+      feedback.style.display = 'block';
+      feedback.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
+      feedback.style.color = '#f87171';
+      feedback.style.border = '1px solid rgba(239, 68, 68, 0.4)';
+      feedback.textContent = '❌ Teks pesan tidak boleh kosong!';
+    }
     return showToast('Teks pesan tidak boleh kosong!', 'error');
   }
 
@@ -662,13 +674,37 @@ async function submitSendMessage() {
   try {
     const result = await apiPost(`/admins/${adminId}/send-message`, { message, targetType });
     if (result.success) {
-      showToast(result.message || 'Pesan berhasil dikirim!', 'success');
-      closeSendMsgModal();
+      const successMsg = result.message || 'Pesan berhasil dikirim!';
+      if (feedback) {
+        feedback.style.display = 'block';
+        feedback.style.backgroundColor = 'rgba(16, 185, 129, 0.2)';
+        feedback.style.color = '#34d399';
+        feedback.style.border = '1px solid rgba(16, 185, 129, 0.4)';
+        feedback.textContent = `✅ ${successMsg}`;
+      }
+      showToast(successMsg, 'success');
+      setTimeout(() => closeSendMsgModal(), 1500);
     } else {
-      showToast(result.error || 'Gagal mengirim pesan ke admin', 'error');
+      const errorMsg = result.error || 'Gagal mengirim pesan ke admin.';
+      if (feedback) {
+        feedback.style.display = 'block';
+        feedback.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
+        feedback.style.color = '#f87171';
+        feedback.style.border = '1px solid rgba(239, 68, 68, 0.4)';
+        feedback.textContent = `❌ ${errorMsg}`;
+      }
+      showToast(errorMsg, 'error');
     }
   } catch (error) {
-    showToast('Terjadi kesalahan: ' + error.message, 'error');
+    const errText = 'Terjadi kesalahan sistem: ' + error.message;
+    if (feedback) {
+      feedback.style.display = 'block';
+      feedback.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
+      feedback.style.color = '#f87171';
+      feedback.style.border = '1px solid rgba(239, 68, 68, 0.4)';
+      feedback.textContent = `❌ ${errText}`;
+    }
+    showToast(errText, 'error');
   } finally {
     btn.disabled = false;
     btn.textContent = oldText;

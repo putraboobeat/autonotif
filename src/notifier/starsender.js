@@ -51,9 +51,8 @@ function applyAntiBanProtection(message) {
 async function sendPersonalMessage(phoneNumber, message) {
   const formattedPhone = formatPhoneNumber(phoneNumber);
   const protectedMessage = applyAntiBanProtection(message);
-  const randomDelay = getRandomInt(5, 12); // Jitter delay 5-12 detik untuk perilaku manusiawi (anti-robot)
 
-  log.info(`Sending personal message to ${formattedPhone} (delay: ${randomDelay}s)...`);
+  log.info(`Sending personal message to ${formattedPhone}...`);
 
   try {
     const result = await retry(async () => {
@@ -67,7 +66,7 @@ async function sendPersonalMessage(phoneNumber, message) {
           messageType: 'text',
           to: formattedPhone,
           body: protectedMessage,
-          delay: randomDelay,
+          delay: 2,
         }),
       });
 
@@ -93,9 +92,8 @@ async function sendPersonalMessage(phoneNumber, message) {
  */
 async function sendGroupMessage(groupName, message) {
   const protectedMessage = applyAntiBanProtection(message);
-  const randomDelay = getRandomInt(5, 12); // Jitter delay 5-12 detik
 
-  log.info(`Sending group message to "${groupName}" (delay: ${randomDelay}s)...`);
+  log.info(`Sending group message to "${groupName}"...`);
 
   try {
     const result = await retry(async () => {
@@ -107,7 +105,7 @@ async function sendGroupMessage(groupName, message) {
         messageType: 'text',
         to: groupName,
         body: protectedMessage,
-        delay: randomDelay,
+        delay: 2,
       };
 
       if (mentionNumbers.length > 0) {
