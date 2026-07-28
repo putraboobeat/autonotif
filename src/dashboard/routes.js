@@ -197,7 +197,7 @@ function createRoutes() {
       if ((targetType === 'all' || targetType === 'admin') && admin.no_hp) {
         const cleanPhone = formatPhoneNumber(admin.no_hp);
         if (cleanPhone) {
-          const resAdmin = await sendPersonalMessage(cleanPhone, message.trim());
+          const resAdmin = await sendPersonalMessage(cleanPhone, message.trim(), { useIceBreaker: true, recipientName: admin.nama });
           NotificationLogModel.create({
             ticketId: 'CUSTOM-MSG',
             targetType: 'custom_admin_msg',
@@ -216,7 +216,7 @@ function createRoutes() {
       if ((targetType === 'all' || targetType === 'ktu') && admin.no_hp_ktu) {
         const cleanKtuPhone = formatPhoneNumber(admin.no_hp_ktu);
         if (cleanKtuPhone) {
-          const resKtu = await sendPersonalMessage(cleanKtuPhone, message.trim());
+          const resKtu = await sendPersonalMessage(cleanKtuPhone, message.trim(), { useIceBreaker: true, recipientName: admin.nama_ktu });
           NotificationLogModel.create({
             ticketId: 'CUSTOM-MSG',
             targetType: 'custom_ktu_msg',
@@ -321,7 +321,7 @@ function createRoutes() {
               lastUpdate: ticket.last_update || ticket.created_date || ticket.created_at,
               adminNama: admin.nama
             });
-            const result = await sendPersonalMessage(cleanPhone, msg);
+            const result = await sendPersonalMessage(cleanPhone, msg, { useIceBreaker: true, recipientName: admin.nama });
             notifiedNumbers.add(cleanPhone);
             totalSent++;
             NotificationLogModel.create({
@@ -347,7 +347,7 @@ function createRoutes() {
               lastUpdate: ticket.last_update || ticket.created_date || ticket.created_at,
               adminNama: admin.nama_ktu || 'Kasubbag Tata Usaha'
             });
-            const ktuResult = await sendPersonalMessage(cleanKtuPhone, ktuMsg);
+            const ktuResult = await sendPersonalMessage(cleanKtuPhone, ktuMsg, { useIceBreaker: true, recipientName: admin.nama_ktu });
             notifiedNumbers.add(cleanKtuPhone);
             totalSent++;
             NotificationLogModel.create({

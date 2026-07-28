@@ -46,38 +46,91 @@ function applyAntiBanProtection(message) {
 }
 
 /**
- * Send a WhatsApp message to a personal number via StarSender with anti-ban protection
+ * Helper internal untuk eksekusi API Gateway (StarSender atau GoWA)
  */
-async function sendPersonalMessage(phoneNumber, message) {
-  const formattedPhone = formatPhoneNumber(phoneNumber);
-  const protectedMessage = applyAntiBanProtection(message);
+async function executeGatewaySend(to, text, isGroup = false) {
+  const provider = config.gateway && config.gateway.provider ? config.gateway.provider : 'starsender';
 
-  log.info(`Sending personal message to ${formattedPhone}...`);
+  if (provider === 'gowa') {
+    // Pengiriman melalui GoWA (Golang WhatsApp / whatsmeow) yang sakti untuk nomor baru
+    const url = isGroup ? config.gateway.gowaGroupUrl : config.gateway.gowaSendUrl;
+    const headers = { 'Content-Type': 'application/json' };
+    if (config.gateway.gowaApiKey) {
+      headers['Authorization'] = `Bearer ${config.gateway.gowaApiKey}`;
+    }
+    
+    const payload = isGroup ? { group: to, message: text } : { phone: to, message: text };
+    
+    const response = await fetch(url, { method: 'POST', headers, body: JSON.stringify(payload) });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data.message || data.error || `GoWA HTTP ${response.status}`);
+    }
+    return data;
+  } else {
+    // Default: Pengiriman via StarSender API
+    const url = isGroup ? config.starsender.groupUrl : config.starsender.sendUrl;
+    const payload = {
+      messageType: 'text',
+      to: to,
+      body: text,
+      delay: 2,
+    };
+
+    if (isGroup) {
+      const mentionMatches = text.match(/@(62\d+|08\d+|8\d+)/g) || [];
+      const mentionNumbers = [...new Set(mentionMatches.map(m => formatPhoneNumber(m.replace('@', ''))))].filter(Boolean);
+      if (mentionNumbers.length > 0) {
+        payload.mention = mentionNumbers;
+        payload.mentions = mentionNumbers.map(n => `${n}@s.whatsapp.net`);
+      }
+    }
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: getActiveApiKey(),
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await response.json();
+    if (!response.ok || !data.success) {
+      throw new Error(data.message || `HTTP ${response.status}`);
+    }
+    return data;
+  }
+}
+
+/**
+ * Send a WhatsApp message to a personal number via StarSender or GoWA with anti-ban & ice-breaker protection
+ */
+async function sendPersonalMessage(phoneNumber, message, options = {}) {
+  const formattedPhone = formatPhoneNumber(phoneNumber);
+  
+  // TRIK SAKTI 1000% ANTI-BANNED & BYPASS COLD NUMBER WHATSAPP META (ICE-BREAKER 2-TAHAP)
+  // Memancing pembukuan sesi E2E WhatsApp untuk nomor baru yang belum pernah berinteraksi sebelumnya
+  if (options && options.useIceBreaker) {
+    const greetingName = options.recipientName ? `Pak/Bu ${options.recipientName.split(' ')[0]}` : 'Bapak/Ibu';
+    const iceBreakerMsg = `Assalamualaikum ${greetingName}, selamat pagi/siang. Mohon izin bersurat dari *Humas Kanwil BPN Provinsi Aceh* 🙏`;
+    
+    log.info(`[ICE-BREAKER] Sending simple handshake greeting first to unlock E2E WhatsApp session for cold number ${formattedPhone}...`);
+    try {
+      await retry(() => executeGatewaySend(formattedPhone, iceBreakerMsg, false), 2, 1500);
+      // Jeda alami layaknya manusia mengetik (3.5 - 5 detik) agar WhatsApp membuka sesi chat dengan aman
+      await humanlikeSleep(3500, 5000);
+    } catch (e) {
+      log.warn(`[ICE-BREAKER] Handshake greeting encountered warning: ${e.message}, proceeding with main message.`);
+    }
+  }
+
+  const protectedMessage = applyAntiBanProtection(message);
+  const provider = config.gateway && config.gateway.provider ? config.gateway.provider.toUpperCase() : 'STARSENDER';
+  log.info(`Sending personal message to ${formattedPhone} via ${provider}...`);
 
   try {
-    const result = await retry(async () => {
-      const response = await fetch(config.starsender.sendUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: getActiveApiKey(),
-        },
-        body: JSON.stringify({
-          messageType: 'text',
-          to: formattedPhone,
-          body: protectedMessage,
-          delay: 2,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        throw new Error(data.message || `HTTP ${response.status}`);
-      }
-
-      return data;
-    }, 3, 2000);
+    const result = await retry(() => executeGatewaySend(formattedPhone, protectedMessage, false), 3, 2000);
 
     log.info(`Personal message sent to ${formattedPhone}`, { success: true });
     return { success: true, data: result, sentMessage: protectedMessage };
@@ -88,48 +141,16 @@ async function sendPersonalMessage(phoneNumber, message) {
 }
 
 /**
- * Send a WhatsApp message to a group via StarSender with anti-ban protection
+ * Send a WhatsApp message to a group via StarSender or GoWA with anti-ban protection
  */
 async function sendGroupMessage(groupName, message) {
   const protectedMessage = applyAntiBanProtection(message);
+  const provider = config.gateway && config.gateway.provider ? config.gateway.provider.toUpperCase() : 'STARSENDER';
 
-  log.info(`Sending group message to "${groupName}"...`);
+  log.info(`Sending group message to "${groupName}" via ${provider}...`);
 
   try {
-    const result = await retry(async () => {
-      const mentionMatches = protectedMessage.match(/@(62\d+|08\d+|8\d+)/g) || [];
-      const mentionNumbers = [...new Set(mentionMatches.map(m => formatPhoneNumber(m.replace('@', ''))))].filter(Boolean);
-      const mentionJid = mentionNumbers.map(n => `${n}@s.whatsapp.net`);
-
-      const payload = {
-        messageType: 'text',
-        to: groupName,
-        body: protectedMessage,
-        delay: 2,
-      };
-
-      if (mentionNumbers.length > 0) {
-        payload.mention = mentionNumbers;
-        payload.mentions = mentionJid;
-      }
-
-      const response = await fetch(config.starsender.groupUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: getActiveApiKey(),
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        throw new Error(data.message || `HTTP ${response.status}`);
-      }
-
-      return data;
-    }, 3, 2000);
+    const result = await retry(() => executeGatewaySend(groupName, protectedMessage, true), 3, 2000);
 
     log.info(`Group message sent to "${groupName}"`, { success: true });
     return { success: true, data: result, sentMessage: protectedMessage };

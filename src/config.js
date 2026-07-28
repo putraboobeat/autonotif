@@ -17,6 +17,14 @@ const config = {
     groupUrl: 'https://api.starsender.online/api/send/grup',
   },
 
+  // WhatsApp Gateway Provider Selection: 'starsender' (default) atau 'gowa'
+  gateway: {
+    provider: (process.env.WA_GATEWAY_PROVIDER || 'starsender').toLowerCase(), // 'starsender' atau 'gowa'
+    gowaSendUrl: process.env.GOWA_SEND_URL || 'http://localhost:3000/send/message',
+    gowaGroupUrl: process.env.GOWA_GROUP_URL || 'http://localhost:3000/send/group',
+    gowaApiKey: process.env.GOWA_API_KEY || '',
+  },
+
   // WhatsApp
   wa: {
     groupName: process.env.WA_GROUP_NAME || '',
