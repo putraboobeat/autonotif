@@ -189,7 +189,7 @@ async function sendTicketNotification(ticket, groupName, groupMessage, personalM
 
   // 2. Send to each matching admin
   for (const { admin, message } of personalMessages) {
-    const result = await sendPersonalMessage(admin.no_hp, message);
+    const result = await sendPersonalMessage(admin.no_hp, message, { useIceBreaker: true, recipientName: admin.nama });
 
     results.personal.push({
       admin: admin.nama,

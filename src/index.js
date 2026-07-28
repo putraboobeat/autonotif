@@ -7,7 +7,16 @@ const { launchBrowser, closeBrowser, isBrowserAlive } = require('./scraper/brows
 const { performLogin } = require('./scraper/login');
 const { scrapeAllOpenTickets } = require('./scraper/ticket-scraper');
 const { detectNewOpenTickets, markTicketProcessed } = require('./detector/ticket-detector');
-const { sendTicketNotification, sendPersonalMessage } = require('./notifier/starsender');
+const { sendTicketNotification, sendPersonalMessage, sendGroupMessage } = require('./notifier/starsender');
+const { 
+  buildKanwilMessage, 
+  buildGroupMessage, 
+  buildPersonalMessage, 
+  buildGroupReminderMessage, 
+  buildPersonalReminderMessage, 
+  buildGroupReminderSummaryMessage, 
+  buildClosedTicketGroupMessage 
+} = require('./notifier/message-builder');
 const { NotificationLogModel } = require('./database/models');
 const { renderTemplate } = require('./notifier/templates');
 const { startDashboard } = require('./dashboard/server');
@@ -88,7 +97,7 @@ async function scrapeCycle() {
         // 1. KIRIM KE ADMIN KANWIL (selalu)
         if (config.kanwil.phone) {
           const kanwilMsg = buildKanwilMessage(ticket, config.kanwil.name);
-          const kanwilResult = await sendPersonalMessage(config.kanwil.phone, kanwilMsg);
+          const kanwilResult = await sendPersonalMessage(config.kanwil.phone, kanwilMsg, { useIceBreaker: true, recipientName: config.kanwil.name });
 
           NotificationLogModel.create({
             ticketId: ticket.ticketId,
@@ -124,9 +133,6 @@ async function scrapeCycle() {
       }
 
       // === PROCESS REMINDER TICKETS ===
-      const { buildGroupReminderMessage, buildPersonalReminderMessage, buildGroupReminderSummaryMessage } = require('./notifier/message-builder');
-      const { sendGroupMessage } = require('./notifier/starsender');
-
       // 1. Kirim REKAP DAFTAR SEMUA TIKET BELUM CLOSED ke Group WA (hanya 1 pesan daftar, tidak spam)
       let groupSummarySuccess = false;
       if (reminderTickets.length > 0 && groupEnabled && waGroupId) {
@@ -163,7 +169,7 @@ async function scrapeCycle() {
             lastUpdate: ticket.lastUpdate,
             reminderCount: rc
           });
-          await sendPersonalMessage(config.kanwil.phone, kanwilRemMsg);
+          await sendPersonalMessage(config.kanwil.phone, kanwilRemMsg, { useIceBreaker: true, recipientName: config.kanwil.name });
         }
 
         // ESKALASI > 1 HARI / 24 JAM TIDAK DI-CLOSE:
@@ -182,7 +188,7 @@ async function scrapeCycle() {
               reminderCount: rc
             });
 
-            const humasRes = await sendPersonalMessage(config.kasubbag_humas.phone, humasMsg);
+            const humasRes = await sendPersonalMessage(config.kasubbag_humas.phone, humasMsg, { useIceBreaker: true, recipientName: config.kasubbag_humas.name });
             NotificationLogModel.create({
               ticketId: ticket.ticketId,
               targetType: 'kasubbag_humas',
@@ -210,7 +216,7 @@ async function scrapeCycle() {
               ktuNama: ktu.nama
             });
 
-            const ktuRes = await sendPersonalMessage(ktu.no_hp, ktuMsg);
+            const ktuRes = await sendPersonalMessage(ktu.no_hp, ktuMsg, { useIceBreaker: true, recipientName: ktu.nama });
             NotificationLogModel.create({
               ticketId: ticket.ticketId,
               targetType: 'kasubbag_tu',
@@ -244,8 +250,6 @@ async function scrapeCycle() {
 
       // === PROCESS CLOSED TICKET ANNOUNCEMENTS ===
       if (closedTickets && closedTickets.length > 0 && groupEnabled && waGroupId) {
-        const { buildClosedTicketGroupMessage } = require('./notifier/message-builder');
-        const { sendGroupMessage } = require('./notifier/starsender');
         log.info(`Sending appreciation notification for ${closedTickets.length} resolved/closed tickets to group "${waGroupId}"...`);
         const closedMsg = buildClosedTicketGroupMessage(closedTickets);
         const closedRes = await sendGroupMessage(waGroupId, closedMsg);
