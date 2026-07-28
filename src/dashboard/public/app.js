@@ -493,7 +493,7 @@ async function loadAdmins() {
         </td>
         <td>
           <div class="actions-bar" style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
-            <button class="btn btn-primary btn-sm" onclick="openSendMsgModal(${admin.id})" title="Kirim Pesan WhatsApp" style="display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; font-size: 12px; background-color: #0284c7; border-color: #0284c7; color: #fff; font-weight: 500;">💬 Kirim Pesan</button>
+            <button class="btn btn-primary btn-sm" onclick="openSendMsgModal(${admin.id})" title="Kirim Pesan WhatsApp" style="display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; font-size: 12px; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important; border-color: rgba(255,255,255,0.2) !important; color: #fff; font-weight: 500;">💬 Kirim Pesan</button>
             <button class="btn btn-ghost btn-sm btn-icon" onclick="editAdmin(${admin.id})" title="Edit">✏️</button>
             <button class="btn btn-danger btn-sm btn-icon" onclick="deleteAdmin(${admin.id}, '${escapeHtml(admin.kantor_pertanahan)}')" title="Hapus">🗑️</button>
           </div>
@@ -587,7 +587,7 @@ async function saveAdmin() {
 }
 
 function editAdmin(id) {
-  const admin = allLoadedAdmins.find(a => a.id === id);
+  const admin = allLoadedAdmins.find(a => String(a.id) === String(id));
   if (admin) {
     openAdminModal(admin);
   } else {
@@ -613,7 +613,7 @@ async function deleteAdmin(id, nama) {
 
 function openSendMsgModal(id) {
   closeAdminModal();
-  const admin = allLoadedAdmins.find(a => a.id === id);
+  const admin = allLoadedAdmins.find(a => String(a.id) === String(id));
   if (!admin) {
     return showToast('Data admin tidak ditemukan, coba refresh halaman', 'error');
   }
