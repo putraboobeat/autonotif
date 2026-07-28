@@ -534,6 +534,20 @@ function createRoutes() {
     }
   });
 
+  router.post('/test-gowa', async (req, res) => {
+    try {
+      const { target } = req.body;
+      if (!target) {
+        return res.status(400).json({ success: false, error: 'Nomor HP tujuan diperlukan' });
+      }
+      const message = `🔔 *TEST PING GOWA FALLBACK*\n\nIni adalah pesan tes ping khusus menggunakan provider *GoWA*.\n\n_Pesan ini bisa sampai ke nomor yang belum pernah di-chat (cold number)._`;
+      const result = await sendPersonalMessage(target, message, { forceProvider: 'gowa' });
+      res.json({ success: result.success, data: result, error: result.error });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
   router.post('/force-check', async (req, res) => {
     try {
       if (typeof global.triggerManualScrape === 'function') {

@@ -20,6 +20,8 @@ const config = {
   // WhatsApp Gateway Provider Selection: 'starsender' (default) atau 'gowa'
   gateway: {
     provider: (process.env.WA_GATEWAY_PROVIDER || 'starsender').toLowerCase(), // 'starsender' atau 'gowa'
+    fallbackEnabled: (process.env.GOWA_FALLBACK_ENABLED || 'true').toLowerCase() === 'true', // auto-fallback ke GoWA jika StarSender gagal
+    coldNumberStrategy: (process.env.COLD_NUMBER_STRATEGY || 'gowa_first').toLowerCase(), // 'gowa_first' | 'starsender_first' | 'gowa_only'
     gowaSendUrl: process.env.GOWA_SEND_URL || 'http://localhost:3000/send/message',
     gowaGroupUrl: process.env.GOWA_GROUP_URL || 'http://localhost:3000/send/group',
     gowaApiKey: process.env.GOWA_API_KEY || '',
