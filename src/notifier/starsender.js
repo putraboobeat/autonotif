@@ -101,8 +101,9 @@ async function executeGoWA(to, text, isGroup = false) {
 
   const response = await fetch(url, { method: 'POST', headers, body: JSON.stringify(payload) });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(data.message || data.error || `GoWA HTTP ${response.status}`);
+  
+  if (!response.ok || (data.code && data.code !== 'SUCCESS' && data.code !== 200)) {
+    throw new Error(data.message || data.error || `GoWA Error: ${data.code || response.status}`);
   }
   return { ...data, _provider: 'gowa' };
 }
