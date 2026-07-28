@@ -4,6 +4,7 @@ const { sendPersonalMessage, sendGroupMessage } = require('../notifier/starsende
 const { buildTestMessage } = require('../notifier/message-builder');
 const { config } = require('../config');
 const { createLogger } = require('../utils/logger');
+const { formatPhoneNumber } = require('../utils/helpers');
 const { getAuthStatus, startLoginInteractive, submitOtpInteractive } = require('../scraper/login-controller');
 const { getAllTemplates, renderTemplate } = require('../notifier/templates');
 const { getSlaMetrics } = require('../analytics/sla-service');
@@ -128,7 +129,14 @@ function createRoutes() {
       if (!nama || !kantor_pertanahan || !no_hp) {
         return res.status(400).json({ success: false, error: 'Nama, kantor pertanahan, dan no HP wajib diisi' });
       }
-      const result = AdminModel.create({ nama, kantor_pertanahan, no_hp, jabatan, nama_ktu, no_hp_ktu });
+      const result = AdminModel.create({ 
+        nama, 
+        kantor_pertanahan, 
+        no_hp: formatPhoneNumber(no_hp), 
+        jabatan, 
+        nama_ktu, 
+        no_hp_ktu: no_hp_ktu ? formatPhoneNumber(no_hp_ktu) : null 
+      });
       res.json({ success: true, data: { id: result.lastInsertRowid } });
     } catch (error) {
       if (error.message.includes('UNIQUE constraint')) {
@@ -145,10 +153,10 @@ function createRoutes() {
       AdminModel.update(parseInt(req.params.id), {
         nama,
         kantor_pertanahan,
-        no_hp,
+        no_hp: formatPhoneNumber(no_hp),
         jabatan,
         nama_ktu,
-        no_hp_ktu,
+        no_hp_ktu: no_hp_ktu ? formatPhoneNumber(no_hp_ktu) : null,
         is_active: is_active !== undefined ? is_active : true,
       });
       res.json({ success: true });

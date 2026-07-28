@@ -43,12 +43,17 @@ db.prepare('DELETE FROM admins').run();
 console.log('Seluruh data admin lama berhasil dihapus.');
 
 // Insert new admins
+const { formatPhoneNumber } = require('./utils/helpers');
 let inserted = 0;
 for (const admin of admins) {
   try {
-    AdminModel.create(admin);
+    const cleanedAdmin = {
+      ...admin,
+      no_hp: formatPhoneNumber(admin.no_hp)
+    };
+    AdminModel.create(cleanedAdmin);
     inserted++;
-    console.log(`  [${inserted}] ${admin.kantor_pertanahan} — ${admin.nama} (${admin.no_hp})`);
+    console.log(`  [${inserted}] ${cleanedAdmin.kantor_pertanahan} — ${cleanedAdmin.nama} (${cleanedAdmin.no_hp})`);
   } catch (err) {
     console.error(`  GAGAL: ${admin.nama} — ${err.message}`);
   }

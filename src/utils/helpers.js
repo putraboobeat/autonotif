@@ -6,6 +6,21 @@ function sleep(ms) {
 }
 
 /**
+ * Get a random integer between min and max (inclusive)
+ */
+function getRandomInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+/**
+ * Sleep for a random human-like duration between minMs and maxMs (Jitter / Anti-Bot)
+ */
+async function humanlikeSleep(minMs = 3500, maxMs = 8500) {
+  const delay = getRandomInt(minMs, maxMs);
+  return new Promise((resolve) => setTimeout(resolve, delay));
+}
+
+/**
  * Retry a function with exponential backoff
  */
 async function retry(fn, maxRetries = 3, baseDelay = 1000) {
@@ -25,16 +40,24 @@ async function retry(fn, maxRetries = 3, baseDelay = 1000) {
 }
 
 /**
- * Format phone number to international format
- * Converts 08xxx to 628xxx
+ * Format phone number to international format (+62 / 62)
+ * Converts 08xxx or 8xxx (without leading 0) to 628xxx
+ * Mencegah error country code +852 (Hong Kong) pada input tanpa angka 0
  */
 function formatPhoneNumber(phone) {
-  let cleaned = phone.replace(/[\s\-\(\)]/g, '');
-  if (cleaned.startsWith('08')) {
+  if (!phone) return '';
+  // Remove all non-digit characters (strips +, spaces, dashes, parentheses)
+  let cleaned = String(phone).replace(/\D/g, '');
+  
+  // Convert leading 0 to 62 (e.g., 0852... -> 62852...)
+  if (cleaned.startsWith('0')) {
     cleaned = '62' + cleaned.substring(1);
-  } else if (cleaned.startsWith('+62')) {
-    cleaned = cleaned.substring(1);
+  } 
+  // Convert leading 8 (input without 0 or 62) to 628... (e.g., 852... -> 62852...)
+  else if (cleaned.startsWith('8')) {
+    cleaned = '62' + cleaned;
   }
+  
   return cleaned;
 }
 
@@ -80,6 +103,8 @@ function truncate(str, maxLength = 50) {
 
 module.exports = {
   sleep,
+  getRandomInt,
+  humanlikeSleep,
   retry,
   formatPhoneNumber,
   formatDate,

@@ -67,6 +67,22 @@ function initDatabase() {
     log.error('Migration failed', { error: err.message });
   }
 
+  // Auto-normalize existing admin phone numbers in database to 628xxx format (prevent +852 Hong Kong error)
+  try {
+    const { formatPhoneNumber } = require('../utils/helpers');
+    const allAdmins = db.prepare('SELECT id, no_hp, no_hp_ktu FROM admins').all();
+    const updatePhoneStmt = db.prepare('UPDATE admins SET no_hp = ?, no_hp_ktu = ? WHERE id = ?');
+    for (const adm of allAdmins) {
+      const cleanHp = adm.no_hp ? formatPhoneNumber(adm.no_hp) : null;
+      const cleanKtu = adm.no_hp_ktu ? formatPhoneNumber(adm.no_hp_ktu) : null;
+      if (cleanHp !== adm.no_hp || cleanKtu !== adm.no_hp_ktu) {
+        updatePhoneStmt.run(cleanHp, cleanKtu, adm.id);
+      }
+    }
+  } catch (err) {
+    log.error('Phone normalization failed', { error: err.message });
+  }
+
   log.info('Database initialized successfully', { path: DB_PATH });
   return db;
 }

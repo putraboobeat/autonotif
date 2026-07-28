@@ -2,14 +2,12 @@
  * Build WhatsApp notification messages
  */
 const { renderTemplate } = require('./templates');
+const { formatPhoneNumber } = require('../utils/helpers');
 
 function formatMention(phone) {
   if (!phone) return '';
-  let clean = phone.toString().replace(/\D/g, '');
-  if (clean.startsWith('0')) {
-    clean = '62' + clean.slice(1);
-  }
-  return `@${clean}`;
+  const clean = formatPhoneNumber(phone);
+  return clean ? `@${clean}` : '';
 }
 
 /**
