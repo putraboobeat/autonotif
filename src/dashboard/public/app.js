@@ -1410,11 +1410,13 @@ function openHolidayModal() {
   document.getElementById('holidayForm').reset();
   document.getElementById('holiday_id').value = '';
   document.getElementById('holiday_active').checked = true;
-  document.getElementById('holidayModal').style.display = 'block';
+  document.getElementById('holidayModal').classList.add('active');
+  document.getElementById('holidayModal').style.display = '';
 }
 
 function closeHolidayModal() {
-  document.getElementById('holidayModal').style.display = 'none';
+  document.getElementById('holidayModal').classList.remove('active');
+  document.getElementById('holidayModal').style.display = '';
 }
 
 function editHoliday(id) {
