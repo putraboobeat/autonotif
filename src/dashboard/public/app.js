@@ -1394,6 +1394,7 @@ async function loadHolidays() {
           </td>
           <td>
             <button class="btn btn-sm" onclick="editHoliday(${h.id})" style="background: rgba(59, 130, 246, 0.1); color: var(--primary);">Edit</button>
+            <button class="btn btn-sm btn-warning" onclick="sendHolidayManual(${h.id}, this)" style="background: #f59e0b; color: #000; font-weight: bold;">📨 Kirim</button>
             <button class="btn btn-sm btn-danger" onclick="deleteHoliday(${h.id})" style="background: rgba(239, 68, 68, 0.1); color: var(--danger);">Hapus</button>
           </td>
         </tr>
@@ -1479,6 +1480,28 @@ async function deleteHoliday(id) {
     }
   } catch (err) {
     alert('Terjadi kesalahan jaringan');
+  }
+}
+
+async function sendHolidayManual(id, btn) {
+  if (!confirm('Kirim pengingat hari besar ini secara manual sekarang?')) return;
+  
+  const oldText = btn.innerHTML;
+  btn.innerHTML = '⏳...';
+  btn.disabled = true;
+
+  try {
+    const res = await apiPost('/holidays/' + id + '/send', {});
+    if (res.success) {
+      alert(`✅ ${res.message}`);
+    } else {
+      alert(`❌ Gagal mengirim: ${res.error}`);
+    }
+  } catch (err) {
+    alert(`❌ Terjadi kesalahan jaringan: ${err.message}`);
+  } finally {
+    btn.innerHTML = oldText;
+    btn.disabled = false;
   }
 }
 

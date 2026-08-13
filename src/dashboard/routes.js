@@ -246,6 +246,44 @@ function createRoutes() {
     }
   });
 
+  router.post('/holidays/:id/send', async (req, res) => {
+    try {
+      const holiday = HolidayModel.getById(parseInt(req.params.id));
+      if (!holiday) {
+        return res.status(404).json({ success: false, error: 'Data Hari Besar tidak ditemukan' });
+      }
+
+      const { buildHolidayReminderMessage } = require('../notifier/message-builder');
+      const message = buildHolidayReminderMessage(holiday, 'manual');
+      
+      const groupTarget = holiday.target_group || ConfigModel.get('holiday_wa_group_id') || config.starsender.defaultGroupId;
+      const adminTarget = holiday.target_admins || '';
+
+      let successCount = 0;
+
+      if (groupTarget) {
+        const groupRes = await sendGroupMessage(groupTarget, message);
+        if (groupRes && groupRes.success) successCount++;
+      }
+
+      if (adminTarget) {
+        const { formatPhoneNumber } = require('../utils/helpers');
+        const adminNumbers = adminTarget.split(',').map(n => n.trim()).filter(Boolean);
+        for (const num of adminNumbers) {
+          const cleanNum = formatPhoneNumber(num);
+          if (cleanNum) {
+            const adminRes = await sendPersonalMessage(cleanNum, message, { useIceBreaker: true, recipientName: 'Admin' });
+            if (adminRes && adminRes.success) successCount++;
+          }
+        }
+      }
+
+      res.json({ success: true, message: `Berhasil mengirim ${successCount} pesan manual` });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
   // Kirim pesan WhatsApp custom ke kontak admin kantor pertanahan / KTU
   router.post('/admins/:id/send-message', async (req, res) => {
     try {

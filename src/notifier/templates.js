@@ -291,6 +291,20 @@ Bapak/Ibu, besok kita sudah memperingati:
 Dimohon kerjasamanya agar desain flyer/ucapan sudah beres atau diselesaikan hari ini dan siap di-*publish* besok.
 
 Terima kasih atas kerja kerasnya!`
+  },
+
+  template_holiday_reminder_manual: {
+    title: '14. Pengingat Hari Besar (Kirim Manual)',
+    description: 'Pesan pengingat hari raya yang dikirim secara manual melalui dashboard.',
+    placeholders: '{namaHariBesar}, {tanggal}',
+    defaultText: `*PENGINGAT HARI BESAR* 🗓️ (Manual)
+
+Bapak/Ibu, mari bersama-sama mempersiapkan peringatan:
+*{namaHariBesar}* (Jatuh pada {tanggal}).
+
+Dimohon untuk berkoordinasi dalam mendesain flyer atau ucapan terkait hari besar tersebut.
+
+Terima kasih atas perhatiannya.`
   }
 };
 

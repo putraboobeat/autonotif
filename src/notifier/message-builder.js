@@ -302,7 +302,8 @@ function buildClosedTicketPersonalMessage(ticket, admin) {
 function buildHolidayReminderMessage(holiday, hMin = 3) {
   let templateKey = 'template_holiday_reminder_h3';
   if (hMin === 2) templateKey = 'template_holiday_reminder_h2';
-  if (hMin === 1) templateKey = 'template_holiday_reminder_h1';
+  else if (hMin === 1) templateKey = 'template_holiday_reminder_h1';
+  else if (hMin === 'manual') templateKey = 'template_holiday_reminder_manual';
 
   return renderTemplate(templateKey, {
     namaHariBesar: holiday.name,
