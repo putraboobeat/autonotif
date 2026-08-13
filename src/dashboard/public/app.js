@@ -1399,9 +1399,11 @@ async function loadHolidays() {
           </td>
         </tr>
       `}).join('');
+    } else {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: red;">Gagal: ${res.error}</td></tr>`;
     }
   } catch (err) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: red;">Gagal memuat data</td></tr>';
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: red;">Kesalahan jaringan: ${err.message}</td></tr>`;
   }
 }
 
