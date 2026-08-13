@@ -250,28 +250,16 @@ function buildClosedTicketGroupMessage(closedTickets) {
     });
   }
 
-  const lines = [
-    '*Informasi Penyelesaian Pengaduan*',
+  let lines = [
+    '*DAFTAR TIKET DISELESAIKAN HARI INI* 🏆',
     '',
-    'Alhamdulillah rekan-rekan,',
-    '',
-    `Sistem memantau terdapat *${closedTickets.length} pengaduan masyarakat* yang baru saja berhasil ditangani dan diubah statusnya menjadi CLOSED pada OCA Interaction:`,
+    `Alhamdulillah, terdapat *${closedTickets.length} pengaduan* yang berhasil ditangani dan ditutup pada sesi ini:`,
     ''
   ];
 
-  const allMentions = new Set();
-
   closedTickets.forEach((ticket, idx) => {
     const admins = ticket.matchingAdmins || [];
-    const tagList = admins.map(a => formatMention(a)).filter(Boolean).join(', ');
-    
-    admins.forEach((a) => {
-      if (a.no_hp) {
-        const m = formatMention(a);
-        if (m) allMentions.add(m);
-      }
-    });
-
+    const mentions = admins.map(a => formatMention(a)).filter(Boolean).join(', ');
     lines.push(
       `*${idx + 1}. No. Tiket*: ${ticket.ticketId}`,
       `   *Kantor*: ${formatField(ticket.kantorPertanahan)}`,
@@ -280,16 +268,32 @@ function buildClosedTicketGroupMessage(closedTickets) {
       `   *Subjek*: ${formatField(ticket.subject || ticket.category, true)}`,
       `   *Tanggal Masuk*: ${formatField(ticket.createdDate, true)}`,
       `   *Last Update*: ${formatField(ticket.lastUpdate || ticket.createdDate, true)}`,
-      `   *Penanggung Jawab*: ${tagList || 'Admin Wilayah Terkait'}`,
+      `   *Ditangani oleh*: ${mentions || 'Admin'}`,
       ''
     );
   });
 
   lines.push(
-    'Terima kasih banyak atas kecepatan dan kualitas layanan dari rekan-rekan yang bertugas. Mari terus perpanjang rekam jejak pelayanan prima kita.'
+    'Terima kasih banyak atas dedikasi dan kecepatan respons rekan-rekan. Pertahankan terus kinerja baik kita!'
   );
 
   return lines.join('\n');
+}
+
+/**
+ * Build personal notification for a newly resolved/closed ticket
+ */
+function buildClosedTicketPersonalMessage(ticket, admin) {
+  return renderTemplate('template_closed_personal', {
+    ticketId: ticket.ticketId,
+    customer: ticket.customer,
+    kantor: admin.kantor_pertanahan || ticket.kantorPertanahan,
+    adminNama: admin.nama,
+    subjek: ticket.subject || ticket.category,
+    kategori: ticket.category,
+    tanggal: ticket.createdDate,
+    lastUpdate: ticket.lastUpdate || ticket.createdDate
+  });
 }
 
 module.exports = {
@@ -302,5 +306,6 @@ module.exports = {
   buildPersonalReminderMessage,
   buildGroupReminderSummaryMessage,
   buildClosedTicketGroupMessage,
+  buildClosedTicketPersonalMessage,
   buildTestMessage,
 };

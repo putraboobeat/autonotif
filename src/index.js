@@ -17,7 +17,8 @@ const {
   buildGroupReminderMessage, 
   buildPersonalReminderMessage, 
   buildGroupReminderSummaryMessage, 
-  buildClosedTicketGroupMessage 
+  buildClosedTicketGroupMessage,
+  buildClosedTicketPersonalMessage
 } = require('./notifier/message-builder');
 const { NotificationLogModel } = require('./database/models');
 const { renderTemplate } = require('./notifier/templates');
@@ -290,21 +291,47 @@ async function scrapeCycle() {
       }
 
       // === PROCESS CLOSED TICKET ANNOUNCEMENTS ===
-      if (closedTickets && closedTickets.length > 0 && groupEnabled && waGroupId) {
-        log.info(`Sending appreciation notification for ${closedTickets.length} resolved/closed tickets to group "${waGroupId}"...`);
-        const closedMsg = buildClosedTicketGroupMessage(closedTickets);
-        const closedRes = await sendGroupMessage(waGroupId, closedMsg);
+      if (closedTickets && closedTickets.length > 0) {
         
-        NotificationLogModel.create({
-          ticketId: 'APRESIASI_CLOSED',
-          targetType: 'group',
-          targetName: waGroupId,
-          targetNumber: waGroupId,
-          message: closedMsg,
-          status: closedRes && closedRes.success ? 'sent' : 'failed',
-          response: JSON.stringify(closedRes),
-        });
-        await sleep(2000);
+        // 1. Group Appreciation
+        if (groupEnabled && waGroupId) {
+          log.info(`Sending appreciation notification for ${closedTickets.length} resolved/closed tickets to group "${waGroupId}"...`);
+          const closedMsg = buildClosedTicketGroupMessage(closedTickets);
+          const closedRes = await sendGroupMessage(waGroupId, closedMsg);
+          
+          NotificationLogModel.create({
+            ticketId: 'APRESIASI_CLOSED',
+            targetType: 'group',
+            targetName: waGroupId,
+            targetNumber: waGroupId,
+            message: closedMsg,
+            status: closedRes && closedRes.success ? 'sent' : 'failed',
+            response: JSON.stringify(closedRes),
+          });
+          await sleep(2000);
+        }
+
+        // 2. Personal Appreciation (Japri Admin)
+        if (personalEnabled) {
+          for (const ticket of closedTickets) {
+            if (ticket.matchingAdmins && ticket.matchingAdmins.length > 0) {
+              for (const admin of ticket.matchingAdmins) {
+                const adminMsg = buildClosedTicketPersonalMessage(ticket, admin);
+                const res = await sendPersonalMessage(admin.no_hp, adminMsg, { useIceBreaker: true, recipientName: admin.nama });
+                NotificationLogModel.create({
+                  ticketId: ticket.ticketId,
+                  targetType: 'personal',
+                  targetName: admin.nama,
+                  targetNumber: admin.no_hp,
+                  message: adminMsg,
+                  status: res && res.success ? 'sent' : 'failed',
+                  response: JSON.stringify(res),
+                });
+                await sleep(1500);
+              }
+            }
+          }
+        }
       }
     } 
 

@@ -215,6 +215,24 @@ Alhamdulillah, pengaduan berikut sudah berhasil ditangani dan ditutup:
 Terima kasih banyak kepada rekan-rekan yang sudah sigap menindaklanjuti. Semoga kita bisa terus menjaga kecepatan dan kualitas pelayanan kepada masyarakat.`
   },
 
+  template_closed_personal: {
+    title: 'Apresiasi Selesai (Japri Admin Kantah)',
+    description: 'Pesan ucapan terima kasih langsung (japri) kepada admin kantah setelah berhasil menutup tiket.',
+    placeholders: '{ticketId}, {customer}, {kantor}, {adminNama}, {subjek}, {kategori}, {tanggal}, {lastUpdate}',
+    defaultText: `Assalamualaikum Pak/Bu *{adminNama}*,
+
+Alhamdulillah, kami pantau tiket pengaduan berikut sudah berhasil Bapak/Ibu selesaikan dan ditutup (Closed):
+
+*No. Tiket*: {ticketId}
+*Pelapor*: {customer}
+*Kategori*: {kategori}
+*Subjek*: {subjek}
+*Tanggal Masuk*: {tanggal}
+*Last Update*: {lastUpdate}
+
+Terima kasih banyak atas kerja keras dan kesigapannya dalam merespons aduan masyarakat. Semangat terus Pak/Bu! 🙏`
+  },
+
   template_manual_resend: {
     title: '10. Peringatan Manual dari Dashboard (Tombol Kirim Ulang)',
     description: 'Pesan peringatan khusus ketika admin kanwil mengeklik tombol "Kirim Ulang Peringatan" dari Dashboard web.',
