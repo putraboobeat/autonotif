@@ -113,6 +113,9 @@
       <button class="tab-btn" data-tab="tickets">
         <span class="tab-icon">📋</span> Tiket Terpantau
       </button>
+      <button class="tab-btn" data-tab="holidays">
+        <span class="tab-icon">🎉</span> Hari Besar
+      </button>
       <button class="tab-btn" data-tab="analytics" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(16, 185, 129, 0.15)); border: 1px solid rgba(59, 130, 246, 0.4);">
         <span class="tab-icon">🚀</span> Radar SLA (Level 6)
       </button>
@@ -311,6 +314,39 @@
       </div>
     </div>
 
+    <!-- Tab: Hari Besar -->
+    <div class="tab-content" id="tab-holidays">
+      <div class="card">
+        <div class="card-header">
+          <h2>🎉 Pengingat Hari Besar (Desain Ucapan)</h2>
+          <button class="btn btn-primary btn-sm" onclick="openHolidayModal()">
+            + Tambah Hari Besar
+          </button>
+          <button class="btn btn-sm" onclick="seedHolidays()" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4);">
+            ✨ Tarik Data Hari Besar Otomatis
+          </button>
+        </div>
+        <div class="card-body">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>Nama Hari Besar</th>
+                <th>Tanggal (YYYY-MM-DD)</th>
+                <th>Target Grup</th>
+                <th>Target Admin</th>
+                <th>Status</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="holiday-table-body">
+              <tr><td colspan="7" style="text-align: center;">Memuat data...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- Tab: Log Notifikasi -->
     <div class="tab-content" id="tab-logs">
       <div class="card">
@@ -374,12 +410,23 @@
 
           <div class="settings-row">
             <div class="settings-info">
-              <h4>ID/Nama Group WhatsApp</h4>
+              <h4>ID/Nama Group WhatsApp (Pengaduan)</h4>
               <p>Tujuan notifikasi group (bisa nama atau ID jika pakai StarSender)</p>
             </div>
             <div style="display: flex; gap: 8px;">
               <input type="text" class="form-input" id="setting-wa-group" placeholder="Nama Group">
               <button class="btn btn-primary btn-sm" onclick="saveWaGroup()">Simpan</button>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-info">
+              <h4>ID/Nama Group WhatsApp (Khusus Hari Besar)</h4>
+              <p>Kosongkan jika ingin disamakan dengan grup Pengaduan</p>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <input type="text" class="form-input" id="setting-holiday-wa-group" placeholder="Nama Group Hari Besar">
+              <button class="btn btn-primary btn-sm" onclick="saveHolidayWaGroup()">Simpan</button>
             </div>
           </div>
 
@@ -470,7 +517,56 @@
     </div>
   </div>
 
-  <!-- Modal: OCA Login -->
+  <!-- Modal Form: Tambah/Edit Hari Besar -->
+  <div id="holidayModal" class="modal">
+    <div class="modal-content" style="max-width: 500px;">
+      <div class="modal-header">
+        <h3 id="holidayModalTitle">Tambah Hari Besar</h3>
+        <span class="modal-close" onclick="closeHolidayModal()">&times;</span>
+      </div>
+      <div class="modal-body">
+        <form id="holidayForm" onsubmit="handleHolidaySubmit(event)">
+          <input type="hidden" id="holiday_id">
+          
+          <div class="form-group">
+            <label for="holiday_name">Nama Hari Besar <span style="color:red">*</span></label>
+            <input type="text" id="holiday_name" class="form-control" placeholder="Contoh: HUT RI ke-81" required>
+          </div>
+          
+          <div class="form-group">
+            <label for="holiday_date">Tanggal <span style="color:red">*</span></label>
+            <input type="date" id="holiday_date" class="form-control" required>
+            <div class="form-hint">Gunakan format tahun spesifik (YYYY-MM-DD).</div>
+          </div>
+          
+          <div class="form-group">
+            <label for="holiday_group">Target Grup (Opsional)</label>
+            <input type="text" id="holiday_group" class="form-control" placeholder="Kosongkan untuk gunakan grup utama">
+          </div>
+          
+          <div class="form-group">
+            <label for="holiday_admin">Target Admin / Nomor WA (Opsional)</label>
+            <input type="text" id="holiday_admin" class="form-control" placeholder="Contoh: 08123456789">
+          </div>
+          
+          <div class="form-group" style="display: flex; align-items: center; gap: 10px; margin-top: 15px;">
+            <label class="switch">
+              <input type="checkbox" id="holiday_active" checked>
+              <span class="slider round"></span>
+            </label>
+            <label for="holiday_active" style="margin: 0; font-weight: 500;">Aktifkan Pengingat H-3</label>
+          </div>
+          
+          <div class="modal-footer" style="margin-top: 25px;">
+            <button type="button" class="btn btn-secondary" onclick="closeHolidayModal()">Batal</button>
+            <button type="submit" class="btn btn-primary" id="btn-save-holiday">Simpan</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification Toast -->
   <div class="modal-overlay" id="login-modal">
     <div class="modal">
       <div class="modal-header">

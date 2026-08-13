@@ -1,5 +1,5 @@
 const express = require('express');
-const { AdminModel, TicketModel, NotificationLogModel, ConfigModel } = require('../database/models');
+const { AdminModel, TicketModel, NotificationLogModel, ConfigModel, HolidayModel } = require('../database/models');
 const { sendPersonalMessage, sendGroupMessage } = require('../notifier/starsender');
 const { buildTestMessage } = require('../notifier/message-builder');
 const { config } = require('../config');
@@ -169,6 +169,77 @@ function createRoutes() {
   router.delete('/admins/:id', (req, res) => {
     try {
       AdminModel.delete(parseInt(req.params.id));
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // ============================================
+  // Holiday (Hari Besar) CRUD
+  // ============================================
+
+  router.get('/holidays', (req, res) => {
+    try {
+      const holidays = HolidayModel.getAll();
+      res.json({ success: true, data: holidays });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  router.post('/holidays/seed', async (req, res) => {
+    try {
+      const { getHolidaySeedData } = require('../detector/holiday-seeder');
+      const currentYear = new Date().getFullYear();
+      const seedData = await getHolidaySeedData(currentYear);
+      const count = HolidayModel.insertMany(seedData);
+      res.json({ success: true, count, message: `${count} hari besar berhasil di-generate untuk tahun ${currentYear}` });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  router.post('/holidays', (req, res) => {
+    try {
+      const { name, event_date, target_group, target_admins } = req.body;
+      if (!name || !event_date) {
+        return res.status(400).json({ success: false, error: 'Nama dan Tanggal Hari Besar wajib diisi' });
+      }
+      HolidayModel.create({
+        name,
+        event_date,
+        target_group: target_group || null,
+        target_admins: target_admins || null,
+      });
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  router.put('/holidays/:id', (req, res) => {
+    try {
+      const { name, event_date, target_group, target_admins, is_active } = req.body;
+      if (!name || !event_date) {
+        return res.status(400).json({ success: false, error: 'Nama dan Tanggal Hari Besar wajib diisi' });
+      }
+      HolidayModel.update(parseInt(req.params.id), {
+        name,
+        event_date,
+        target_group: target_group || null,
+        target_admins: target_admins || null,
+        is_active: is_active !== undefined ? is_active : true,
+      });
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  router.delete('/holidays/:id', (req, res) => {
+    try {
+      HolidayModel.delete(parseInt(req.params.id));
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ success: false, error: error.message });

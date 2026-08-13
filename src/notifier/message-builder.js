@@ -296,6 +296,20 @@ function buildClosedTicketPersonalMessage(ticket, admin) {
   });
 }
 
+/**
+ * Build holiday reminder message
+ */
+function buildHolidayReminderMessage(holiday, hMin = 3) {
+  let templateKey = 'template_holiday_reminder_h3';
+  if (hMin === 2) templateKey = 'template_holiday_reminder_h2';
+  if (hMin === 1) templateKey = 'template_holiday_reminder_h1';
+
+  return renderTemplate(templateKey, {
+    namaHariBesar: holiday.name,
+    tanggal: holiday.event_date
+  });
+}
+
 module.exports = {
   buildGroupMessage,
   buildPersonalMessage,
@@ -307,5 +321,6 @@ module.exports = {
   buildGroupReminderSummaryMessage,
   buildClosedTicketGroupMessage,
   buildClosedTicketPersonalMessage,
+  buildHolidayReminderMessage,
   buildTestMessage,
 };

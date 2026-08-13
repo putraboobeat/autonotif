@@ -74,3 +74,20 @@ INSERT OR IGNORE INTO system_config (key, value) VALUES ('personal_notification_
 INSERT OR IGNORE INTO system_config (key, value) VALUES ('scrape_interval', '60000');
 INSERT OR IGNORE INTO system_config (key, value) VALUES ('last_scrape_time', '');
 INSERT OR IGNORE INTO system_config (key, value) VALUES ('scraper_status', 'stopped');
+INSERT OR IGNORE INTO system_config (key, value) VALUES ('holiday_wa_group_id', '');
+
+-- Tabel Hari Besar (Holidays)
+CREATE TABLE IF NOT EXISTS holidays (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name VARCHAR(255) NOT NULL,
+    event_date DATE NOT NULL,
+    target_group VARCHAR(255),
+    target_admins VARCHAR(255),
+    is_active INTEGER DEFAULT 1,
+    notified_h3_year INTEGER DEFAULT 0,
+    notified_h2_year INTEGER DEFAULT 0,
+    notified_h1_year INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_holidays_date ON holidays(event_date);

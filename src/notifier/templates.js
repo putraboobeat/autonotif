@@ -249,6 +249,48 @@ Pesan ini dikirimkan langsung oleh Tim Kanwil melalui Dashboard Pengawasan. Kami
 *Last Update*: {lastUpdate}
 
 Mohon saat ini bisa langsung dibuka dan ditindaklanjuti melalui OCA Interaction ya. Kami sangat mengapresiasi kecepatan respons Bapak/Ibu.`
+  },
+
+  template_holiday_reminder_h3: {
+    title: '11. Pengingat Hari Besar H-3',
+    description: 'Pesan pengingat H-3 untuk persiapan flyer/desain ucapan hari raya.',
+    placeholders: '{namaHariBesar}, {tanggal}',
+    defaultText: `*PENGINGAT HARI BESAR (H-3)* 🗓️
+
+Bapak/Ibu, 3 hari lagi kita akan memperingati:
+*{namaHariBesar}* (Jatuh pada {tanggal}).
+
+Mohon untuk mulai mempersiapkan dan mendesain flyer/ucapan terkait hari besar tersebut.
+
+Terima kasih atas perhatiannya.`
+  },
+
+  template_holiday_reminder_h2: {
+    title: '12. Pengingat Hari Besar H-2',
+    description: 'Pesan pengingat H-2 untuk persiapan flyer/desain ucapan hari raya.',
+    placeholders: '{namaHariBesar}, {tanggal}',
+    defaultText: `*PENGINGAT HARI BESAR (H-2)* 🗓️
+
+Bapak/Ibu, ini adalah pengingat bahwa 2 hari lagi kita akan memperingati:
+*{namaHariBesar}* (Jatuh pada {tanggal}).
+
+Mohon pastikan konsep flyer/ucapan sudah mulai dikerjakan agar tidak terburu-buru.
+
+Semangat dan terima kasih!`
+  },
+
+  template_holiday_reminder_h1: {
+    title: '13. Pengingat Hari Besar H-1',
+    description: 'Pesan pengingat terakhir H-1 untuk persiapan flyer/desain ucapan hari raya.',
+    placeholders: '{namaHariBesar}, {tanggal}',
+    defaultText: `*PENGINGAT TERAKHIR BESOK (H-1)* 🚨
+
+Bapak/Ibu, besok kita sudah memperingati:
+*{namaHariBesar}* (Jatuh pada {tanggal}).
+
+Dimohon kerjasamanya agar desain flyer/ucapan sudah beres atau diselesaikan hari ini dan siap di-*publish* besok.
+
+Terima kasih atas kerja kerasnya!`
   }
 };
 

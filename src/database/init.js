@@ -63,6 +63,24 @@ function initDatabase() {
         ALTER TABLE admins ADD COLUMN no_hp_ktu VARCHAR(50);
       `);
     }
+
+    // Auto-migrate: Holidays
+    try {
+      const holidayCols = db.pragma('table_info(holidays)');
+      if (holidayCols.length > 0) { // If table exists
+        const hasH3 = holidayCols.some(c => c.name === 'notified_h3_year');
+        if (!hasH3) {
+          log.info('Migrating database: Updating holidays table schema for H-3/2/1');
+          db.exec(`
+            ALTER TABLE holidays ADD COLUMN notified_h3_year INTEGER DEFAULT 0;
+            ALTER TABLE holidays ADD COLUMN notified_h2_year INTEGER DEFAULT 0;
+            ALTER TABLE holidays ADD COLUMN notified_h1_year INTEGER DEFAULT 0;
+          `);
+        }
+      }
+    } catch (e) {
+      log.error('Holiday migration failed', { error: e.message });
+    }
   } catch (err) {
     log.error('Migration failed', { error: err.message });
   }

@@ -372,3 +372,82 @@ module.exports = {
   NotificationLogModel,
   ConfigModel,
 };
+
+// ============================================
+// Holiday (Hari Besar) Operations
+// ============================================
+
+const HolidayModel = {
+  getAll() {
+    const db = getDb();
+    return db.prepare('SELECT * FROM holidays ORDER BY event_date ASC').all();
+  },
+
+  getActive() {
+    const db = getDb();
+    return db.prepare('SELECT * FROM holidays WHERE is_active = 1 ORDER BY event_date ASC').all();
+  },
+
+  getById(id) {
+    const db = getDb();
+    return db.prepare('SELECT * FROM holidays WHERE id = ?').get(id);
+  },
+
+  create({ name, event_date, target_group = null, target_admins = null }) {
+    const db = getDb();
+    const stmt = db.prepare(
+      'INSERT INTO holidays (name, event_date, target_group, target_admins) VALUES (?, ?, ?, ?)'
+    );
+    const result = stmt.run(name, event_date, target_group, target_admins);
+    return result;
+  },
+
+  update(id, { name, event_date, target_group = null, target_admins = null, is_active }) {
+    const db = getDb();
+    const stmt = db.prepare(
+      'UPDATE holidays SET name = ?, event_date = ?, target_group = ?, target_admins = ?, is_active = ? WHERE id = ?'
+    );
+    const result = stmt.run(name, event_date, target_group, target_admins, is_active ? 1 : 0, id);
+    return result;
+  },
+
+  delete(id) {
+    const db = getDb();
+    return db.prepare('DELETE FROM holidays WHERE id = ?').run(id);
+  },
+
+  markNotified(id, year, type) {
+    const db = getDb();
+    let col = 'notified_h3_year';
+    if (type === 'h2') col = 'notified_h2_year';
+    if (type === 'h1') col = 'notified_h1_year';
+    const stmt = db.prepare(`UPDATE holidays SET ${col} = ? WHERE id = ?`);
+    return stmt.run(year, id);
+  },
+
+  insertMany(holidaysData) {
+    const db = getDb();
+    const insert = db.prepare('INSERT INTO holidays (name, event_date) VALUES (?, ?)');
+    
+    let count = 0;
+    db.transaction(() => {
+      for (const h of holidaysData) {
+        // Cek apakah sudah ada (berdasarkan nama dan tanggal yang sama untuk tahun ini)
+        const exists = db.prepare('SELECT id FROM holidays WHERE name = ? AND event_date = ?').get(h.name, h.event_date);
+        if (!exists) {
+          insert.run(h.name, h.event_date);
+          count++;
+        }
+      }
+    })();
+    return count;
+  }
+};
+
+module.exports = {
+  AdminModel,
+  TicketModel,
+  NotificationLogModel,
+  ConfigModel,
+  HolidayModel,
+};

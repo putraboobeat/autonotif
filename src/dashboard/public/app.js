@@ -271,6 +271,10 @@ async function loadStats() {
     if (document.activeElement.id !== 'setting-wa-group') {
       document.getElementById('setting-wa-group').value = settings.waGroupId || '';
     }
+
+    if (document.activeElement.id !== 'setting-holiday-wa-group') {
+      document.getElementById('setting-holiday-wa-group').value = settings.holiday_wa_group_id || '';
+    }
     
     // Update reminder interval
     if (document.activeElement.id !== 'setting-reminder-interval') {
@@ -1080,6 +1084,20 @@ async function saveWaGroup() {
   }
 }
 
+async function saveHolidayWaGroup() {
+  const waGroup = document.getElementById('setting-holiday-wa-group').value;
+  try {
+    const result = await apiPost('/settings', { key: 'holiday_wa_group_id', value: waGroup });
+    if (result.success) {
+      alert('Group WA khusus Hari Besar berhasil disimpan!');
+    } else {
+      alert(`Gagal menyimpan: ${result.error}`);
+    }
+  } catch (error) {
+    console.error('Error saving holiday wa group:', error);
+  }
+}
+
 async function saveReminderInterval() {
   const interval = document.getElementById('setting-reminder-interval').value;
   try {
@@ -1329,5 +1347,168 @@ async function sendExecutiveReportWA() {
     }
   } catch (err) {
     alert(`❌ Terjadi kesalahan jaringan: ${err.message}`);
+  }
+}
+
+// ============================================
+// Holiday (Hari Besar) Tab Logic
+// ============================================
+let holidays = [];
+
+async function loadHolidays() {
+  const tbody = document.getElementById('holiday-table-body');
+  try {
+    const res = await apiGet('/holidays');
+    if (res.success) {
+      holidays = res.data;
+      
+      if (holidays.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Belum ada data hari besar</td></tr>';
+        return;
+      }
+      
+      tbody.innerHTML = holidays.map((h, i) => {
+        // Hitung sisa hari
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const eventDate = new Date(h.event_date);
+        const diffTime = eventDate - today;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        let sisaHariTxt = '';
+        if (diffDays > 0) sisaHariTxt = `<span style="font-size: 0.85em; color: #10b981; font-weight: bold;"><br>(${diffDays} hari lagi)</span>`;
+        else if (diffDays === 0) sisaHariTxt = `<span style="font-size: 0.85em; color: #f59e0b; font-weight: bold;"><br>(HARI INI)</span>`;
+        else sisaHariTxt = `<span style="font-size: 0.85em; color: #ef4444;"><br>(Terlewat)</span>`;
+
+        return `
+        <tr>
+          <td>${i + 1}</td>
+          <td><strong>${h.name}</strong></td>
+          <td>${h.event_date} ${sisaHariTxt}</td>
+          <td>${h.target_group || 'Grup Utama'}</td>
+          <td>${h.target_admins || 'Admin Kanwil'}</td>
+          <td>
+            <span class="status-badge ${h.is_active ? 'connected' : 'stopped'}">
+              ${h.is_active ? 'Aktif' : 'Non-aktif'}
+            </span>
+          </td>
+          <td>
+            <button class="btn btn-sm" onclick="editHoliday(${h.id})" style="background: rgba(59, 130, 246, 0.1); color: var(--primary);">Edit</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteHoliday(${h.id})" style="background: rgba(239, 68, 68, 0.1); color: var(--danger);">Hapus</button>
+          </td>
+        </tr>
+      `}).join('');
+    }
+  } catch (err) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: red;">Gagal memuat data</td></tr>';
+  }
+}
+
+function openHolidayModal() {
+  document.getElementById('holidayModalTitle').textContent = 'Tambah Hari Besar';
+  document.getElementById('holidayForm').reset();
+  document.getElementById('holiday_id').value = '';
+  document.getElementById('holiday_active').checked = true;
+  document.getElementById('holidayModal').style.display = 'block';
+}
+
+function closeHolidayModal() {
+  document.getElementById('holidayModal').style.display = 'none';
+}
+
+function editHoliday(id) {
+  const h = holidays.find(x => x.id === id);
+  if (!h) return;
+  document.getElementById('holidayModalTitle').textContent = 'Edit Hari Besar';
+  document.getElementById('holiday_id').value = h.id;
+  document.getElementById('holiday_name').value = h.name;
+  document.getElementById('holiday_date').value = h.event_date;
+  document.getElementById('holiday_group').value = h.target_group || '';
+  document.getElementById('holiday_admin').value = h.target_admins || '';
+  document.getElementById('holiday_active').checked = h.is_active === 1;
+  document.getElementById('holidayModal').style.display = 'block';
+}
+
+async function handleHolidaySubmit(e) {
+  e.preventDefault();
+  const id = document.getElementById('holiday_id').value;
+  const data = {
+    name: document.getElementById('holiday_name').value,
+    event_date: document.getElementById('holiday_date').value,
+    target_group: document.getElementById('holiday_group').value,
+    target_admins: document.getElementById('holiday_admin').value,
+    is_active: document.getElementById('holiday_active').checked
+  };
+
+  const btn = document.getElementById('btn-save-holiday');
+  btn.textContent = 'Menyimpan...';
+  btn.disabled = true;
+
+  try {
+    let res;
+    if (id) {
+      res = await apiPut('/holidays/' + id, data);
+    } else {
+      res = await apiPost('/holidays', data);
+    }
+    
+    if (res.success) {
+      closeHolidayModal();
+      showToast('Hari besar berhasil ' + (id ? 'diperbarui' : 'ditambahkan'));
+      loadHolidays();
+    } else {
+      alert('Gagal: ' + res.error);
+    }
+  } catch (err) {
+    alert('Terjadi kesalahan jaringan');
+  } finally {
+    btn.textContent = 'Simpan';
+    btn.disabled = false;
+  }
+}
+
+async function deleteHoliday(id) {
+  if (!confirm('Hapus data hari besar ini?')) return;
+  try {
+    const res = await apiDelete('/holidays/' + id);
+    if (res.success) {
+      showToast('Hari besar dihapus');
+      loadHolidays();
+    } else {
+      alert('Gagal menghapus: ' + res.error);
+    }
+  } catch (err) {
+    alert('Terjadi kesalahan jaringan');
+  }
+}
+
+// Tambahkan loadHolidays ke sistem inisialisasi tab
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (btn.dataset.tab === 'holidays') loadHolidays();
+  });
+});
+
+async function seedHolidays() {
+  if (!confirm('Tarik ratusan data hari besar otomatis untuk tahun ini? Ini tidak akan menduplikat data yang sudah ada.')) return;
+  
+  const btn = event.currentTarget;
+  const oldText = btn.innerHTML;
+  btn.innerHTML = '⏳ Menarik Data...';
+  btn.disabled = true;
+
+  try {
+    const res = await apiPost('/holidays/seed', {});
+    if (res.success) {
+      alert(`✅ Berhasil! ${res.count} hari besar ditambahkan.`);
+      loadHolidays();
+    } else {
+      alert(`❌ Gagal menarik data: ${res.error}`);
+    }
+  } catch (err) {
+    alert(`❌ Terjadi kesalahan jaringan: ${err.message}`);
+  } finally {
+    btn.innerHTML = oldText;
+    btn.disabled = false;
   }
 }

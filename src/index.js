@@ -7,6 +7,7 @@ const { launchBrowser, closeBrowser, isBrowserAlive } = require('./scraper/brows
 const { performLogin } = require('./scraper/login');
 const { scrapeAllOpenTickets } = require('./scraper/ticket-scraper');
 const { detectNewOpenTickets, markTicketProcessed } = require('./detector/ticket-detector');
+const { checkAndSendHolidayReminders } = require('./detector/holiday-detector');
 const { sendTicketNotification, sendPersonalMessage, sendGroupMessage } = require('./notifier/starsender');
 const { 
   buildKanwilMessage, 
@@ -338,7 +339,10 @@ async function scrapeCycle() {
     ConfigModel.set('scraper_status', 'idle');
     log.info(`Scrape cycle #${scrapeCount} complete. Next in ${config.app.scrapeInterval / 1000}s`);
 
-    // 3. Daily Automated Maintenance & Browser Recycling (Every ~1440 cycles / 24 hours at 60s interval)
+    // 3. Check Holidays
+    await checkAndSendHolidayReminders();
+
+    // 4. Daily Automated Maintenance & Browser Recycling (Every ~1440 cycles / 24 hours at 60s interval)
     if (scrapeCount > 0 && scrapeCount % 1440 === 0) {
       log.info('♻️ Performing scheduled daily maintenance: recycling browser RAM & pruning 60-day old logs...');
       try {
