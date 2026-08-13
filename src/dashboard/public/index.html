@@ -397,6 +397,9 @@
           <h2>⚙️ Pengaturan Sistem</h2>
         </div>
         <div class="card-body">
+          
+          <h3 style="margin-top: 0; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color); color: var(--primary);">📡 Pengaturan Notifikasi Pengaduan OCA</h3>
+          
           <div class="settings-row">
             <div class="settings-info">
               <h4>Koneksi OCA Interaction</h4>
@@ -416,17 +419,6 @@
             <div style="display: flex; gap: 8px;">
               <input type="text" class="form-input" id="setting-wa-group" placeholder="Nama Group">
               <button class="btn btn-primary btn-sm" onclick="saveWaGroup()">Simpan</button>
-            </div>
-          </div>
-
-          <div class="settings-row">
-            <div class="settings-info">
-              <h4>ID/Nama Group WhatsApp (Khusus Hari Besar)</h4>
-              <p>Kosongkan jika ingin disamakan dengan grup Pengaduan</p>
-            </div>
-            <div style="display: flex; gap: 8px;">
-              <input type="text" class="form-input" id="setting-holiday-wa-group" placeholder="Nama Group Hari Besar">
-              <button class="btn btn-primary btn-sm" onclick="saveHolidayWaGroup()">Simpan</button>
             </div>
           </div>
 
@@ -497,6 +489,47 @@
             </div>
             <button class="btn btn-primary btn-sm" style="background-color: var(--warning, #f59e0b); color: #000; font-weight: bold;" onclick="forceCheckNow()">⚡ Cek Sekarang</button>
           </div>
+
+          <h3 style="margin-top: 40px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color); color: #f59e0b;">🎉 Pengaturan Pengingat Hari Besar</h3>
+
+          <div class="settings-row">
+            <div class="settings-info">
+              <h4>ID/Nama Group WhatsApp Hari Besar</h4>
+              <p>Kosongkan jika ingin disamakan dengan grup Pengaduan</p>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <input type="text" class="form-input" id="setting-holiday-wa-group" placeholder="Nama Group Hari Besar">
+              <button class="btn btn-primary btn-sm" onclick="saveHolidaySetting('holiday_wa_group_id', 'setting-holiday-wa-group')">Simpan</button>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-info">
+              <h4>Nomor WhatsApp Admin Desain (Japri)</h4>
+              <p>Nomor admin utama yang mengurus desain (contoh: 08123456789)</p>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <input type="text" class="form-input" id="setting-holiday-admin" placeholder="08123456789">
+              <button class="btn btn-primary btn-sm" onclick="saveHolidaySetting('holiday_admin_number', 'setting-holiday-admin')">Simpan</button>
+            </div>
+          </div>
+
+          <div class="settings-row" style="border-top: 2px dashed rgba(255,255,255,0.1); padding-top: 16px; margin-top: 8px;">
+            <div class="settings-info">
+              <h4>Tes Ping Group Hari Besar</h4>
+              <p>Kirim pesan tes ke Group Hari Besar</p>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="pingHolidayGroup()">Ping Group (Hari Besar)</button>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-info">
+              <h4>Tes Ping Admin Desain</h4>
+              <p>Kirim pesan tes ke Admin Desain Hari Besar</p>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="pingHolidayAdmin()">Ping Admin (Hari Besar)</button>
+          </div>
+
         </div>
       </div>
 

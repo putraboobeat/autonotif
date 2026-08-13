@@ -44,7 +44,7 @@ async function checkAndSendHolidayReminders() {
         
         const message = buildHolidayReminderMessage(holiday, hMin);
         const groupTarget = holiday.target_group || ConfigModel.get('holiday_wa_group_id') || config.starsender.defaultGroupId;
-        const adminTarget = holiday.target_admins || ''; // No fallback to Kanwil for holidays unless set
+        const adminTarget = holiday.target_admins || ConfigModel.get('holiday_admin_number') || '';
 
         let groupSuccess = false;
         let adminSuccess = false;

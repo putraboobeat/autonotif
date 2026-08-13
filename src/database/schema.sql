@@ -75,6 +75,7 @@ INSERT OR IGNORE INTO system_config (key, value) VALUES ('scrape_interval', '600
 INSERT OR IGNORE INTO system_config (key, value) VALUES ('last_scrape_time', '');
 INSERT OR IGNORE INTO system_config (key, value) VALUES ('scraper_status', 'stopped');
 INSERT OR IGNORE INTO system_config (key, value) VALUES ('holiday_wa_group_id', '');
+INSERT OR IGNORE INTO system_config (key, value) VALUES ('holiday_admin_number', '');
 
 -- Tabel Hari Besar (Holidays)
 CREATE TABLE IF NOT EXISTS holidays (

@@ -1025,6 +1025,12 @@ async function loadSettings() {
 
       const elPers = document.getElementById('setting-personal');
       if (elPers) elPers.checked = res.data.personal_notification_enabled !== '0';
+
+      const elHolGroup = document.getElementById('setting-holiday-wa-group');
+      if (elHolGroup) elHolGroup.value = res.data.holiday_wa_group_id || '';
+
+      const elHolAdmin = document.getElementById('setting-holiday-admin');
+      if (elHolAdmin) elHolAdmin.value = res.data.holiday_admin_number || '';
     }
   } catch (err) {
     console.error('Error loading settings:', err);
@@ -1084,17 +1090,43 @@ async function saveWaGroup() {
   }
 }
 
-async function saveHolidayWaGroup() {
-  const waGroup = document.getElementById('setting-holiday-wa-group').value;
+async function saveHolidaySetting(key, inputId) {
+  const value = document.getElementById(inputId).value;
   try {
-    const result = await apiPost('/settings', { key: 'holiday_wa_group_id', value: waGroup });
+    const result = await apiPost('/settings', { key, value });
     if (result.success) {
-      alert('Group WA khusus Hari Besar berhasil disimpan!');
+      showToast('Pengaturan Hari Besar berhasil disimpan!', 'success');
     } else {
       alert(`Gagal menyimpan: ${result.error}`);
     }
   } catch (error) {
-    console.error('Error saving holiday wa group:', error);
+    console.error(`Error saving ${key}:`, error);
+  }
+}
+
+async function pingHolidayGroup() {
+  try {
+    const result = await apiPost('/settings/ping-holiday-group', {});
+    if (result.success) {
+      alert('✅ Ping ke Group Hari Besar Berhasil Dikirim!');
+    } else {
+      alert(`❌ Gagal ping Group Hari Besar: ${result.error}`);
+    }
+  } catch (error) {
+    alert(`❌ Error: ${error.message}`);
+  }
+}
+
+async function pingHolidayAdmin() {
+  try {
+    const result = await apiPost('/settings/ping-holiday-admin', {});
+    if (result.success) {
+      alert('✅ Ping ke Admin Hari Besar Berhasil Dikirim!');
+    } else {
+      alert(`❌ Gagal ping Admin Hari Besar: ${result.error}`);
+    }
+  } catch (error) {
+    alert(`❌ Error: ${error.message}`);
   }
 }
 

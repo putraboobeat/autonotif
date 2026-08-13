@@ -362,6 +362,7 @@ function renderTemplate(key, data = {}) {
     '{adminNama}': data.adminNama || data.nama || 'Admin Kantah',
     '{ktuNama}': data.ktuNama || data.nama_ktu || 'Kasubbag Tata Usaha',
     '{reminderCount}': data.reminderCount || '1',
+    '{namaHariBesar}': data.namaHariBesar || '',
   };
 
   for (const [placeholder, val] of Object.entries(replacements)) {

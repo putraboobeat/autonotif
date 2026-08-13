@@ -257,7 +257,7 @@ function createRoutes() {
       const message = buildHolidayReminderMessage(holiday, 'manual');
       
       const groupTarget = holiday.target_group || ConfigModel.get('holiday_wa_group_id') || config.starsender.defaultGroupId;
-      const adminTarget = holiday.target_admins || '';
+      const adminTarget = holiday.target_admins || ConfigModel.get('holiday_admin_number') || '';
 
       let successCount = 0;
 
@@ -637,6 +637,34 @@ function createRoutes() {
       }
       const message = `🔔 *TEST PING GROUP*\n\nIni adalah pesan tes ping ke Group dari sistem *Auto Notif Pengaduan*.\n\n_Jika pesan ini sampai, koneksi WhatsApp Bot ke group berfungsi normal._`;
       const result = await sendGroupMessage(waGroupId, message);
+      res.json({ success: result.success, data: result, error: result.error });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  router.post('/settings/ping-holiday-group', async (req, res) => {
+    try {
+      const waGroupId = ConfigModel.get('holiday_wa_group_id');
+      if (!waGroupId) {
+        return res.status(400).json({ success: false, error: 'ID/Nama Group Hari Besar belum disetting di pengaturan.' });
+      }
+      const message = `🎉 *TEST PING HARI BESAR (GROUP)*\n\nIni adalah pesan tes ping ke Group Khusus Hari Besar.\n\n_Jika pesan ini sampai, konfigurasi notifikasi Hari Besar sudah berfungsi._`;
+      const result = await sendGroupMessage(waGroupId, message);
+      res.json({ success: result.success, data: result, error: result.error });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  router.post('/settings/ping-holiday-admin', async (req, res) => {
+    try {
+      const adminNumber = ConfigModel.get('holiday_admin_number');
+      if (!adminNumber) {
+        return res.status(400).json({ success: false, error: 'Nomor HP Admin Desain Hari Besar belum disetting di pengaturan.' });
+      }
+      const message = `🎉 *TEST PING HARI BESAR (ADMIN)*\n\nHalo Admin Desain,\nIni adalah pesan tes ping dari sistem *Pengingat Hari Besar*.\n\n_Jika pesan ini sampai, notifikasi japri Hari Besar siap digunakan._`;
+      const result = await sendPersonalMessage(adminNumber, message);
       res.json({ success: result.success, data: result, error: result.error });
     } catch (error) {
       res.status(500).json({ success: false, error: error.message });
