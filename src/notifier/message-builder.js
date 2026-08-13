@@ -89,6 +89,39 @@ function buildKanwilMessage(ticket, adminName) {
 }
 
 /**
+ * Build personal notification message for disposisi
+ */
+function buildDisposisiPersonalMessage(ticket, admin, oldKantor) {
+  return renderTemplate('template_disposisi_personal', {
+    ticketId: ticket.ticketId,
+    customer: ticket.customer,
+    kantor: admin.kantor_pertanahan || ticket.kantorPertanahan,
+    oldKantor: oldKantor,
+    adminNama: admin.nama,
+    subjek: ticket.subject || ticket.category,
+    kategori: ticket.category,
+    tanggal: ticket.createdDate,
+    lastUpdate: ticket.lastUpdate
+  });
+}
+
+/**
+ * Build kanwil notification message for disposisi
+ */
+function buildDisposisiKanwilMessage(ticket, adminName, oldKantor) {
+  return renderTemplate('template_disposisi_kanwil', {
+    ticketId: ticket.ticketId,
+    customer: ticket.customer,
+    kantor: ticket.kantorPertanahan,
+    oldKantor: oldKantor,
+    subjek: ticket.subject || ticket.category,
+    kategori: ticket.category,
+    tanggal: ticket.createdDate,
+    lastUpdate: ticket.lastUpdate
+  });
+}
+
+/**
  * Build group reminder notification message
  */
 function buildGroupReminderMessage(ticket, groupName, reminderCount) {
@@ -263,6 +296,8 @@ module.exports = {
   buildGroupMessage,
   buildPersonalMessage,
   buildKanwilMessage,
+  buildDisposisiPersonalMessage,
+  buildDisposisiKanwilMessage,
   buildGroupReminderMessage,
   buildPersonalReminderMessage,
   buildGroupReminderSummaryMessage,

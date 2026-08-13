@@ -11,7 +11,9 @@ const { sendTicketNotification, sendPersonalMessage, sendGroupMessage } = requir
 const { 
   buildKanwilMessage, 
   buildGroupMessage, 
-  buildPersonalMessage, 
+  buildPersonalMessage,
+  buildDisposisiPersonalMessage,
+  buildDisposisiKanwilMessage,
   buildGroupReminderMessage, 
   buildPersonalReminderMessage, 
   buildGroupReminderSummaryMessage, 
@@ -74,7 +76,7 @@ async function scrapeCycle() {
 
     // 2. Detect tickets to notify
     const { detectTicketsToNotify, markTicketProcessed } = require('./detector/ticket-detector');
-    const { newTickets, reminderTickets, closedTickets, allOpenTickets } = detectTicketsToNotify(await scrapeAllOpenTickets());
+    const { newTickets, reminderTickets, closedTickets, disposisiTickets, allOpenTickets } = detectTicketsToNotify(await scrapeAllOpenTickets());
 
     // Common config
     const notifEnabled = ConfigModel.get('notification_enabled') !== '0';
@@ -130,6 +132,45 @@ async function scrapeCycle() {
 
         markTicketProcessed(ticket, { notifiedGroup, notifiedAdmin });
         await sleep(3000);
+      }
+
+      // === PROCESS DISPOSISI TICKETS ===
+      for (const ticket of disposisiTickets || []) {
+        // 1. KIRIM KE ADMIN KANWIL (sebagai pengingat)
+        if (config.kanwil.phone) {
+          const kanwilMsg = buildDisposisiKanwilMessage(ticket, config.kanwil.name, ticket.oldKantor);
+          const kanwilResult = await sendPersonalMessage(config.kanwil.phone, kanwilMsg, { useIceBreaker: true, recipientName: config.kanwil.name });
+
+          NotificationLogModel.create({
+            ticketId: ticket.ticketId,
+            targetType: 'kanwil',
+            targetName: config.kanwil.name,
+            targetNumber: config.kanwil.phone,
+            message: kanwilMsg,
+            status: kanwilResult && kanwilResult.success ? 'sent' : 'failed',
+            response: JSON.stringify(kanwilResult),
+          });
+          await sleep(2000);
+        }
+
+        // 2. KIRIM KE ADMIN KANTAH BARU
+        if (personalEnabled && ticket.matchingAdmins && ticket.matchingAdmins.length > 0) {
+          for (const admin of ticket.matchingAdmins) {
+            const adminMsg = buildDisposisiPersonalMessage(ticket, admin, ticket.oldKantor);
+            const res = await sendPersonalMessage(admin.no_hp, adminMsg, { useIceBreaker: true, recipientName: admin.nama });
+            
+            NotificationLogModel.create({
+              ticketId: ticket.ticketId,
+              targetType: 'personal',
+              targetName: admin.nama,
+              targetNumber: admin.no_hp,
+              message: adminMsg,
+              status: res && res.success ? 'sent' : 'failed',
+              response: JSON.stringify(res),
+            });
+            await sleep(1500);
+          }
+        }
       }
 
       // === PROCESS REMINDER TICKETS ===

@@ -12,6 +12,7 @@ function detectTicketsToNotify(scrapedTickets) {
   const newTickets = [];
   const reminderTickets = [];
   const closedTickets = [];
+  const disposisiTickets = [];
 
   const reminderIntervalMinutes = parseInt(ConfigModel.get('reminder_interval_minutes') || '5', 10);
 
@@ -22,8 +23,25 @@ function detectTicketsToNotify(scrapedTickets) {
     if (processedData) {
       const oldStatus = (processedData.status || '').toLowerCase();
       const newStatus = (ticket.status || '').toLowerCase();
+      const oldKantor = (processedData.kantor_pertanahan || '').trim();
+      const newKantor = (ticket.kantorPertanahan || '').trim();
 
       TicketModel.updateInfo(ticket);
+      
+      if (oldKantor !== newKantor && oldKantor !== '' && newKantor !== '') {
+        log.info(`🔄 Ticket ${ticket.ticketId} dipindahtugaskan/disposisi: ${oldKantor} ➔ ${newKantor}`);
+        
+        // Retrieve admins for the NEW kantah
+        const allFound = AdminModel.findByKantor(newKantor);
+        const { matchingAdmins, ktuAdmins } = categorizeAdmins(allFound);
+        disposisiTickets.push({ 
+          ...ticket, 
+          oldKantor, 
+          matchingAdmins, 
+          ktuAdmins 
+        });
+      }
+
       if (oldStatus !== newStatus) {
         log.info(`Ticket ${ticket.ticketId} status updated: ${processedData.status} ➔ ${ticket.status}`);
         // If it just changed from Open to Closed/Resolved, trigger appreciation announcement
@@ -121,13 +139,13 @@ function categorizeAdmins(allAdmins) {
     });
   }
 
-  if (newTickets.length > 0 || reminderTickets.length > 0 || closedTickets.length > 0) {
-    log.info(`Detected ${newTickets.length} new open ticket(s), ${reminderTickets.length} reminder(s), and ${closedTickets.length} closed ticket(s) to notify`);
+  if (newTickets.length > 0 || reminderTickets.length > 0 || closedTickets.length > 0 || disposisiTickets.length > 0) {
+    log.info(`Detected ${newTickets.length} new open ticket(s), ${reminderTickets.length} reminder(s), ${closedTickets.length} closed ticket(s), and ${disposisiTickets.length} disposisi ticket(s) to notify`);
   } else {
     log.debug('No tickets to notify');
   }
 
-  return { newTickets, reminderTickets, closedTickets, allOpenTickets: openTickets };
+  return { newTickets, reminderTickets, closedTickets, disposisiTickets, allOpenTickets: openTickets };
 }
 
 /**

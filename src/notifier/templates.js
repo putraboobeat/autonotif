@@ -42,6 +42,43 @@ Mohon kiranya bisa segera ditindaklanjuti melalui aplikasi OCA Interaction ya. K
 Terima kasih banyak atas kerjasamanya.`
   },
 
+  template_disposisi_personal: {
+    title: 'Notifikasi Disposisi Tiket (Japri Admin Kantah)',
+    description: 'Pesan ke Admin Kantah ketika sebuah tiket dilimpahkan/disposisi ke kantor mereka.',
+    placeholders: '{ticketId}, {customer}, {kantor}, {oldKantor}, {adminNama}, {subjek}, {kategori}, {tanggal}, {lastUpdate}',
+    defaultText: `Assalamualaikum Pak/Bu *{adminNama}*,
+
+Mohon maaf mengganggu waktunya. Terdapat tiket pengaduan yang baru saja *didisposisikan/dilimpahkan* dari *{oldKantor}* ke *{kantor}*:
+
+*No. Tiket*: {ticketId}
+*Nama Pelapor*: {customer}
+*Kategori*: {kategori}
+*Subjek*: {subjek}
+*Tanggal Masuk*: {tanggal}
+*Last Update*: {lastUpdate}
+
+Mohon kiranya bisa dicek dan segera ditindaklanjuti melalui aplikasi OCA Interaction.
+
+Terima kasih atas kerjasamanya.`
+  },
+
+  template_disposisi_kanwil: {
+    title: 'Notifikasi Disposisi Tiket (Japri Admin Kanwil)',
+    description: 'Laporan pemantauan disposisi tiket ke Kanwil.',
+    placeholders: '{ticketId}, {customer}, {kantor}, {oldKantor}, {subjek}, {kategori}, {tanggal}, {lastUpdate}',
+    defaultText: `*Laporan Disposisi Tiket*
+
+Satu tiket pengaduan telah dipindahtugaskan/didisposisikan:
+
+*Dari*: {oldKantor}
+*Ke*: {kantor}
+*No. Tiket*: {ticketId}
+*Kategori*: {kategori}
+*Subjek*: {subjek}
+
+Sistem telah otomatis memberikan pengingat/notifikasi ke Admin di {kantor}.`
+  },
+
   template_new_kanwil: {
     title: '3. Laporan Rekap Tiket Baru (Japri Admin Kanwil)',
     description: 'Laporan pemantauan ke nomor Admin Kanwil (Pengawas Utama) setiap kali ada aduan baru.',
