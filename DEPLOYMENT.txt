@@ -42,3 +42,7 @@ PANDUAN TROUBLESHOOTING:
    Cari foldernya secara manual dengan perintah: 
    find / -name "autonotif" 2>/dev/null
    Kemudian masuk dengan: cd /path/hasil/pencarian
+
+CATATAN TENTANG DATABASE:
+-------------------------
+Karena aplikasi ini menggunakan SQLite dan fitur auto-migrate pada saat startup (init.js membaca schema.sql), semua tabel baru (seperti ig_rules dan processed_ig_posts) akan OTOMATIS terbuat sesaat setelah Anda menjalankan perintah `pm2 restart`. Anda tidak perlu menjalankan perintah migrasi database secara manual.
