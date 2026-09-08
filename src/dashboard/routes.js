@@ -329,44 +329,91 @@ function createRoutes() {
       let imageUrl = post.image_url || '';
       let videoUrl = post.video_url || '';
 
-      // Jika video_url belum tersimpan di DB tapi merupakan reel / video
-      if (!videoUrl && post.link && post.link.includes('/reel/')) {
+      // Cek apakah imageUrl kosong atau masih berupa thumbnail persegi terpotong (og:image / stp=c...s640x640)
+      const isCroppedImage = imageUrl && (imageUrl.includes('stp=c') || imageUrl.includes('s640x640'));
+      const needsImageFetch = (!imageUrl || isCroppedImage) && !videoUrl && post.link;
+      const needsVideoFetch = !videoUrl && post.link && post.link.includes('/reel/');
+
+      if (needsVideoFetch || needsImageFetch) {
         try {
           const { launchBrowser } = require('../scraper/browser');
           const { browser } = await launchBrowser();
           const pPage = await browser.newPage();
-          await pPage.goto(post.link, { waitUntil: 'domcontentloaded', timeout: 15000 });
-          const pHtml = await pPage.content();
-          const mVid = pHtml.match(/"video_versions":\[\{"type":\d+,"url":"([^"]+)"/) ||
-                       pHtml.match(/"video_url":"([^"]+)"/);
-          if (mVid) {
-            videoUrl = mVid[1].replace(/\\u0026/g, '&').replace(/\\\//g, '/');
-            if (post.id) {
-              try {
-                const { getDb } = require('../database/init');
-                getDb().prepare('UPDATE processed_ig_posts SET video_url = ? WHERE id = ?').run(videoUrl, post.id);
-              } catch {}
-            }
-          }
-          await pPage.close();
-        } catch {}
-      }
+          await pPage.goto(post.link, { waitUntil: 'domcontentloaded', timeout: 18000 });
 
-      if (!imageUrl && !videoUrl && post.link) {
-        try {
-          const resHtml = await fetch(post.link, { headers: { 'User-Agent': 'curl/7.68.0' }, signal: AbortSignal.timeout(6000) });
-          const html = await resHtml.text();
-          const m = html.match(/property="og:image" content="([^"]+)"/);
-          if (m) {
-            imageUrl = m[1].replace(/&amp;/g, '&');
-            if (post.id) {
-              try {
-                const { getDb } = require('../database/init');
-                getDb().prepare('UPDATE processed_ig_posts SET image_url = ? WHERE id = ?').run(imageUrl, post.id);
-              } catch {}
+          if (needsVideoFetch) {
+            const pHtml = await pPage.content();
+            const mVid = pHtml.match(/"video_versions":\[\{"type":\d+,"url":"([^"]+)"/) ||
+                         pHtml.match(/"video_url":"([^"]+)"/);
+            if (mVid) {
+              videoUrl = mVid[1].replace(/\\u0026/g, '&').replace(/\\\//g, '/');
+              if (post.id) {
+                try {
+                  const { getDb } = require('../database/init');
+                  getDb().prepare('UPDATE processed_ig_posts SET video_url = ? WHERE id = ?').run(videoUrl, post.id);
+                } catch {}
+              }
             }
           }
-        } catch {}
+
+          if (needsImageFetch) {
+            try {
+              await pPage.waitForSelector('div._aagv img, main img, meta[property="og:image"]', { timeout: 3500 });
+            } catch {}
+
+            const extImg = await pPage.evaluate(() => {
+              // 1. div._aagv img (container slide Instagram)
+              const aagv = document.querySelector('div._aagv img');
+              if (aagv && aagv.src) {
+                if (aagv.srcset) {
+                  const parts = aagv.srcset.split(',').map(s => s.trim().split(' '));
+                  return parts[parts.length - 1][0];
+                }
+                return aagv.src;
+              }
+              // 2. Gambar pertama di main/article (bukan avatar)
+              const allImgs = Array.from(document.querySelectorAll('main img, article img'));
+              const firstSlide = allImgs.find(i => {
+                const alt = (i.alt || '').toLowerCase();
+                if (alt.includes('profile picture') || alt.includes('avatar')) return false;
+                if (i.closest('header')) return false;
+                const w = i.naturalWidth || i.width || 0;
+                const h = i.naturalHeight || i.height || 0;
+                return (w > 250 || h > 250);
+              });
+              if (firstSlide) {
+                if (firstSlide.srcset) {
+                  const parts = firstSlide.srcset.split(',').map(s => s.trim().split(' '));
+                  return parts[parts.length - 1][0];
+                }
+                return firstSlide.src;
+              }
+              // 3. Fallback meta og:image
+              return document.querySelector('meta[property="og:image"]')?.getAttribute('content') || '';
+            });
+
+            if (extImg) {
+              imageUrl = extImg;
+              if (post.id) {
+                try {
+                  const { getDb } = require('../database/init');
+                  getDb().prepare('UPDATE processed_ig_posts SET image_url = ? WHERE id = ?').run(imageUrl, post.id);
+                } catch {}
+              }
+            }
+          }
+
+          await pPage.close();
+        } catch (e) {
+          if (!imageUrl && post.link) {
+            try {
+              const resHtml = await fetch(post.link, { headers: { 'User-Agent': 'curl/7.68.0' }, signal: AbortSignal.timeout(6000) });
+              const html = await resHtml.text();
+              const m = html.match(/property="og:image" content="([^"]+)"/);
+              if (m) imageUrl = m[1].replace(/&amp;/g, '&');
+            } catch {}
+          }
+        }
       }
 
       const defaultTemplate = videoUrl 

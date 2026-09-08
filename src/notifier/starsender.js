@@ -92,8 +92,8 @@ function applyAntiBanProtection(message) {
 async function resolveImageAsJpgUrl(imageUrl) {
   if (!imageUrl || typeof imageUrl !== 'string') return '';
   
-  // Jika sudah URL .jpg bersih yang bukan dari cdninstagram, langsung gunakan
-  if (imageUrl.endsWith('.jpg') && !imageUrl.includes('cdninstagram.com')) {
+  // Jika sudah URL .jpg bersih yang bukan dari cdninstagram / fbcdn, langsung gunakan
+  if (imageUrl.endsWith('.jpg') && !imageUrl.includes('cdninstagram.com') && !imageUrl.includes('fbcdn.net') && !imageUrl.includes('instagram.')) {
     return imageUrl;
   }
   

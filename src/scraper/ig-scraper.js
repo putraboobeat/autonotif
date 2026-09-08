@@ -150,6 +150,11 @@ async function scrapeInstagram(options = {}) {
         try {
           const postPage = await browser.newPage();
           await postPage.goto(post.link, { waitUntil: 'domcontentloaded', timeout: 20000 });
+          // Tunggu sebentar agar elemen slide utama selesai di-render
+          try {
+            await postPage.waitForSelector('div._aagv img, main img, meta[property="og:image"]', { timeout: 3500 });
+          } catch {}
+
           const extracted = await postPage.evaluate(() => {
             let cap = '';
             let img = '';
@@ -161,10 +166,52 @@ async function scrapeInstagram(options = {}) {
               const match = content.match(/on Instagram: "([\s\S]+)"/);
               cap = match ? match[1] : content;
             }
-            const metaImg = document.querySelector('meta[property="og:image"]');
-            if (metaImg) {
-              img = metaImg.getAttribute('content');
+
+            // Ambil Slide 1 asli beresolusi penuh (bukan thumbnail og:image yang terpotong 1:1)
+            let slide1Img = '';
+
+            // Prioritas 1: div._aagv img (container media slide Instagram)
+            const aagv = document.querySelector('div._aagv img');
+            if (aagv && aagv.src) {
+              if (aagv.srcset) {
+                const parts = aagv.srcset.split(',').map(s => s.trim().split(' '));
+                slide1Img = parts[parts.length - 1][0];
+              } else {
+                slide1Img = aagv.src;
+              }
             }
+
+            // Prioritas 2: Gambar utama pertama di main/article (bukan avatar/foto profil)
+            if (!slide1Img) {
+              const allImgs = Array.from(document.querySelectorAll('main img, article img'));
+              const firstSlide = allImgs.find(i => {
+                const alt = (i.alt || '').toLowerCase();
+                if (alt.includes('profile picture') || alt.includes('avatar')) return false;
+                if (i.closest('header')) return false;
+                const w = i.naturalWidth || i.width || 0;
+                const h = i.naturalHeight || i.height || 0;
+                return (w > 250 || h > 250);
+              });
+              if (firstSlide) {
+                if (firstSlide.srcset) {
+                  const parts = firstSlide.srcset.split(',').map(s => s.trim().split(' '));
+                  slide1Img = parts[parts.length - 1][0];
+                } else {
+                  slide1Img = firstSlide.src;
+                }
+              }
+            }
+
+            // Fallback: og:image hanya jika elemen slide di DOM tidak ditemukan sama sekali
+            if (!slide1Img) {
+              const metaImg = document.querySelector('meta[property="og:image"]');
+              if (metaImg) {
+                slide1Img = metaImg.getAttribute('content');
+              }
+            }
+
+            img = slide1Img || '';
+
             const metaVid = document.querySelector('meta[property="og:video"], meta[property="og:video:secure_url"], meta[name="twitter:player:stream"]');
             if (metaVid) {
               vid = metaVid.getAttribute('content');
