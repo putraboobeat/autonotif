@@ -323,9 +323,7 @@ function createRoutes() {
           if (m) imageUrl = m[1].replace(/&amp;/g, '&');
         } catch {}
       }
-      if (imageUrl) {
-        imageUrl = imageUrl.replace(/\.webp(?=\?|$)/gi, '.jpg').replace(/dst-webp/gi, 'dst-jpg');
-      }
+      // imageUrl tetap menggunakan URL asli bertoken valid untuk diunduh menjadi base64 JPEG oleh resolveImageAsBase64
 
       const maxLen = parseInt(ConfigModel.get('ig_caption_max_length'), 10) || 50;
       const rawCaption = (post.caption || '').replace(/\s+/g, ' ').trim();

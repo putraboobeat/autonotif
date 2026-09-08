@@ -170,10 +170,7 @@ async function scrapeInstagram(options = {}) {
             return { cap, img, pDate };
           });
           caption = extracted.cap;
-          imageUrl = extracted.img;
-          if (imageUrl) {
-            imageUrl = imageUrl.replace(/\.webp(?=\?|$)/gi, '.jpg').replace(/dst-webp/gi, 'dst-jpg');
-          }
+          imageUrl = extracted.img || '';
           postDate = extracted.pDate;
           await postPage.close();
         } catch (e) {

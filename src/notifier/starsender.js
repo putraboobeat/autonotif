@@ -50,26 +50,49 @@ function applyAntiBanProtection(message) {
 // ============================================
 
 /**
+ * Convert an image URL to a JPEG base64 data URI.
+ * Ini menjamin WhatsApp mendeteksi MIME type sebagai image/jpeg,
+ * sehingga tampil sebagai FOTO TERBUKA PENUH (imageMessage) dan bukan file dokumen (.webp).
+ */
+async function resolveImageAsBase64(imageUrl) {
+  if (!imageUrl || typeof imageUrl !== 'string') return '';
+  if (imageUrl.startsWith('data:image/')) return imageUrl;
+  
+  try {
+    const res = await fetch(imageUrl, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+      signal: AbortSignal.timeout(10000)
+    });
+    if (!res.ok) return imageUrl;
+    
+    const arrayBuffer = await res.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    return `data:image/jpeg;base64,${buffer.toString('base64')}`;
+  } catch (err) {
+    log.warn(`Failed to convert image to base64: ${err.message}. Using original URL.`);
+    return imageUrl;
+  }
+}
+
+/**
  * Execute send via StarSender API
  */
 async function executeStarSender(to, text, isGroup = false, options = {}) {
   const url = isGroup ? config.starsender.groupUrl : config.starsender.sendUrl;
-  let imgUrl = options.imageUrl || '';
-  if (imgUrl) {
-    imgUrl = imgUrl.replace(/\.webp(?=\?|$)/gi, '.jpg').replace(/dst-webp/gi, 'dst-jpg');
+  let fileData = options.imageUrl || '';
+  if (fileData && fileData.startsWith('http')) {
+    fileData = await resolveImageAsBase64(fileData);
   }
 
   const payload = {
-    messageType: imgUrl ? 'media' : 'text',
+    messageType: fileData ? 'media' : 'text',
     to: to,
     delay: 2,
   };
   
-  if (imgUrl) {
-    payload.file = imgUrl;
-    payload.url = imgUrl; // backward compatibility
+  if (fileData) {
+    payload.file = fileData;
     payload.body = text;
-    payload.caption = text; // backward compatibility
   } else {
     payload.body = text;
   }
