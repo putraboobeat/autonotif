@@ -75,16 +75,17 @@ async function scrapeInstagram() {
   
         // Extract posts from current view
         const currentPosts = await igPage.evaluate(() => {
-          const postElements = Array.from(document.querySelectorAll('a')).filter(a => a.href && a.href.includes('/p/'));
+          const postElements = Array.from(document.querySelectorAll('a')).filter(a => a.href && (a.href.includes('/p/') || a.href.includes('/reel/')));
           const results = [];
           
           postElements.forEach(el => {
             const href = el.href;
-            const match = href.match(/\/p\/(.+?)\//);
+            const match = href.match(/\/(p|reel)\/(.+?)\//);
             if (match) {
-              const shortcode = match[1];
+              const type = match[1];
+              const shortcode = match[2];
               if (!results.some(r => r.shortcode === shortcode)) {
-                results.push({ shortcode, caption: '', link: `https://www.instagram.com/p/${shortcode}/` });
+                results.push({ shortcode, caption: '', link: `https://www.instagram.com/${type}/${shortcode}/` });
               }
             }
           });
