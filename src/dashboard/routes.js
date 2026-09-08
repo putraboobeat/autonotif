@@ -395,64 +395,78 @@ function createRoutes() {
       let errorMsg = '';
       
       if (target_group) {
-        try {
-          const resGroup = await sendGroupMessage(target_group, message, { imageUrl, videoUrl });
-          if (!resGroup.success) {
+        const groups = target_group.split(',').map(g => g.trim()).filter(Boolean);
+        for (const grp of groups) {
+          try {
+            const resGroup = await sendGroupMessage(grp, message, { imageUrl, videoUrl });
+            if (!resGroup.success) {
+              status = 'failed';
+              errorMsg += `Group (${grp}): ${resGroup.error || 'Gagal'}. `;
+            }
+            NotificationLogModel.create({
+              ticketId: `IG-${post.shortcode}`,
+              targetType: 'group',
+              targetName: grp,
+              targetNumber: '',
+              message: resGroup.sentMessage || message,
+              status: resGroup.success ? 'sent' : 'failed',
+              response: JSON.stringify(resGroup)
+            });
+            if (groups.length > 1) {
+              const { sleep } = require('../utils/helpers');
+              await sleep(1500);
+            }
+          } catch (err) {
             status = 'failed';
-            errorMsg += `Group (${target_group}): ${resGroup.error || 'Gagal'}. `;
+            errorMsg += `Group (${grp}) Exception: ${err.message}. `;
+            NotificationLogModel.create({
+              ticketId: `IG-${post.shortcode}`,
+              targetType: 'group',
+              targetName: grp,
+              targetNumber: '',
+              message: message,
+              status: 'failed',
+              response: JSON.stringify({ error: err.message })
+            });
           }
-          NotificationLogModel.create({
-            ticketId: `IG-${post.shortcode}`,
-            targetType: 'group',
-            targetName: target_group,
-            targetNumber: '',
-            message: resGroup.sentMessage || message,
-            status: resGroup.success ? 'sent' : 'failed',
-            response: JSON.stringify(resGroup)
-          });
-        } catch (err) {
-          status = 'failed';
-          errorMsg += `Group Exception: ${err.message}. `;
-          NotificationLogModel.create({
-            ticketId: `IG-${post.shortcode}`,
-            targetType: 'group',
-            targetName: target_group,
-            targetNumber: '',
-            message: message,
-            status: 'failed',
-            response: JSON.stringify({ error: err.message })
-          });
         }
       }
       
       if (target_admin) {
-        try {
-          const resAdmin = await sendPersonalMessage(target_admin, message, { imageUrl, videoUrl });
-          if (!resAdmin.success) {
+        const admins = target_admin.split(',').map(a => a.trim()).filter(Boolean);
+        for (const adm of admins) {
+          try {
+            const resAdmin = await sendPersonalMessage(adm, message, { imageUrl, videoUrl });
+            if (!resAdmin.success) {
+              status = 'failed';
+              errorMsg += `Admin (${adm}): ${resAdmin.error || 'Gagal'}. `;
+            }
+            NotificationLogModel.create({
+              ticketId: `IG-${post.shortcode}`,
+              targetType: 'personal',
+              targetName: 'Admin IG',
+              targetNumber: adm,
+              message: resAdmin.sentMessage || message,
+              status: resAdmin.success ? 'sent' : 'failed',
+              response: JSON.stringify(resAdmin)
+            });
+            if (admins.length > 1) {
+              const { sleep } = require('../utils/helpers');
+              await sleep(1500);
+            }
+          } catch (err) {
             status = 'failed';
-            errorMsg += `Admin (${target_admin}): ${resAdmin.error || 'Gagal'}. `;
+            errorMsg += `Admin (${adm}) Exception: ${err.message}. `;
+            NotificationLogModel.create({
+              ticketId: `IG-${post.shortcode}`,
+              targetType: 'personal',
+              targetName: 'Admin IG',
+              targetNumber: adm,
+              message: message,
+              status: 'failed',
+              response: JSON.stringify({ error: err.message })
+            });
           }
-          NotificationLogModel.create({
-            ticketId: `IG-${post.shortcode}`,
-            targetType: 'personal',
-            targetName: 'Admin IG',
-            targetNumber: target_admin,
-            message: resAdmin.sentMessage || message,
-            status: resAdmin.success ? 'sent' : 'failed',
-            response: JSON.stringify(resAdmin)
-          });
-        } catch (err) {
-          status = 'failed';
-          errorMsg += `Admin Exception: ${err.message}. `;
-          NotificationLogModel.create({
-            ticketId: `IG-${post.shortcode}`,
-            targetType: 'personal',
-            targetName: 'Admin IG',
-            targetNumber: target_admin,
-            message: message,
-            status: 'failed',
-            response: JSON.stringify({ error: err.message })
-          });
         }
       }
       
@@ -473,11 +487,27 @@ function createRoutes() {
       const { group } = req.body;
       if (!group) return res.status(400).json({ success: false, error: 'Group tidak boleh kosong' });
       
-      const result = await sendGroupMessage(group, '🤖 *PING TEST* 🤖\n\nIni adalah pesan percobaan dari sistem Instagram Auto Notif.');
-      if (result.success) {
-        res.json({ success: true, message: 'Ping berhasil dikirim' });
+      const groups = group.split(',').map(g => g.trim()).filter(Boolean);
+      let successList = [];
+      let failList = [];
+      const { sleep } = require('../utils/helpers');
+
+      for (const grp of groups) {
+        const result = await sendGroupMessage(grp, '🤖 *PING TEST* 🤖\n\nIni adalah pesan percobaan dari sistem Instagram Auto Notif.');
+        if (result.success) {
+          successList.push(grp);
+        } else {
+          failList.push(`${grp} (${result.error || 'Gagal'})`);
+        }
+        if (groups.length > 1) await sleep(1000);
+      }
+
+      if (failList.length === 0) {
+        res.json({ success: true, message: `Ping berhasil dikirim ke ${successList.length} group: ${successList.join(', ')}` });
+      } else if (successList.length > 0) {
+        res.json({ success: true, message: `Berhasil ke: ${successList.join(', ')}. Gagal ke: ${failList.join(', ')}` });
       } else {
-        res.status(500).json({ success: false, error: result.error });
+        res.status(500).json({ success: false, error: `Gagal kirim: ${failList.join(', ')}` });
       }
     } catch (error) {
       res.status(500).json({ success: false, error: error.message });
@@ -489,11 +519,27 @@ function createRoutes() {
       const { phone } = req.body;
       if (!phone) return res.status(400).json({ success: false, error: 'Nomor HP tidak boleh kosong' });
       
-      const result = await sendPersonalMessage(phone, '🤖 *PING TEST* 🤖\n\nIni adalah pesan percobaan dari sistem Instagram Auto Notif.');
-      if (result.success) {
-        res.json({ success: true, message: 'Ping berhasil dikirim' });
+      const phones = phone.split(',').map(p => p.trim()).filter(Boolean);
+      let successList = [];
+      let failList = [];
+      const { sleep } = require('../utils/helpers');
+
+      for (const p of phones) {
+        const result = await sendPersonalMessage(p, '🤖 *PING TEST* 🤖\n\nIni adalah pesan percobaan dari sistem Instagram Auto Notif.');
+        if (result.success) {
+          successList.push(p);
+        } else {
+          failList.push(`${p} (${result.error || 'Gagal'})`);
+        }
+        if (phones.length > 1) await sleep(1000);
+      }
+
+      if (failList.length === 0) {
+        res.json({ success: true, message: `Ping berhasil dikirim ke ${successList.length} nomor: ${successList.join(', ')}` });
+      } else if (successList.length > 0) {
+        res.json({ success: true, message: `Berhasil ke: ${successList.join(', ')}. Gagal ke: ${failList.join(', ')}` });
       } else {
-        res.status(500).json({ success: false, error: result.error });
+        res.status(500).json({ success: false, error: `Gagal kirim: ${failList.join(', ')}` });
       }
     } catch (error) {
       res.status(500).json({ success: false, error: error.message });

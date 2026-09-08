@@ -239,67 +239,75 @@ async function scrapeInstagram(options = {}) {
           errorMsg = 'Tujuan Group / Nomor Admin WhatsApp belum diatur di form Default Target Pengiriman Instagram atau Pengaturan Utama.';
           log.warn(`[IG] No target group or admin configured. Post ${post.shortcode} marked as failed.`);
         } else {
-          // Send to group
+          // Send to group(s)
           if (targetGroup) {
-            try {
-              const resGroup = await sendGroupMessage(targetGroup, message, { imageUrl: post.imageUrl, videoUrl: post.videoUrl });
-              if (!resGroup.success) {
+            const groups = targetGroup.split(',').map(g => g.trim()).filter(Boolean);
+            for (const grp of groups) {
+              try {
+                const resGroup = await sendGroupMessage(grp, message, { imageUrl: post.imageUrl, videoUrl: post.videoUrl });
+                if (!resGroup.success) {
+                  status = 'failed';
+                  errorMsg += `Group (${grp}): ${resGroup.error || 'Gagal'}. `;
+                }
+                NotificationLogModel.create({
+                  ticketId: `IG-${post.shortcode}`,
+                  targetType: 'group',
+                  targetName: grp,
+                  targetNumber: '',
+                  message: resGroup.sentMessage || message,
+                  status: resGroup.success ? 'sent' : 'failed',
+                  response: JSON.stringify(resGroup)
+                });
+                if (groups.length > 1) await sleep(1500);
+              } catch (err) {
                 status = 'failed';
-                errorMsg += `Group (${targetGroup}): ${resGroup.error || 'Gagal'}. `;
+                errorMsg += `Group (${grp}) Exception: ${err.message}. `;
+                NotificationLogModel.create({
+                  ticketId: `IG-${post.shortcode}`,
+                  targetType: 'group',
+                  targetName: grp,
+                  targetNumber: '',
+                  message: message,
+                  status: 'failed',
+                  response: JSON.stringify({ error: err.message })
+                });
               }
-              NotificationLogModel.create({
-                ticketId: `IG-${post.shortcode}`,
-                targetType: 'group',
-                targetName: targetGroup,
-                targetNumber: '',
-                message: resGroup.sentMessage || message,
-                status: resGroup.success ? 'sent' : 'failed',
-                response: JSON.stringify(resGroup)
-              });
-            } catch (err) {
-              status = 'failed';
-              errorMsg += `Group Exception: ${err.message}. `;
-              NotificationLogModel.create({
-                ticketId: `IG-${post.shortcode}`,
-                targetType: 'group',
-                targetName: targetGroup,
-                targetNumber: '',
-                message: message,
-                status: 'failed',
-                response: JSON.stringify({ error: err.message })
-              });
             }
           }
           
-          // Send to admin
+          // Send to admin(s)
           if (targetAdmin) {
-            try {
-              const resAdmin = await sendPersonalMessage(targetAdmin, message, { imageUrl: post.imageUrl, videoUrl: post.videoUrl });
-              if (!resAdmin.success) {
+            const admins = targetAdmin.split(',').map(a => a.trim()).filter(Boolean);
+            for (const adm of admins) {
+              try {
+                const resAdmin = await sendPersonalMessage(adm, message, { imageUrl: post.imageUrl, videoUrl: post.videoUrl });
+                if (!resAdmin.success) {
+                  status = 'failed';
+                  errorMsg += `Admin (${adm}): ${resAdmin.error || 'Gagal'}. `;
+                }
+                NotificationLogModel.create({
+                  ticketId: `IG-${post.shortcode}`,
+                  targetType: 'personal',
+                  targetName: 'Admin IG',
+                  targetNumber: adm,
+                  message: resAdmin.sentMessage || message,
+                  status: resAdmin.success ? 'sent' : 'failed',
+                  response: JSON.stringify(resAdmin)
+                });
+                if (admins.length > 1) await sleep(1500);
+              } catch (err) {
                 status = 'failed';
-                errorMsg += `Admin (${targetAdmin}): ${resAdmin.error || 'Gagal'}. `;
+                errorMsg += `Admin (${adm}) Exception: ${err.message}. `;
+                NotificationLogModel.create({
+                  ticketId: `IG-${post.shortcode}`,
+                  targetType: 'personal',
+                  targetName: 'Admin IG',
+                  targetNumber: adm,
+                  message: message,
+                  status: 'failed',
+                  response: JSON.stringify({ error: err.message })
+                });
               }
-              NotificationLogModel.create({
-                ticketId: `IG-${post.shortcode}`,
-                targetType: 'personal',
-                targetName: 'Admin IG',
-                targetNumber: targetAdmin,
-                message: resAdmin.sentMessage || message,
-                status: resAdmin.success ? 'sent' : 'failed',
-                response: JSON.stringify(resAdmin)
-              });
-            } catch (err) {
-              status = 'failed';
-              errorMsg += `Admin Exception: ${err.message}. `;
-              NotificationLogModel.create({
-                ticketId: `IG-${post.shortcode}`,
-                targetType: 'personal',
-                targetName: 'Admin IG',
-                targetNumber: targetAdmin,
-                message: message,
-                status: 'failed',
-                response: JSON.stringify({ error: err.message })
-              });
             }
           }
         }

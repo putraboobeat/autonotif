@@ -435,16 +435,16 @@
           <div class="settings-row" style="border-top: 2px dashed rgba(255,255,255,0.1); padding-top: 16px; margin-top: 8px;">
             <div class="settings-info">
               <h4>Default Target Pengiriman</h4>
-              <p>Simpan nomor HP dan Group untuk keperluan pengetesan manual (Test Ping) atau untuk Mode Teruskan Semua.</p>
+              <p>Simpan nama Group dan nomor HP Admin WhatsApp (bisa <strong>multi-group</strong> &amp; <strong>multi-nomor</strong>, pisahkan dengan tanda koma <code>,</code>).</p>
             </div>
             <div style="display: flex; flex-direction: column; gap: 8px;">
               <div style="display: flex; gap: 8px; align-items: center;">
-                <input type="text" class="form-input" id="test-ig-group" placeholder="ID/Nama Group WA..." style="flex: 1;">
+                <input type="text" class="form-input" id="test-ig-group" placeholder="Pengaduan Aceh, Group Humas, Info Publik (pisah koma)..." style="flex: 1;">
                 <button class="btn btn-primary btn-sm" onclick="saveCustomSetting('ig_default_group', 'test-ig-group')">💾 Simpan</button>
                 <button class="btn btn-ghost btn-sm" onclick="pingIgGroup()">Ping Group</button>
               </div>
               <div style="display: flex; gap: 8px; align-items: center;">
-                <input type="text" class="form-input" id="test-ig-admin" placeholder="08123456789" style="flex: 1;">
+                <input type="text" class="form-input" id="test-ig-admin" placeholder="085225726372, 08123456789 (pisah koma)..." style="flex: 1;">
                 <button class="btn btn-primary btn-sm" onclick="saveCustomSetting('ig_default_admin', 'test-ig-admin')">💾 Simpan</button>
                 <button class="btn btn-ghost btn-sm" onclick="pingIgAdmin()">Ping Admin</button>
               </div>
