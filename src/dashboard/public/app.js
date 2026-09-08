@@ -143,6 +143,7 @@ function loadAllData() {
   loadTemplates();
   checkAuthStatus();
   checkStarSenderStatus();
+  loadIgPosts();
 }
 
 function startAutoRefresh() {
@@ -1012,26 +1013,18 @@ async function loadSettings() {
   try {
     const res = await apiGet('/settings');
     if (res.success && res.data) {
-      const elWa = document.getElementById('setting-wa-group');
-      if (elWa) elWa.value = res.data.wa_group_id || '';
+      document.getElementById('setting-notification').checked = res.data.notification_enabled === '1';
+      document.getElementById('setting-group').checked = res.data.group_notification_enabled === '1';
+      document.getElementById('setting-personal').checked = res.data.personal_notification_enabled === '1';
+      document.getElementById('setting-wa-group').value = res.data.wa_group_id || '';
+      document.getElementById('setting-holiday-wa-group').value = res.data.holiday_wa_group_id || '';
+      document.getElementById('setting-holiday-admin').value = res.data.holiday_admin_number || '';
+      document.getElementById('setting-reminder-interval').value = res.data.reminder_interval_minutes || '';
       
-      const elRem = document.getElementById('setting-reminder-interval');
-      if (elRem) elRem.value = res.data.reminder_interval_minutes !== undefined && res.data.reminder_interval_minutes !== '' ? res.data.reminder_interval_minutes : '5';
-
-      const elNoti = document.getElementById('setting-notification');
-      if (elNoti) elNoti.checked = res.data.notification_enabled !== '0';
-
-      const elGroup = document.getElementById('setting-group');
-      if (elGroup) elGroup.checked = res.data.group_notification_enabled !== '0';
-
-      const elPers = document.getElementById('setting-personal');
-      if (elPers) elPers.checked = res.data.personal_notification_enabled !== '0';
-
-      const elIgEn = document.getElementById('setting-ig-enabled');
-      if (elIgEn) elIgEn.checked = res.data.ig_enabled === '1';
-
-      const elIgUser = document.getElementById('setting-ig-username');
-      if (elIgUser) elIgUser.value = res.data.ig_username || '';
+      document.getElementById('setting-ig-enabled').checked = res.data.ig_enabled === '1';
+      document.getElementById('setting-ig-username').value = res.data.ig_username || '';
+      document.getElementById('setting-ig-template').value = res.data.ig_template_msg || '';
+      document.getElementById('setting-ig-watermark').value = res.data.ig_watermark || '';
 
       const elIgStatus = document.getElementById('ig-scraper-status-text');
       if (elIgStatus) {
@@ -1039,12 +1032,6 @@ async function loadSettings() {
         if (res.data.last_ig_scrape_time) text += ` (Terakhir cek: ${new Date(res.data.last_ig_scrape_time).toLocaleTimeString()})`;
         elIgStatus.innerHTML = `Status: ${text}`;
       }
-
-      const elHolGroup = document.getElementById('setting-holiday-wa-group');
-      if (elHolGroup) elHolGroup.value = res.data.holiday_wa_group_id || '';
-
-      const elHolAdmin = document.getElementById('setting-holiday-admin');
-      if (elHolAdmin) elHolAdmin.value = res.data.holiday_admin_number || '';
     }
   } catch (err) {
     console.error('Error loading settings:', err);
@@ -1607,9 +1594,10 @@ async function loadIgRules() {
             <td>${idx + 1}</td>
             <td><span class="badge" style="background: rgba(236,72,153,0.2); color: #ec4899; border: 1px solid rgba(236,72,153,0.4);">${rule.code}</span></td>
             <td>${rule.target_group}</td>
+            <td>${rule.target_admin || '-'}</td>
             <td><span class="badge badge-${rule.is_active ? 'success' : 'danger'}">${rule.is_active ? 'Aktif' : 'Nonaktif'}</span></td>
             <td>
-              <button class="btn btn-sm" onclick='editIgRule(${JSON.stringify(rule)})'>Edit</button>
+              <button class="btn btn-sm" onclick='editIgRule(${JSON.stringify(rule).replace(/'/g, "&apos;")})'>Edit</button>
               <button class="btn btn-danger btn-sm" onclick="deleteIgRule(${rule.id})">Hapus</button>
             </td>
           </tr>
@@ -1625,6 +1613,7 @@ function openIgRuleModal() {
   document.getElementById('ig_rule_id').value = '';
   document.getElementById('ig_rule_code').value = '';
   document.getElementById('ig_rule_target').value = '';
+  document.getElementById('ig_rule_admin').value = '';
   document.getElementById('ig_rule_active').checked = true;
   document.getElementById('igRuleModalTitle').textContent = 'Tambah Rule Instagram';
   document.getElementById('igRuleModal').style.display = 'flex';
@@ -1638,17 +1627,19 @@ function editIgRule(rule) {
   document.getElementById('ig_rule_id').value = rule.id;
   document.getElementById('ig_rule_code').value = rule.code;
   document.getElementById('ig_rule_target').value = rule.target_group;
+  document.getElementById('ig_rule_admin').value = rule.target_admin || '';
   document.getElementById('ig_rule_active').checked = rule.is_active === 1;
   document.getElementById('igRuleModalTitle').textContent = 'Edit Rule Instagram';
   document.getElementById('igRuleModal').style.display = 'flex';
 }
 
-async function handleIgRuleSubmit(event) {
-  event.preventDefault();
+async function handleIgRuleSubmit(e) {
+  e.preventDefault();
   const id = document.getElementById('ig_rule_id').value;
   const data = {
     code: document.getElementById('ig_rule_code').value,
     target_group: document.getElementById('ig_rule_target').value,
+    target_admin: document.getElementById('ig_rule_admin').value,
     is_active: document.getElementById('ig_rule_active').checked
   };
 
@@ -1711,6 +1702,99 @@ async function saveCustomSetting(key, elementId) {
     }
   } catch (error) {
     showToast('Terjadi kesalahan', 'error');
+  }
+}
+
+// ------------------------------
+// Scraped Posts and Ping 
+// ------------------------------
+
+async function loadIgPosts() {
+  try {
+    const res = await apiGet('/ig-posts');
+    if (res.success) {
+      const tbody = document.getElementById('ig-posts-table-body');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+      if (res.data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Belum ada data postingan ter-scrape</td></tr>';
+        return;
+      }
+      res.data.forEach((post) => {
+        let statusBadge = '';
+        if (post.status === 'success') statusBadge = '<span class="badge badge-success">Sukses</span>';
+        else if (post.status === 'ignored') statusBadge = '<span class="badge" style="background:#4b5563; color:white;">Abaikan (No Match)</span>';
+        else statusBadge = `<span class="badge badge-danger" title="${post.error_msg}">Gagal</span>`;
+        
+        let actions = '';
+        if (post.status !== 'ignored') {
+            actions = `<button class="btn btn-primary btn-sm" style="font-size:11px;" onclick="resendIgPost(${post.id})">Kirim Ulang</button>`;
+        }
+        
+        let timeLabel = new Date(post.created_at).toLocaleString('id-ID');
+        let linkLabel = post.link ? `<br><a href="${post.link}" target="_blank" style="color: #38b6ff; text-decoration:none; font-size:11px;">Buka Post ↗</a>` : '';
+        
+        tbody.innerHTML += `
+          <tr>
+            <td style="font-size:12px;">${timeLabel} ${linkLabel}</td>
+            <td><span class="badge" style="background: rgba(236,72,153,0.2); color: #ec4899; border: 1px solid rgba(236,72,153,0.4);">${post.matched_code || '-'}</span></td>
+            <td style="font-size:12px; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${post.caption}">${post.caption || '-'}</td>
+            <td>${statusBadge}</td>
+            <td>${actions}</td>
+          </tr>
+        `;
+      });
+    }
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+async function resendIgPost(id) {
+  const targetGroup = prompt("Kirim ulang ke Group apa? (Biarkan kosong jika tidak kirim ke group)");
+  const targetAdmin = prompt("Kirim ulang ke Admin mana? (Nomor HP, biarkan kosong jika tidak kirim ke admin)");
+  
+  if (targetGroup === null && targetAdmin === null) return;
+  if (!targetGroup && !targetAdmin) {
+    showToast("Anda harus mengisi minimal salah satu (Group atau Admin)", "error");
+    return;
+  }
+  
+  try {
+    showToast("Mengirim ulang...", "info");
+    const res = await apiCall(`/ig-posts/${id}/resend`, 'POST', { target_group: targetGroup, target_admin: targetAdmin });
+    if (res.success) {
+      showToast(res.message, 'success');
+      loadIgPosts();
+    } else {
+      showToast(res.error, 'error');
+    }
+  } catch (error) {
+    showToast("Gagal mengirim ulang", "error");
+  }
+}
+
+async function pingIgGroup() {
+  const group = document.getElementById('test-ig-group').value;
+  if (!group) return showToast('Isi nama/ID group dulu', 'error');
+  try {
+    const res = await apiCall('/ig-scraper/ping-group', 'POST', { group });
+    if (res.success) showToast(res.message, 'success');
+    else showToast(res.error, 'error');
+  } catch(e) {
+    showToast('Error', 'error');
+  }
+}
+
+async function pingIgAdmin() {
+  const phone = document.getElementById('test-ig-admin').value;
+  if (!phone) return showToast('Isi nomor HP dulu', 'error');
+  try {
+    const res = await apiCall('/ig-scraper/ping-admin', 'POST', { phone });
+    if (res.success) showToast(res.message, 'success');
+    else showToast(res.error, 'error');
+  } catch(e) {
+    showToast('Error', 'error');
   }
 }
 

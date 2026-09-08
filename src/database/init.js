@@ -81,6 +81,32 @@ function initDatabase() {
     } catch (e) {
       log.error('Holiday migration failed', { error: e.message });
     }
+    // Auto-migrate: Instagram tables
+    try {
+      const ruleCols = db.pragma('table_info(ig_rules)');
+      if (ruleCols.length > 0) {
+        const hasTargetAdmin = ruleCols.some(c => c.name === 'target_admin');
+        if (!hasTargetAdmin) {
+          log.info('Migrating database: Adding target_admin to ig_rules');
+          db.exec("ALTER TABLE ig_rules ADD COLUMN target_admin VARCHAR(255);");
+        }
+      }
+
+      const postCols = db.pragma('table_info(processed_ig_posts)');
+      if (postCols.length > 0) {
+        const hasLink = postCols.some(c => c.name === 'link');
+        if (!hasLink) {
+          log.info('Migrating database: Adding new columns to processed_ig_posts');
+          db.exec(`
+            ALTER TABLE processed_ig_posts ADD COLUMN link VARCHAR(255);
+            ALTER TABLE processed_ig_posts ADD COLUMN status VARCHAR(50) DEFAULT 'success';
+            ALTER TABLE processed_ig_posts ADD COLUMN error_msg TEXT;
+          `);
+        }
+      }
+    } catch (e) {
+      log.error('IG migration failed', { error: e.message });
+    }
   } catch (err) {
     log.error('Migration failed', { error: err.message });
   }

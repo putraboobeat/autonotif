@@ -102,6 +102,7 @@ CREATE TABLE IF NOT EXISTS ig_rules (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     code VARCHAR(100) NOT NULL UNIQUE,
     target_group VARCHAR(255) NOT NULL,
+    target_admin VARCHAR(255),
     is_active INTEGER DEFAULT 1,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
@@ -112,9 +113,12 @@ CREATE INDEX IF NOT EXISTS idx_ig_rules_code ON ig_rules(code);
 CREATE TABLE IF NOT EXISTS processed_ig_posts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     shortcode VARCHAR(50) NOT NULL UNIQUE,
+    link VARCHAR(255),
     caption TEXT,
     matched_code VARCHAR(100),
     notified_group VARCHAR(255),
+    status VARCHAR(50) DEFAULT 'success',
+    error_msg TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -126,3 +130,5 @@ INSERT OR IGNORE INTO system_config (key, value) VALUES ('ig_username', '');
 INSERT OR IGNORE INTO system_config (key, value) VALUES ('ig_scrape_interval', '300000'); -- default 5 menit
 INSERT OR IGNORE INTO system_config (key, value) VALUES ('ig_scraper_status', 'stopped');
 INSERT OR IGNORE INTO system_config (key, value) VALUES ('last_ig_scrape_time', '');
+INSERT OR IGNORE INTO system_config (key, value) VALUES ('ig_template_msg', '📸 *INFO POSTINGAN BARU* 📸\n\nAda postingan Instagram terbaru (@{{username}}) yang terkait dengan instansi Anda.\n\n*Kode:* {{kode}}\n*Caption:* {{caption}}\n\n*Link:* {{link}}');
+INSERT OR IGNORE INTO system_config (key, value) VALUES ('ig_watermark', '_Pesan otomatis dari Auto Notif Pengaduan_');

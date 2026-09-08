@@ -261,11 +261,11 @@ function createRoutes() {
 
   router.post('/ig-rules', (req, res) => {
     try {
-      const { code, target_group } = req.body;
+      const { code, target_group, target_admin } = req.body;
       if (!code || !target_group) {
         return res.status(400).json({ success: false, error: 'Kode dan Target Group wajib diisi' });
       }
-      IgRuleModel.create({ code, target_group });
+      IgRuleModel.create({ code, target_group, target_admin });
       res.json({ success: true });
     } catch (error) {
       if (error.message.includes('UNIQUE constraint')) {
@@ -277,9 +277,9 @@ function createRoutes() {
 
   router.put('/ig-rules/:id', (req, res) => {
     try {
-      const { code, target_group, is_active } = req.body;
+      const { code, target_group, target_admin, is_active } = req.body;
       IgRuleModel.update(parseInt(req.params.id), {
-        code, target_group, is_active: is_active !== undefined ? is_active : true
+        code, target_group, target_admin, is_active: is_active !== undefined ? is_active : true
       });
       res.json({ success: true });
     } catch (error) {
@@ -301,6 +301,101 @@ function createRoutes() {
       // Trigger IG scrape asynchronously
       scrapeInstagram().catch(e => log.error('Manual IG Scrape Error', { error: e.message }));
       res.json({ success: true, message: 'Instagram scraper dijalankan di latar belakang.' });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+  
+  router.get('/ig-posts', (req, res) => {
+    try {
+      const { IgPostModel } = require('../database/models');
+      const posts = IgPostModel.getAll();
+      res.json({ success: true, data: posts });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  router.post('/ig-posts/:id/resend', async (req, res) => {
+    try {
+      const { IgPostModel, IgRuleModel } = require('../database/models');
+      const post = IgPostModel.getById(parseInt(req.params.id));
+      if (!post) {
+        return res.status(404).json({ success: false, error: 'Postingan tidak ditemukan' });
+      }
+      
+      const { target_group, target_admin } = req.body;
+      if (!target_group && !target_admin) {
+         return res.status(400).json({ success: false, error: 'Harap sediakan target group atau admin' });
+      }
+      
+      const username = ConfigModel.get('ig_username').split(',')[0].trim();
+      const templateMsg = ConfigModel.get('ig_template_msg') || '📸 *INFO POSTINGAN BARU* 📸\n\nAda postingan Instagram terbaru (@{{username}}) yang terkait dengan instansi Anda.\n\n*Kode:* {{kode}}\n*Caption:* {{caption}}\n\n*Link:* {{link}}';
+      const watermark = ConfigModel.get('ig_watermark') || '_Pesan otomatis dari Auto Notif Pengaduan_';
+      
+      const captionSnippet = post.caption ? (post.caption.substring(0, 500) + (post.caption.length > 500 ? '...' : '')) : '';
+      let message = templateMsg
+        .replace(/\{\{username\}\}/g, username || 'Instagram')
+        .replace(/\{\{kode\}\}/g, post.matched_code || '')
+        .replace(/\{\{caption\}\}/g, captionSnippet)
+        .replace(/\{\{link\}\}/g, post.link || '');
+        
+      message += `\n\n${watermark}`;
+      
+      let status = 'success';
+      let errorMsg = '';
+      
+      if (target_group) {
+        const resGroup = await sendGroupMessage(target_group, message);
+        if (!resGroup.success) {
+          status = 'failed';
+          errorMsg += `Group: ${resGroup.error}. `;
+        }
+      }
+      
+      if (target_admin) {
+        const resAdmin = await sendPersonalMessage(target_admin, message);
+        if (!resAdmin.success) {
+          status = 'failed';
+          errorMsg += `Admin: ${resAdmin.error}. `;
+        }
+      }
+      
+      IgPostModel.updateStatus(post.id, status, errorMsg.trim());
+      res.json({ success: true, message: 'Kirim ulang berhasil dijalankan.' });
+      
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  router.post('/ig-scraper/ping-group', async (req, res) => {
+    try {
+      const { group } = req.body;
+      if (!group) return res.status(400).json({ success: false, error: 'Group tidak boleh kosong' });
+      
+      const result = await sendGroupMessage(group, '🤖 *PING TEST* 🤖\n\nIni adalah pesan percobaan dari sistem Instagram Auto Notif.');
+      if (result.success) {
+        res.json({ success: true, message: 'Ping berhasil dikirim' });
+      } else {
+        res.status(500).json({ success: false, error: result.error });
+      }
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  router.post('/ig-scraper/ping-admin', async (req, res) => {
+    try {
+      const { phone } = req.body;
+      if (!phone) return res.status(400).json({ success: false, error: 'Nomor HP tidak boleh kosong' });
+      
+      const result = await sendPersonalMessage(phone, '🤖 *PING TEST* 🤖\n\nIni adalah pesan percobaan dari sistem Instagram Auto Notif.');
+      if (result.success) {
+        res.json({ success: true, message: 'Ping berhasil dikirim' });
+      } else {
+        res.status(500).json({ success: false, error: result.error });
+      }
     } catch (error) {
       res.status(500).json({ success: false, error: error.message });
     }

@@ -384,6 +384,50 @@
               <button class="btn btn-primary btn-sm" onclick="saveCustomSetting('ig_username', 'setting-ig-username')">Simpan</button>
             </div>
           </div>
+
+          <div class="settings-row">
+            <div class="settings-info">
+              <h4>Template Pesan Instagram</h4>
+              <p>Gunakan variabel: {{username}}, {{kode}}, {{caption}}, {{link}}</p>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
+              <textarea class="form-input" id="setting-ig-template" style="min-height: 100px; resize: vertical;" placeholder="Template pesan..."></textarea>
+              <button class="btn btn-primary btn-sm" style="align-self: flex-start;" onclick="saveCustomSetting('ig_template_msg', 'setting-ig-template')">Simpan Template</button>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-info">
+              <h4>Watermark Instagram</h4>
+              <p>Tambahan teks di akhir pesan</p>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <input type="text" class="form-input" id="setting-ig-watermark" placeholder="_Pesan otomatis..._">
+              <button class="btn btn-primary btn-sm" onclick="saveCustomSetting('ig_watermark', 'setting-ig-watermark')">Simpan</button>
+            </div>
+          </div>
+
+          <div class="settings-row" style="border-top: 2px dashed rgba(255,255,255,0.1); padding-top: 16px; margin-top: 8px;">
+            <div class="settings-info">
+              <h4>Tes Ping IG Group</h4>
+              <p>Kirim pesan tes ke Group WA (masukkan ID/Nama Group)</p>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <input type="text" class="form-input" id="test-ig-group" placeholder="Group WA...">
+              <button class="btn btn-primary btn-sm" onclick="pingIgGroup()">Ping Group</button>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-info">
+              <h4>Tes Ping IG Admin</h4>
+              <p>Kirim pesan tes ke Admin WA (masukkan Nomor HP)</p>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <input type="text" class="form-input" id="test-ig-admin" placeholder="08123456789">
+              <button class="btn btn-primary btn-sm" onclick="pingIgAdmin()">Ping Admin</button>
+            </div>
+          </div>
           
           <h3 style="margin-top: 30px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color); color: #ec4899; display: flex; justify-content: space-between; align-items: center;">
             <span>📋 Rule Pemetaan Kode -> Group WA</span>
@@ -395,11 +439,31 @@
                 <th>No</th>
                 <th>Kode Caption</th>
                 <th>Target Group WA</th>
+                <th>Target Admin WA</th>
                 <th>Status</th>
                 <th>Aksi</th>
               </tr>
             </thead>
             <tbody id="ig-rule-table-body">
+              <tr><td colspan="6" style="text-align: center;">Memuat data...</td></tr>
+            </tbody>
+          </table>
+
+          <h3 style="margin-top: 30px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color); color: #ec4899; display: flex; justify-content: space-between; align-items: center;">
+            <span>📰 Riwayat Postingan IG (Scraped)</span>
+            <button class="btn btn-ghost btn-sm" onclick="loadIgPosts()">↻ Refresh Tabel</button>
+          </h3>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Waktu & Link</th>
+                <th>Kode</th>
+                <th>Cuplikan Caption</th>
+                <th>Status Notif</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="ig-posts-table-body">
               <tr><td colspan="5" style="text-align: center;">Memuat data...</td></tr>
             </tbody>
           </table>
@@ -679,6 +743,11 @@
           <div class="form-group">
             <label for="ig_rule_target">Target Group WhatsApp <span style="color:red">*</span></label>
             <input type="text" id="ig_rule_target" class="form-control" placeholder="ID atau Nama Group" required style="width: 100%; padding: 10px; border-radius: 8px; margin-top: 10px;">
+          </div>
+          
+          <div class="form-group">
+            <label for="ig_rule_admin">Target Admin WhatsApp (Opsional)</label>
+            <input type="text" id="ig_rule_admin" class="form-control" placeholder="Nomor HP Admin" style="width: 100%; padding: 10px; border-radius: 8px; margin-top: 10px;">
           </div>
           
           <div class="form-group" style="display: flex; align-items: center; gap: 10px; margin-top: 15px;">

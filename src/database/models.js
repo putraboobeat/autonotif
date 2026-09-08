@@ -464,21 +464,21 @@ const IgRuleModel = {
     return db.prepare('SELECT * FROM ig_rules WHERE id = ?').get(id);
   },
 
-  create({ code, target_group }) {
+  create({ code, target_group, target_admin }) {
     const db = getDb();
     const stmt = db.prepare(
-      'INSERT INTO ig_rules (code, target_group) VALUES (?, ?)'
+      'INSERT INTO ig_rules (code, target_group, target_admin) VALUES (?, ?, ?)'
     );
-    const result = stmt.run(code, target_group);
+    const result = stmt.run(code, target_group, target_admin || '');
     return result;
   },
 
-  update(id, { code, target_group, is_active }) {
+  update(id, { code, target_group, target_admin, is_active }) {
     const db = getDb();
     const stmt = db.prepare(
-      'UPDATE ig_rules SET code = ?, target_group = ?, is_active = ? WHERE id = ?'
+      'UPDATE ig_rules SET code = ?, target_group = ?, target_admin = ?, is_active = ? WHERE id = ?'
     );
-    const result = stmt.run(code, target_group, is_active ? 1 : 0, id);
+    const result = stmt.run(code, target_group, target_admin || '', is_active ? 1 : 0, id);
     return result;
   },
 
@@ -489,6 +489,11 @@ const IgRuleModel = {
 };
 
 const IgPostModel = {
+  getAll() {
+    const db = getDb();
+    return db.prepare('SELECT * FROM processed_ig_posts ORDER BY id DESC LIMIT 200').all();
+  },
+
   isProcessed(shortcode) {
     const db = getDb();
     const stmt = db.prepare('SELECT * FROM processed_ig_posts WHERE shortcode = ?');
@@ -496,14 +501,36 @@ const IgPostModel = {
     return result || null;
   },
 
-  save({ shortcode, caption, matched_code, notified_group }) {
+  save({ shortcode, link, caption, matched_code, notified_group, status, error_msg }) {
     const db = getDb();
     const stmt = db.prepare(`
       INSERT INTO processed_ig_posts 
-      (shortcode, caption, matched_code, notified_group)
-      VALUES (?, ?, ?, ?)
+      (shortcode, link, caption, matched_code, notified_group, status, error_msg)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(shortcode) DO UPDATE SET
+      status = excluded.status,
+      error_msg = excluded.error_msg
     `);
-    return stmt.run(shortcode, caption || '', matched_code || '', notified_group || '');
+    return stmt.run(
+      shortcode, 
+      link || '',
+      caption || '', 
+      matched_code || '', 
+      notified_group || '',
+      status || 'success',
+      error_msg || ''
+    );
+  },
+  
+  updateStatus(id, status, error_msg) {
+    const db = getDb();
+    const stmt = db.prepare('UPDATE processed_ig_posts SET status = ?, error_msg = ? WHERE id = ?');
+    return stmt.run(status, error_msg || '', id);
+  },
+  
+  getById(id) {
+    const db = getDb();
+    return db.prepare('SELECT * FROM processed_ig_posts WHERE id = ?').get(id);
   }
 };
 

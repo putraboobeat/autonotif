@@ -1,6 +1,6 @@
 const { getBrowser, getPage } = require('./browser');
 const { IgRuleModel, IgPostModel, ConfigModel } = require('../database/models');
-const { sendGroupMessage } = require('../notifier/starsender');
+const { sendGroupMessage, sendPersonalMessage } = require('../notifier/starsender');
 const { createLogger } = require('../utils/logger');
 
 const log = createLogger('IG-SCRAPER');
@@ -111,27 +111,72 @@ async function scrapeInstagram() {
         if (matchedRule) {
           log.info(`Post ${post.shortcode} matched rule code: ${matchedRule.code}`);
           
+          // Get templates
+          const templateMsg = ConfigModel.get('ig_template_msg') || '📸 *INFO POSTINGAN BARU* 📸\n\nAda postingan Instagram terbaru (@{{username}}) yang terkait dengan instansi Anda.\n\n*Kode:* {{kode}}\n*Caption:* {{caption}}\n\n*Link:* {{link}}';
+          const watermark = ConfigModel.get('ig_watermark') || '_Pesan otomatis dari Auto Notif Pengaduan_';
+          
           // Format message
-          const message = `📸 *INFO POSTINGAN BARU* 📸\n\nAda postingan Instagram terbaru (@${username}) yang terkait dengan instansi Anda.\n\n*Kode:* ${matchedRule.code}\n*Caption:* ${post.caption.substring(0, 300)}${post.caption.length > 300 ? '...' : ''}\n\n*Link:* ${post.link}\n\n_Pesan otomatis dari Auto Notif Pengaduan_`;
+          const captionSnippet = post.caption.substring(0, 500) + (post.caption.length > 500 ? '...' : '');
+          let message = templateMsg
+            .replace(/\{\{username\}\}/g, username)
+            .replace(/\{\{kode\}\}/g, matchedRule.code)
+            .replace(/\{\{caption\}\}/g, captionSnippet)
+            .replace(/\{\{link\}\}/g, post.link);
+            
+          message += `\n\n${watermark}`;
+          
+          let status = 'success';
+          let errorMsg = '';
           
           // Send to group
-          const result = await sendGroupMessage(matchedRule.target_group, message);
+          if (matchedRule.target_group) {
+            try {
+              const resGroup = await sendGroupMessage(matchedRule.target_group, message);
+              if (!resGroup.success) {
+                status = 'failed';
+                errorMsg += `Group: ${resGroup.error}. `;
+              }
+            } catch (err) {
+              status = 'failed';
+              errorMsg += `Group Exception: ${err.message}. `;
+            }
+          }
+          
+          // Send to admin
+          if (matchedRule.target_admin) {
+            try {
+              const resAdmin = await sendPersonalMessage(matchedRule.target_admin, message);
+              if (!resAdmin.success) {
+                status = 'failed';
+                errorMsg += `Admin: ${resAdmin.error}. `;
+              }
+            } catch (err) {
+              status = 'failed';
+              errorMsg += `Admin Exception: ${err.message}. `;
+            }
+          }
           
           // Save to processed
           IgPostModel.save({
             shortcode: post.shortcode,
+            link: post.link,
             caption: post.caption,
             matched_code: matchedRule.code,
-            notified_group: matchedRule.target_group
+            notified_group: matchedRule.target_group,
+            status: status,
+            error_msg: errorMsg.trim()
           });
           
         } else {
           // Save as processed even if no match so we don't check it again
           IgPostModel.save({
             shortcode: post.shortcode,
+            link: post.link,
             caption: post.caption,
             matched_code: '',
-            notified_group: ''
+            notified_group: '',
+            status: 'ignored',
+            error_msg: ''
           });
         }
       }
