@@ -31,12 +31,14 @@ function applyAntiBanProtection(message) {
 
   // Cek apakah fitur footer verifikasi diaktifkan (default: aktif / 1)
   let footerEnabled = '1';
+  let customFooter = '';
   let footerLabel = 'HumasKanwil';
   let prefix = 'ATR';
   try {
     const { ConfigModel } = require('../database/models');
     const dbEnabled = ConfigModel.get('anti_ban_footer_enabled');
     if (dbEnabled !== undefined && dbEnabled !== null) footerEnabled = dbEnabled;
+    customFooter = (ConfigModel.get('anti_ban_footer_text') || '').trim();
     const dbLabel = ConfigModel.get('anti_ban_footer_label');
     if (dbLabel) footerLabel = dbLabel.trim();
     const dbPrefix = ConfigModel.get('anti_ban_footer_prefix');
@@ -57,10 +59,20 @@ function applyAntiBanProtection(message) {
   const timestamp = now.toLocaleTimeString('id-ID', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
   const dateCode = now.toISOString().slice(2, 10).replace(/-/g, ''); // YYMMDD
   const randomHash = Math.random().toString(36).substring(2, 6).toUpperCase() + Math.floor(100 + Math.random() * 900);
+  const fullCode = `#${prefix}-${dateCode}-${randomHash}`;
 
-  const verificationFooter = `\n\n───\n_🔒 ${footerLabel} | Ref. Verifikasi: *#${prefix}-${dateCode}-${randomHash}* (${timestamp} WIB)_`;
+  let footerLine = '';
+  if (customFooter) {
+    footerLine = customFooter
+      .replace(/\{\{kode\}\}/g, fullCode)
+      .replace(/\{\{label\}\}/g, footerLabel)
+      .replace(/\{\{waktu\}\}/g, timestamp)
+      .replace(/\{\{jam\}\}/g, timestamp);
+  } else {
+    footerLine = `_🔒 ${footerLabel} | Ref. Verifikasi: *${fullCode}* (${timestamp} WIB)_`;
+  }
 
-  return message + verificationFooter;
+  return `${message}\n\n───\n${footerLine}`;
 }
 
 // ============================================

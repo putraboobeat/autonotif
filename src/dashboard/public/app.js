@@ -1085,6 +1085,9 @@ async function loadSettings() {
       if (document.getElementById('setting-footer-enabled')) {
         document.getElementById('setting-footer-enabled').checked = res.data.anti_ban_footer_enabled !== '0';
       }
+      if (document.getElementById('setting-footer-text')) {
+        document.getElementById('setting-footer-text').value = res.data.anti_ban_footer_text || '';
+      }
       if (document.getElementById('setting-footer-label')) {
         document.getElementById('setting-footer-label').value = res.data.anti_ban_footer_label || 'HumasKanwil';
       }

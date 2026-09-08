@@ -725,6 +725,20 @@
 
           <div class="settings-row">
             <div class="settings-info">
+              <h4>Format / Teks Lengkap Footer</h4>
+              <p>Ketik kalimat footer verifikasi sesuka Anda. Variabel: <code>{{kode}}</code> (kode hash unik), <code>{{waktu}}</code> (jam WIB).</p>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 500px;">
+              <div style="display: flex; gap: 8px;">
+                <input type="text" class="form-input" id="setting-footer-text" placeholder="_🔒 HumasKanwil | Ref. Verifikasi: *{{kode}}* ({{waktu}} WIB)_" style="flex: 1;">
+                <button class="btn btn-primary btn-sm" onclick="saveCustomSetting('anti_ban_footer_text', 'setting-footer-text')">Simpan</button>
+              </div>
+              <span style="font-size: 11px; color: var(--text-muted);">Biarkan kosong untuk menggunakan teks bawaan.</span>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-info">
               <h4>Label Instansi Footer</h4>
               <p>Teks nama humas/instansi di footer verifikasi (contoh: <code>HumasKanwil</code> atau <code>KantahAceh</code>)</p>
             </div>
