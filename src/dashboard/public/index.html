@@ -434,55 +434,25 @@
             </div>
           </div>
           
-          <div class="settings-row" style="border-top: 2px dashed rgba(255,255,255,0.1); padding-top: 16px; margin-top: 8px;">
-            <div class="settings-info">
-              <h4>Teruskan Semua Postingan (Tanpa Rule)</h4>
-              <p>Jika dihidupkan, scraper akan mengabaikan Rule Kode dan otomatis meneruskan semua postingan baru ke Default Target di atas.</p>
-            </div>
-            <label class="toggle-switch">
-              <input type="checkbox" id="setting-ig-forward-all" onchange="updateSetting('ig_forward_all', this.checked ? '1' : '0')">
-              <span class="toggle-slider"></span>
-            </label>
-          </div>
-          
-          <h3 style="margin-top: 30px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color); color: #ec4899; display: flex; justify-content: space-between; align-items: center;">
-            <span>📋 Rule Pemetaan Kode -> Group WA</span>
-            <button class="btn btn-primary btn-sm" onclick="openIgRuleModal()">+ Tambah Rule</button>
-          </h3>
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>No</th>
-                <th>Kode Caption</th>
-                <th>Target Group WA</th>
-                <th>Target Admin WA</th>
-                <th>Status</th>
-                <th>Aksi</th>
-              </tr>
-            </thead>
-            <tbody id="ig-rule-table-body">
-              <tr><td colspan="6" style="text-align: center;">Memuat data...</td></tr>
-            </tbody>
-          </table>
-
           <h3 style="margin-top: 30px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color); color: #ec4899; display: flex; justify-content: space-between; align-items: center;">
             <span>📰 Riwayat Postingan IG (Scraped)</span>
             <button class="btn btn-ghost btn-sm" onclick="loadIgPosts()">↻ Refresh Tabel</button>
           </h3>
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Waktu & Link</th>
-                <th>Kode</th>
-                <th>Cuplikan Caption</th>
-                <th>Status Notif</th>
-                <th>Aksi</th>
-              </tr>
-            </thead>
-            <tbody id="ig-posts-table-body">
-              <tr><td colspan="5" style="text-align: center;">Memuat data...</td></tr>
-            </tbody>
-          </table>
+          <div class="table-container" style="margin-top: 16px;">
+            <table class="data-table" id="ig-posts-table">
+              <thead>
+                <tr>
+                  <th>Waktu & Link</th>
+                  <th>Cuplikan Caption</th>
+                  <th>Status Notif</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="ig-posts-table-body">
+                <tr><td colspan="4" style="text-align: center;">Memuat data...</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

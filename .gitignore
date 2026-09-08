@@ -6,3 +6,4 @@ logs/
 cookies.json
 *.log
 .DS_Store
+Website Scraping/credentials.json

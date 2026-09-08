@@ -125,7 +125,7 @@ function initTabs() {
         case 'tickets': loadTickets(); break;
         case 'analytics': loadAnalytics(); break;
         case 'logs': loadLogs(); break;
-        case 'instagram': loadIgRules(); break;
+        case 'instagram': break;
         case 'settings': 
           loadSettings(); 
           loadTemplates(); 
@@ -1027,7 +1027,6 @@ async function loadSettings() {
       document.getElementById('setting-ig-watermark').value = res.data.ig_watermark || '';
       document.getElementById('test-ig-group').value = res.data.ig_default_group || '';
       document.getElementById('test-ig-admin').value = res.data.ig_default_admin || '';
-      document.getElementById('setting-ig-forward-all').checked = res.data.ig_forward_all === '1';
 
       const elIgStatus = document.getElementById('ig-scraper-status-text');
       if (elIgStatus) {
@@ -1580,107 +1579,6 @@ async function seedHolidays() {
 // Instagram Auto Notif
 // ============================================
 
-async function loadIgRules() {
-  try {
-    const res = await apiGet('/ig-rules');
-    if (res.success) {
-      const tbody = document.getElementById('ig-rule-table-body');
-      if (!tbody) return;
-      tbody.innerHTML = '';
-      if (res.data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Belum ada data rule Instagram</td></tr>';
-        return;
-      }
-      res.data.forEach((rule, idx) => {
-        tbody.innerHTML += `
-          <tr>
-            <td>${idx + 1}</td>
-            <td><span class="badge" style="background: rgba(236,72,153,0.2); color: #ec4899; border: 1px solid rgba(236,72,153,0.4);">${rule.code}</span></td>
-            <td>${rule.target_group}</td>
-            <td>${rule.target_admin || '-'}</td>
-            <td><span class="badge badge-${rule.is_active ? 'success' : 'danger'}">${rule.is_active ? 'Aktif' : 'Nonaktif'}</span></td>
-            <td>
-              <button class="btn btn-sm" onclick='editIgRule(${JSON.stringify(rule).replace(/'/g, "&apos;")})'>Edit</button>
-              <button class="btn btn-danger btn-sm" onclick="deleteIgRule(${rule.id})">Hapus</button>
-            </td>
-          </tr>
-        `;
-      });
-    }
-  } catch (error) {
-    console.error(error);
-  }
-}
-
-function openIgRuleModal() {
-  document.getElementById('ig_rule_id').value = '';
-  document.getElementById('ig_rule_code').value = '';
-  document.getElementById('ig_rule_target').value = '';
-  document.getElementById('ig_rule_admin').value = '';
-  document.getElementById('ig_rule_active').checked = true;
-  document.getElementById('igRuleModalTitle').textContent = 'Tambah Rule Instagram';
-  document.getElementById('igRuleModal').style.display = 'flex';
-}
-
-function closeIgRuleModal() {
-  document.getElementById('igRuleModal').style.display = 'none';
-}
-
-function editIgRule(rule) {
-  document.getElementById('ig_rule_id').value = rule.id;
-  document.getElementById('ig_rule_code').value = rule.code;
-  document.getElementById('ig_rule_target').value = rule.target_group;
-  document.getElementById('ig_rule_admin').value = rule.target_admin || '';
-  document.getElementById('ig_rule_active').checked = rule.is_active === 1;
-  document.getElementById('igRuleModalTitle').textContent = 'Edit Rule Instagram';
-  document.getElementById('igRuleModal').style.display = 'flex';
-}
-
-async function handleIgRuleSubmit(e) {
-  e.preventDefault();
-  const id = document.getElementById('ig_rule_id').value;
-  const data = {
-    code: document.getElementById('ig_rule_code').value,
-    target_group: document.getElementById('ig_rule_target').value,
-    target_admin: document.getElementById('ig_rule_admin').value,
-    is_active: document.getElementById('ig_rule_active').checked
-  };
-
-  try {
-    let res;
-    if (id) {
-      res = await apiPut(`/ig-rules/${id}`, data);
-    } else {
-      res = await apiPost('/ig-rules', data);
-    }
-
-    if (res.success) {
-      showToast('Rule berhasil disimpan', 'success');
-      closeIgRuleModal();
-      loadIgRules();
-    } else {
-      showToast(res.error || 'Gagal menyimpan rule', 'error');
-    }
-  } catch (error) {
-    showToast('Terjadi kesalahan sistem', 'error');
-  }
-}
-
-async function deleteIgRule(id) {
-  if (!confirm('Yakin ingin menghapus rule ini?')) return;
-  try {
-    const res = await apiDelete(`/ig-rules/${id}`);
-    if (res.success) {
-      showToast('Rule berhasil dihapus', 'success');
-      loadIgRules();
-    } else {
-      showToast(res.error || 'Gagal menghapus rule', 'error');
-    }
-  } catch (error) {
-    showToast('Terjadi kesalahan sistem', 'error');
-  }
-}
-
 let igPoller = null;
 
 async function forceCheckIg() {
@@ -1782,7 +1680,7 @@ async function loadIgPosts() {
       if (!tbody) return;
       tbody.innerHTML = '';
       if (res.data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Belum ada data postingan ter-scrape</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">Belum ada data postingan ter-scrape</td></tr>';
         return;
       }
       res.data.forEach((post) => {
@@ -1791,10 +1689,7 @@ async function loadIgPosts() {
         else if (post.status === 'ignored') statusBadge = '<span class="badge" style="background:#4b5563; color:white;">Abaikan (No Match)</span>';
         else statusBadge = `<span class="badge badge-danger" title="${post.error_msg}">Gagal</span>`;
         
-        let actions = '';
-        if (post.status !== 'ignored') {
-            actions = `<button class="btn btn-primary btn-sm" style="font-size:11px;" onclick="resendIgPost(${post.id})">Kirim Ulang</button>`;
-        }
+        let actions = `<button class="btn btn-primary btn-sm" style="font-size:11px;" onclick="resendIgPost(${post.id})">Kirim Ulang</button>`;
         
         let timeLabel = post.post_date ? new Date(post.post_date).toLocaleString('id-ID') : new Date(post.created_at).toLocaleString('id-ID');
         let scrapeLabel = new Date(post.created_at).toLocaleString('id-ID');
@@ -1803,7 +1698,6 @@ async function loadIgPosts() {
         tbody.innerHTML += `
           <tr>
             <td style="font-size:12px;"><strong>Posting:</strong> ${timeLabel}<br><strong>Scrape:</strong> ${scrapeLabel} ${linkLabel}</td>
-            <td><span class="badge" style="background: rgba(236,72,153,0.2); color: #ec4899; border: 1px solid rgba(236,72,153,0.4);">${post.matched_code || '-'}</span></td>
             <td style="font-size:12px; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${post.caption}">${post.caption || '-'}</td>
             <td>${statusBadge}</td>
             <td>${actions}</td>

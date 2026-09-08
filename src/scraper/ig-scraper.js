@@ -23,12 +23,6 @@ async function scrapeInstagram() {
     return;
   }
 
-  const activeRules = IgRuleModel.getActive();
-  if (activeRules.length === 0) {
-    log.debug('No active IG rules found. Skipping scrape.');
-    return;
-  }
-
   ConfigModel.set('ig_scraper_status', 'running');
   
   let page = getPage();
@@ -191,100 +185,64 @@ async function scrapeInstagram() {
         post.imageUrl = imageUrl || '';
         post.postDate = postDate || '';
         
-        const isForwardAll = ConfigModel.get('ig_forward_all') === '1';
-        let matchedRule = null;
+        const targetGroup = ConfigModel.get('ig_default_group') || '';
+        const targetAdmin = ConfigModel.get('ig_default_admin') || '';
         
-        if (isForwardAll) {
-          matchedRule = {
-            code: 'FORWARD_ALL',
-            target_group: ConfigModel.get('ig_default_group') || '',
-            target_admin: ConfigModel.get('ig_default_admin') || ''
-          };
-          log.info(`Post ${post.shortcode} matched by FORWARD_ALL mode`);
-        } else {
-          const lowerCaption = post.caption.toLowerCase();
-          for (const rule of activeRules) {
-            const lowerCode = rule.code.toLowerCase();
-            if (lowerCaption.includes(lowerCode)) {
-              matchedRule = rule;
-              break; // First match wins
+        // Get templates
+        const templateMsg = ConfigModel.get('ig_template_msg') || '📸 *INFO POSTINGAN BARU* 📸\n\nAda postingan Instagram terbaru (@{{username}}).\n\n*Caption:* {{caption}}\n\n*Link:* {{link}}';
+        const watermark = ConfigModel.get('ig_watermark') || '_Pesan otomatis dari Auto Notif Pengaduan_';
+        
+        // Format message
+        const captionSnippet = post.caption.substring(0, 500) + (post.caption.length > 500 ? '...' : '');
+        let message = templateMsg
+          .replace(/\{\{username\}\}/g, username)
+          .replace(/\{\{caption\}\}/g, captionSnippet)
+          .replace(/\{\{link\}\}/g, post.link);
+          
+        message += `\n\n${watermark}`;
+        
+        let status = 'success';
+        let errorMsg = '';
+        
+        // Send to group
+        if (targetGroup) {
+          try {
+            const resGroup = await sendGroupMessage(targetGroup, message, { imageUrl: post.imageUrl });
+            if (!resGroup.success) {
+              status = 'failed';
+              errorMsg += `Group: ${resGroup.error}. `;
             }
+          } catch (err) {
+            status = 'failed';
+            errorMsg += `Group Exception: ${err.message}. `;
           }
         }
         
-        if (matchedRule) {
-          if (!isForwardAll) log.info(`Post ${post.shortcode} matched rule code: ${matchedRule.code}`);
-          
-          // Get templates
-          const templateMsg = ConfigModel.get('ig_template_msg') || '📸 *INFO POSTINGAN BARU* 📸\n\nAda postingan Instagram terbaru (@{{username}}) yang terkait dengan instansi Anda.\n\n*Kode:* {{kode}}\n*Caption:* {{caption}}\n\n*Link:* {{link}}';
-          const watermark = ConfigModel.get('ig_watermark') || '_Pesan otomatis dari Auto Notif Pengaduan_';
-          
-          // Format message
-          const captionSnippet = post.caption.substring(0, 500) + (post.caption.length > 500 ? '...' : '');
-          let message = templateMsg
-            .replace(/\{\{username\}\}/g, username)
-            .replace(/\{\{kode\}\}/g, matchedRule.code)
-            .replace(/\{\{caption\}\}/g, captionSnippet)
-            .replace(/\{\{link\}\}/g, post.link);
-            
-          message += `\n\n${watermark}`;
-          
-          let status = 'success';
-          let errorMsg = '';
-          
-          // Send to group
-          if (matchedRule.target_group) {
-            try {
-              const resGroup = await sendGroupMessage(matchedRule.target_group, message, { imageUrl: post.imageUrl });
-              if (!resGroup.success) {
-                status = 'failed';
-                errorMsg += `Group: ${resGroup.error}. `;
-              }
-            } catch (err) {
+        // Send to admin
+        if (targetAdmin) {
+          try {
+            const resAdmin = await sendPersonalMessage(targetAdmin, message, { imageUrl: post.imageUrl });
+            if (!resAdmin.success) {
               status = 'failed';
-              errorMsg += `Group Exception: ${err.message}. `;
+              errorMsg += `Admin: ${resAdmin.error}. `;
             }
+          } catch (err) {
+            status = 'failed';
+            errorMsg += `Admin Exception: ${err.message}. `;
           }
-          
-          // Send to admin
-          if (matchedRule.target_admin) {
-            try {
-              const resAdmin = await sendPersonalMessage(matchedRule.target_admin, message, { imageUrl: post.imageUrl });
-              if (!resAdmin.success) {
-                status = 'failed';
-                errorMsg += `Admin: ${resAdmin.error}. `;
-              }
-            } catch (err) {
-              status = 'failed';
-              errorMsg += `Admin Exception: ${err.message}. `;
-            }
-          }
-          
-          // Save to processed
-          IgPostModel.save({
-            shortcode: post.shortcode,
-            link: post.link,
-            caption: post.caption,
-            matched_code: matchedRule.code,
-            notified_group: matchedRule.target_group,
-            status: status,
-            error_msg: errorMsg.trim(),
-            post_date: post.postDate
-          });
-          
-        } else {
-          // Save as processed even if no match so we don't check it again
-          IgPostModel.save({
-            shortcode: post.shortcode,
-            link: post.link,
-            caption: post.caption,
-            matched_code: '',
-            notified_group: '',
-            status: 'ignored',
-            error_msg: '',
-            post_date: post.postDate
-          });
         }
+        
+        // Save to processed
+        IgPostModel.save({
+          shortcode: post.shortcode,
+          link: post.link,
+          caption: post.caption,
+          matched_code: 'ALL',
+          notified_group: targetGroup,
+          status: status,
+          error_msg: errorMsg.trim(),
+          post_date: post.postDate
+        });
       }
     } // End of loop over usernames
 

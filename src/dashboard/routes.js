@@ -250,52 +250,6 @@ function createRoutes() {
   // Instagram Rules CRUD
   // ============================================
 
-  router.get('/ig-rules', (req, res) => {
-    try {
-      const rules = IgRuleModel.getAll();
-      res.json({ success: true, data: rules });
-    } catch (error) {
-      res.status(500).json({ success: false, error: error.message });
-    }
-  });
-
-  router.post('/ig-rules', (req, res) => {
-    try {
-      const { code, target_group, target_admin } = req.body;
-      if (!code || !target_group) {
-        return res.status(400).json({ success: false, error: 'Kode dan Target Group wajib diisi' });
-      }
-      IgRuleModel.create({ code, target_group, target_admin });
-      res.json({ success: true });
-    } catch (error) {
-      if (error.message.includes('UNIQUE constraint')) {
-        return res.status(400).json({ success: false, error: 'Kode sudah terdaftar' });
-      }
-      res.status(500).json({ success: false, error: error.message });
-    }
-  });
-
-  router.put('/ig-rules/:id', (req, res) => {
-    try {
-      const { code, target_group, target_admin, is_active } = req.body;
-      IgRuleModel.update(parseInt(req.params.id), {
-        code, target_group, target_admin, is_active: is_active !== undefined ? is_active : true
-      });
-      res.json({ success: true });
-    } catch (error) {
-      res.status(500).json({ success: false, error: error.message });
-    }
-  });
-
-  router.delete('/ig-rules/:id', (req, res) => {
-    try {
-      IgRuleModel.delete(parseInt(req.params.id));
-      res.json({ success: true });
-    } catch (error) {
-      res.status(500).json({ success: false, error: error.message });
-    }
-  });
-
   router.post('/ig-scraper/force', async (req, res) => {
     try {
       ConfigModel.set('ig_scrape_mode', 'normal');
@@ -351,13 +305,12 @@ function createRoutes() {
       }
       
       const username = ConfigModel.get('ig_username').split(',')[0].trim();
-      const templateMsg = ConfigModel.get('ig_template_msg') || '📸 *INFO POSTINGAN BARU* 📸\n\nAda postingan Instagram terbaru (@{{username}}) yang terkait dengan instansi Anda.\n\n*Kode:* {{kode}}\n*Caption:* {{caption}}\n\n*Link:* {{link}}';
+      const templateMsg = ConfigModel.get('ig_template_msg') || '📸 *INFO POSTINGAN BARU* 📸\n\nAda postingan Instagram terbaru (@{{username}}).\n\n*Caption:* {{caption}}\n\n*Link:* {{link}}';
       const watermark = ConfigModel.get('ig_watermark') || '_Pesan otomatis dari Auto Notif Pengaduan_';
       
       const captionSnippet = post.caption ? (post.caption.substring(0, 500) + (post.caption.length > 500 ? '...' : '')) : '';
       let message = templateMsg
         .replace(/\{\{username\}\}/g, username || 'Instagram')
-        .replace(/\{\{kode\}\}/g, post.matched_code || '')
         .replace(/\{\{caption\}\}/g, captionSnippet)
         .replace(/\{\{link\}\}/g, post.link || '');
         
