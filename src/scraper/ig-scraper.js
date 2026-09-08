@@ -201,7 +201,9 @@ async function scrapeInstagram(options = {}) {
         let message = templateMsg
           .replace(/\{\{username\}\}/g, username)
           .replace(/\{\{caption\}\}/g, captionSnippet)
-          .replace(/\{\{link\}\}/g, post.link);
+          .replace(/\{\{link\}\}/g, post.link)
+          .replace(/Kode:\s*\{\{kode\}\}\n*/gi, '')
+          .replace(/\{\{kode\}\}/g, '');
           
         message += `\n\n${watermark}`;
         
@@ -216,7 +218,7 @@ async function scrapeInstagram(options = {}) {
           // Send to group
           if (targetGroup) {
             try {
-              const resGroup = await sendGroupMessage(targetGroup, message);
+              const resGroup = await sendGroupMessage(targetGroup, message, { imageUrl: post.imageUrl });
               if (!resGroup.success) {
                 status = 'failed';
                 errorMsg += `Group (${targetGroup}): ${resGroup.error || 'Gagal'}. `;
@@ -248,7 +250,7 @@ async function scrapeInstagram(options = {}) {
           // Send to admin
           if (targetAdmin) {
             try {
-              const resAdmin = await sendPersonalMessage(targetAdmin, message);
+              const resAdmin = await sendPersonalMessage(targetAdmin, message, { imageUrl: post.imageUrl });
               if (!resAdmin.success) {
                 status = 'failed';
                 errorMsg += `Admin (${targetAdmin}): ${resAdmin.error || 'Gagal'}. `;
@@ -287,7 +289,8 @@ async function scrapeInstagram(options = {}) {
           notified_group: targetGroup || targetAdmin || '-',
           status: status,
           error_msg: errorMsg.trim(),
-          post_date: post.postDate
+          post_date: post.postDate,
+          image_url: post.imageUrl || ''
         });
       }
     } // End of loop over usernames

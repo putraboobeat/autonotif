@@ -112,6 +112,14 @@ function initDatabase() {
             ALTER TABLE processed_ig_posts ADD COLUMN post_date DATETIME;
           `);
         }
+
+        const hasImageUrl = postCols.some(c => c.name === 'image_url');
+        if (!hasImageUrl) {
+          log.info('Migrating database: Adding image_url column to processed_ig_posts');
+          db.exec(`
+            ALTER TABLE processed_ig_posts ADD COLUMN image_url TEXT;
+          `);
+        }
       }
     } catch (e) {
       log.error('IG migration failed', { error: e.message });

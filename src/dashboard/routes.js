@@ -312,11 +312,23 @@ function createRoutes() {
       const templateMsg = ConfigModel.get('ig_template_msg') || '📸 *INFO POSTINGAN BARU* 📸\n\nAda postingan Instagram terbaru (@{{username}}).\n\n*Caption:* {{caption}}\n\n*Link:* {{link}}';
       const watermark = ConfigModel.get('ig_watermark') || '_Pesan otomatis dari Auto Notif Pengaduan_';
       
+      let imageUrl = post.image_url || '';
+      if (!imageUrl && post.link) {
+        try {
+          const resHtml = await fetch(post.link, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(5000) });
+          const html = await resHtml.text();
+          const m = html.match(/property="og:image" content="([^"]+)"/);
+          if (m) imageUrl = m[1].replace(/&amp;/g, '&');
+        } catch {}
+      }
+
       const captionSnippet = post.caption ? (post.caption.substring(0, 500) + (post.caption.length > 500 ? '...' : '')) : '';
       let message = templateMsg
         .replace(/\{\{username\}\}/g, username || 'Instagram')
         .replace(/\{\{caption\}\}/g, captionSnippet)
-        .replace(/\{\{link\}\}/g, post.link || '');
+        .replace(/\{\{link\}\}/g, post.link || '')
+        .replace(/Kode:\s*\{\{kode\}\}\n*/gi, '')
+        .replace(/\{\{kode\}\}/g, '');
         
       message += `\n\n${watermark}`;
       
@@ -325,7 +337,7 @@ function createRoutes() {
       
       if (target_group) {
         try {
-          const resGroup = await sendGroupMessage(target_group, message);
+          const resGroup = await sendGroupMessage(target_group, message, { imageUrl });
           if (!resGroup.success) {
             status = 'failed';
             errorMsg += `Group (${target_group}): ${resGroup.error || 'Gagal'}. `;
@@ -356,7 +368,7 @@ function createRoutes() {
       
       if (target_admin) {
         try {
-          const resAdmin = await sendPersonalMessage(target_admin, message);
+          const resAdmin = await sendPersonalMessage(target_admin, message, { imageUrl });
           if (!resAdmin.success) {
             status = 'failed';
             errorMsg += `Admin (${target_admin}): ${resAdmin.error || 'Gagal'}. `;

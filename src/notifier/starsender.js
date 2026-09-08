@@ -34,14 +34,6 @@ function applyAntiBanProtection(message) {
     return message;
   }
 
-  // Tarik link Instagram ke paling bawah agar WhatsApp mengenerate Thumbnail Link Preview
-  let extractedLink = '';
-  const igMatch = message.match(/(https?:\/\/(?:www\.)?instagram\.com\/(?:p|reel)\/[a-zA-Z0-9_-]+\/?)/);
-  if (igMatch) {
-    extractedLink = igMatch[1];
-    message = message.replace(extractedLink, '');
-  }
-
   // Kode Unik Anti-Duplicate Hash (Alfanumerik Acak + Timestamp Lengkap dengan Detik)
   const now = new Date();
   const timestamp = now.toLocaleTimeString('id-ID', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -50,12 +42,7 @@ function applyAntiBanProtection(message) {
 
   const verificationFooter = `\n\n───\n_🔒 HumasKanwil | Ref. Verifikasi: *#ATR-${dateCode}-${randomHash}* (${timestamp} WIB)_`;
 
-  let finalMessage = message + verificationFooter;
-  if (extractedLink) {
-    finalMessage += `\n\n${extractedLink}`;
-  }
-  
-  return finalMessage;
+  return message + verificationFooter;
 }
 
 // ============================================
@@ -68,14 +55,16 @@ function applyAntiBanProtection(message) {
 async function executeStarSender(to, text, isGroup = false, options = {}) {
   const url = isGroup ? config.starsender.groupUrl : config.starsender.sendUrl;
   const payload = {
-    messageType: options.imageUrl ? 'image' : 'text',
+    messageType: options.imageUrl ? 'media' : 'text',
     to: to,
     delay: 2,
   };
   
   if (options.imageUrl) {
-    payload.url = options.imageUrl;
-    payload.caption = text;
+    payload.file = options.imageUrl;
+    payload.url = options.imageUrl; // backward compatibility
+    payload.body = text;
+    payload.caption = text; // backward compatibility
   } else {
     payload.body = text;
   }
