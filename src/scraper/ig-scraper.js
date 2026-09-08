@@ -40,6 +40,7 @@ async function scrapeInstagram() {
   try {
     for (const username of usernames) {
       log.info(`Checking Instagram for @${username}...`);
+      ConfigModel.set('ig_scraper_status', `Sedang memeriksa profil @${username}...`);
       
       // We create a new page for IG to avoid messing with OCA page
       const browser = getBrowser();
@@ -58,10 +59,12 @@ async function scrapeInstagram() {
 
       // Go to profile
       const url = `https://www.instagram.com/${username}/`;
+      ConfigModel.set('ig_scraper_status', `Membuka halaman @${username}...`);
       await igPage.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
       
       // Wait for articles to load
       try {
+        ConfigModel.set('ig_scraper_status', `Menunggu data postingan @${username}...`);
         await igPage.waitForSelector('article a[href^="/p/"]', { timeout: 10000 });
       } catch (err) {
         log.warn(`Could not find posts for @${username}. Maybe private or blocked.`);
@@ -90,6 +93,7 @@ async function scrapeInstagram() {
       await igPage.close();
       
       log.info(`Found ${posts.length} posts for @${username}`);
+      ConfigModel.set('ig_scraper_status', `Menemukan ${posts.length} postingan di @${username}. Mengecek filter...`);
 
       for (const post of posts) {
         // Check if already processed
@@ -184,8 +188,11 @@ async function scrapeInstagram() {
 
   } catch (error) {
     log.error('Error scraping Instagram', { error: error.message });
+    ConfigModel.set('ig_scraper_status', `Gagal: ${error.message}`);
   } finally {
-    ConfigModel.set('ig_scraper_status', 'stopped');
+    setTimeout(() => {
+        ConfigModel.set('ig_scraper_status', 'stopped');
+    }, 5000); // Keep status visible for 5s
     ConfigModel.set('last_ig_scrape_time', new Date().toISOString());
   }
 }

@@ -1025,6 +1025,8 @@ async function loadSettings() {
       document.getElementById('setting-ig-username').value = res.data.ig_username || '';
       document.getElementById('setting-ig-template').value = res.data.ig_template_msg || '';
       document.getElementById('setting-ig-watermark').value = res.data.ig_watermark || '';
+      document.getElementById('test-ig-group').value = res.data.ig_test_group || '';
+      document.getElementById('test-ig-admin').value = res.data.ig_test_admin || '';
 
       const elIgStatus = document.getElementById('ig-scraper-status-text');
       if (elIgStatus) {
@@ -1678,17 +1680,48 @@ async function deleteIgRule(id) {
   }
 }
 
+let igPoller = null;
+
 async function forceCheckIg() {
   try {
     const res = await apiCall('/ig-scraper/force', 'POST');
     if (res.success) {
       showToast(res.message || 'Pengecekan Instagram sedang berjalan', 'success');
+      startIgStatusPoller();
     } else {
       showToast(res.error || 'Gagal', 'error');
     }
   } catch (error) {
     showToast('Terjadi kesalahan', 'error');
   }
+}
+
+function startIgStatusPoller() {
+  const badge = document.getElementById('ig-scraper-live-status');
+  const text = document.getElementById('ig-scraper-live-text');
+  if (!badge || !text) return;
+  
+  badge.style.display = 'flex';
+  if (igPoller) clearInterval(igPoller);
+  
+  igPoller = setInterval(async () => {
+    try {
+      const res = await apiGet('/settings');
+      if (res.success && res.data) {
+        const status = res.data.ig_scraper_status;
+        if (status && status !== 'stopped') {
+          text.textContent = status;
+        } else if (status === 'stopped') {
+          clearInterval(igPoller);
+          text.textContent = 'Selesai';
+          setTimeout(() => { badge.style.display = 'none'; }, 3000);
+          loadIgPosts(); // refresh table
+        }
+      }
+    } catch (e) {
+      // ignore poll error
+    }
+  }, 1000);
 }
 
 async function saveCustomSetting(key, elementId) {

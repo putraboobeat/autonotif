@@ -358,7 +358,11 @@
             <h2>📸 Instagram Auto Notif</h2>
             <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px;">Pantau akun Instagram dan otomatis forward caption ke Group WA jika mengandung kode tertentu.</p>
           </div>
-          <div style="display: flex; gap: 8px;">
+          <div style="display: flex; gap: 12px; align-items: center;">
+            <div id="ig-scraper-live-status" style="font-size: 0.85rem; padding: 6px 12px; border-radius: 8px; background: rgba(236,72,153,0.15); color: #ec4899; border: 1px solid rgba(236,72,153,0.3); font-weight: 600; display: none; align-items: center; gap: 6px;">
+              <span class="loading-spinner" style="width: 14px; height: 14px; border-width: 2px;"></span>
+              <span id="ig-scraper-live-text">Memeriksa...</span>
+            </div>
             <button class="btn btn-primary btn-sm" onclick="forceCheckIg()">⚡ Cek Sekarang</button>
           </div>
         </div>
@@ -409,23 +413,20 @@
 
           <div class="settings-row" style="border-top: 2px dashed rgba(255,255,255,0.1); padding-top: 16px; margin-top: 8px;">
             <div class="settings-info">
-              <h4>Tes Ping IG Group</h4>
-              <p>Kirim pesan tes ke Group WA (masukkan ID/Nama Group)</p>
+              <h4>Nomor WA / Group Tes Ping</h4>
+              <p>Simpan nomor HP dan Group untuk keperluan pengetesan manual (Test Ping).</p>
             </div>
-            <div style="display: flex; gap: 8px;">
-              <input type="text" class="form-input" id="test-ig-group" placeholder="Group WA...">
-              <button class="btn btn-primary btn-sm" onclick="pingIgGroup()">Ping Group</button>
-            </div>
-          </div>
-
-          <div class="settings-row">
-            <div class="settings-info">
-              <h4>Tes Ping IG Admin</h4>
-              <p>Kirim pesan tes ke Admin WA (masukkan Nomor HP)</p>
-            </div>
-            <div style="display: flex; gap: 8px;">
-              <input type="text" class="form-input" id="test-ig-admin" placeholder="08123456789">
-              <button class="btn btn-primary btn-sm" onclick="pingIgAdmin()">Ping Admin</button>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <input type="text" class="form-input" id="test-ig-group" placeholder="ID/Nama Group WA..." style="flex: 1;">
+                <button class="btn btn-primary btn-sm" onclick="saveCustomSetting('ig_test_group', 'test-ig-group')">💾 Simpan</button>
+                <button class="btn btn-ghost btn-sm" onclick="pingIgGroup()">Ping Group</button>
+              </div>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <input type="text" class="form-input" id="test-ig-admin" placeholder="08123456789" style="flex: 1;">
+                <button class="btn btn-primary btn-sm" onclick="saveCustomSetting('ig_test_admin', 'test-ig-admin')">💾 Simpan</button>
+                <button class="btn btn-ghost btn-sm" onclick="pingIgAdmin()">Ping Admin</button>
+              </div>
             </div>
           </div>
           
