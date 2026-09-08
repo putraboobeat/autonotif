@@ -769,7 +769,10 @@ function filterTickets() {
       <td>${ticket.notified_admin ? '<span class="badge badge-success">✓</span>' : '<span class="badge badge-danger">✕</span>'}</td>
       <td class="timestamp">${formatDateTime(ticket.notified_at)}</td>
       <td>
-        <button class="btn btn-warning btn-sm" style="font-size: 11px; padding: 6px 10px; background: #f59e0b; color: #000; font-weight: bold; border-radius: 6px; white-space: nowrap;" onclick="resendReminder('${ticket.ticket_id}', this)">📨 Kirim Ulang</button>
+        <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+          <button class="btn btn-warning btn-sm" style="font-size: 11px; padding: 6px 10px; background: #f59e0b; color: #000; font-weight: bold; border-radius: 6px; white-space: nowrap;" onclick="resendReminder('${ticket.ticket_id}', this)">📨 Kirim Ulang</button>
+          <button class="btn btn-danger btn-sm" style="font-size: 11px; padding: 6px 10px; border-radius: 6px; white-space: nowrap;" onclick="deleteTicket('${ticket.ticket_id}')">Hapus</button>
+        </div>
       </td>
     </tr>
   `).join('');
@@ -1708,7 +1711,12 @@ async function loadIgPosts() {
         else if (post.status === 'ignored') statusBadge = '<span class="badge" style="background:#4b5563; color:white;">Abaikan (No Match)</span>';
         else statusBadge = `<span class="badge badge-danger" title="${post.error_msg}">Gagal</span>`;
         
-        let actions = `<button class="btn btn-primary btn-sm" style="font-size:11px;" onclick="resendIgPost(${post.id})">Kirim Ulang</button>`;
+        let actions = `
+          <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+            <button class="btn btn-primary btn-sm" style="font-size:11px;" onclick="resendIgPost(${post.id})">Kirim Ulang</button>
+            <button class="btn btn-danger btn-sm" style="font-size:11px;" onclick="deleteIgPost(${post.id})">Hapus</button>
+          </div>
+        `;
         
         let timeLabel = post.post_date ? new Date(post.post_date).toLocaleString('id-ID') : new Date(post.created_at).toLocaleString('id-ID');
         let scrapeLabel = new Date(post.created_at).toLocaleString('id-ID');
@@ -1862,4 +1870,38 @@ function pollWebStatus() {
     } catch (e) {
     }
   }, 2000);
+}
+
+async function deleteIgPost(id) {
+  if (!confirm("Apakah Anda yakin ingin menghapus riwayat ini? Jika dihapus, scraper akan memposting ulang saat menemukan postingan ini lagi.")) return;
+  
+  try {
+    const res = await fetch(`${API_BASE}/ig-posts/${id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (data.success) {
+      showToast(data.message, 'success');
+      loadIgPosts();
+    } else {
+      showToast(data.error, 'error');
+    }
+  } catch (error) {
+    showToast("Gagal menghapus data", "error");
+  }
+}
+
+async function deleteTicket(ticketId) {
+  if (!confirm(`Apakah Anda yakin ingin menghapus tiket #${ticketId} dari riwayat terpantau? Jika tiket ini masih open/belum terselesaikan, scraper mungkin akan menangkapnya kembali pada sinkronisasi berikutnya.`)) return;
+  
+  try {
+    const res = await fetch(`${API_BASE}/tickets/${ticketId}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (data.success) {
+      showToast(data.message, 'success');
+      loadTickets();
+    } else {
+      showToast(data.error, 'error');
+    }
+  } catch (error) {
+    showToast("Gagal menghapus data", "error");
+  }
 }

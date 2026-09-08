@@ -257,6 +257,14 @@ const TicketModel = {
     ).get();
     return { total: total.count, today: today.count };
   },
+
+  /**
+   * Delete a ticket by its ticket_id
+   */
+  delete(ticketId) {
+    const db = getDb();
+    return db.prepare('DELETE FROM processed_tickets WHERE ticket_id = ?').run(ticketId);
+  }
 };
 
 // ============================================

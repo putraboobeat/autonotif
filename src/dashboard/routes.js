@@ -972,6 +972,26 @@ function createRoutes() {
     }
   });
 
+  router.delete('/ig-posts/:id', async (req, res) => {
+    try {
+      const { IgPostModel } = require('../database/models');
+      IgPostModel.delete(parseInt(req.params.id));
+      res.json({ success: true, message: 'Postingan IG berhasil dihapus dari riwayat.' });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  router.delete('/tickets/:id', async (req, res) => {
+    try {
+      const { TicketModel } = require('../database/models');
+      TicketModel.delete(req.params.id);
+      res.json({ success: true, message: 'Tiket berhasil dihapus dari riwayat terpantau.' });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
   return router;
 }
 
