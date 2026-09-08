@@ -122,6 +122,9 @@
       <button class="tab-btn" data-tab="instagram" style="background: linear-gradient(135deg, rgba(236, 72, 153, 0.15), rgba(245, 158, 11, 0.15)); border: 1px solid rgba(236, 72, 153, 0.4);">
         <span class="tab-icon">📸</span> Instagram Notif
       </button>
+      <button class="tab-btn" data-tab="website" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(52, 211, 153, 0.15)); border: 1px solid rgba(16, 185, 129, 0.4);">
+        <span class="tab-icon">🌐</span> Web to WP
+      </button>
       <button class="tab-btn" data-tab="logs">
         <span class="tab-icon">📨</span> Log Notifikasi
       </button>
@@ -450,6 +453,118 @@
               </thead>
               <tbody id="ig-posts-table-body">
                 <tr><td colspan="4" style="text-align: center;">Memuat data...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Website to WordPress Scraper -->
+    <div class="tab-content" id="tab-website">
+      <div class="card">
+        <div class="card-header" style="flex-wrap: wrap; gap: 12px; border-left: 4px solid #10b981;">
+          <div>
+            <h2>🌐 Web to WordPress</h2>
+            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px;">Tarik berita terbaru dari website sumber lalu posting otomatis ke WordPress.</p>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary" onclick="forceWebFetch()">⬇️ Tarik Link Baru</button>
+            <button class="btn btn-primary" onclick="forceWebPost()">🚀 Posting ke WP</button>
+          </div>
+        </div>
+
+        <div class="settings-group" style="padding: 16px;">
+          <h3 style="font-size: 1.1rem; margin-bottom: 16px;">⚙️ Konfigurasi WordPress & Scraper</h3>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px;">
+            
+            <div class="setting-item">
+              <div class="settings-info">
+                <h4>URL Website Target (WordPress)</h4>
+                <p>Contoh: https://acehsahoe.com</p>
+              </div>
+              <input type="text" id="setting-web-wp-url" class="form-control" placeholder="https://..." onchange="updateSetting('web_wp_url', this.value)">
+            </div>
+            
+            <div class="setting-item">
+              <div class="settings-info">
+                <h4>Username WordPress</h4>
+                <p>Username login WP</p>
+              </div>
+              <input type="text" id="setting-web-wp-user" class="form-control" placeholder="Username WP" onchange="updateSetting('web_wp_username', this.value)">
+            </div>
+            
+            <div class="setting-item">
+              <div class="settings-info">
+                <h4>Application Password WP</h4>
+                <p>Gunakan Application Password, bukan password biasa</p>
+              </div>
+              <input type="password" id="setting-web-wp-pass" class="form-control" placeholder="**** **** **** ****" onchange="updateSetting('web_wp_password', this.value)">
+            </div>
+            
+            <div class="setting-item">
+              <div class="settings-info">
+                <h4>Status Artikel WP</h4>
+                <p>draft / publish</p>
+              </div>
+              <select id="setting-web-wp-status" class="form-control" onchange="updateSetting('web_wp_status', this.value)">
+                <option value="draft">Draft</option>
+                <option value="publish">Publish</option>
+              </select>
+            </div>
+            
+            <div class="setting-item" style="grid-column: 1 / -1;">
+              <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 8px 0;">
+            </div>
+
+            <div class="setting-item">
+              <div class="settings-info">
+                <h4>Status Aktif Web Scraper</h4>
+                <p>Jika nyala, sistem menarik berita dan mem-postingnya secara otomatis setiap siklus.</p>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="setting-web-enabled" onchange="updateSetting('web_enabled', this.checked ? '1' : '0')">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            
+            <div class="setting-item">
+              <div class="settings-info">
+                <h4>URL Sumber Berita (ATR/BPN)</h4>
+                <p>Link halaman daftar berita</p>
+              </div>
+              <input type="text" id="setting-web-source-url" class="form-control" placeholder="https://www.atrbpn.go.id/berita" onchange="updateSetting('web_source_url', this.value)">
+            </div>
+            
+            <div class="setting-item">
+              <div class="settings-info">
+                <h4>Interval (Menit)</h4>
+                <p>Seberapa sering bot berjalan (default: 60)</p>
+              </div>
+              <input type="number" id="setting-web-interval" class="form-control" placeholder="60" onchange="updateSetting('web_interval_minutes', this.value)">
+            </div>
+            
+          </div>
+          
+          <div style="margin-top: 20px; padding: 12px; background: rgba(59,130,246,0.1); border-radius: 8px; border: 1px solid rgba(59,130,246,0.2);">
+            <strong>Status Scraper Berjalan:</strong> <span id="web-scraper-status-text">Memuat...</span>
+          </div>
+        </div>
+
+        <div style="padding: 16px;">
+          <h3 style="margin-bottom: 16px;">📑 Riwayat Artikel Website</h3>
+          <div class="table-responsive">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th style="width: 25%">Informasi</th>
+                  <th style="width: 35%">Judul / URL Sumber</th>
+                  <th style="width: 15%">Kategori</th>
+                  <th style="width: 15%">Status WP</th>
+                </tr>
+              </thead>
+              <tbody id="web-articles-table-body">
+                <tr><td colspan="4" style="text-align: center;">Memuat data artikel...</td></tr>
               </tbody>
             </table>
           </div>

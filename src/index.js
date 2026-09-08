@@ -445,6 +445,31 @@ async function main() {
       await sleep(igInterval);
     }
   })();
+
+  // Web to WP Loop
+  let isWebScraping = false;
+  (async () => {
+    while (isRunning) {
+      const webIntervalStr = ConfigModel.get('web_interval_minutes');
+      const webInterval = (parseInt(webIntervalStr, 10) || 60) * 60 * 1000;
+      
+      const webEnabled = ConfigModel.get('web_enabled') === '1';
+      if (webEnabled && !isWebScraping) {
+        isWebScraping = true;
+        try {
+          const { fetchLatestLinks, postArticlesToWP } = require('./scraper/web-scraper');
+          await fetchLatestLinks();
+          await postArticlesToWP();
+        } catch (error) {
+          log.error('Error in Web Scrape cycle', { error: error.message });
+        } finally {
+          isWebScraping = false;
+        }
+      }
+      
+      await sleep(webInterval);
+    }
+  })();
 }
 
 // Graceful shutdown

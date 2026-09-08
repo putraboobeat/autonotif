@@ -1,5 +1,5 @@
 const express = require('express');
-const { AdminModel, TicketModel, NotificationLogModel, ConfigModel, HolidayModel, IgRuleModel } = require('../database/models');
+const { AdminModel, TicketModel, NotificationLogModel, ConfigModel, HolidayModel, IgPostModel, WebArticleModel } = require('../database/models');
 const { sendPersonalMessage, sendGroupMessage } = require('../notifier/starsender');
 const { buildTestMessage } = require('../notifier/message-builder');
 const { config } = require('../config');
@@ -293,15 +293,19 @@ function createRoutes() {
 
   router.post('/ig-posts/:id/resend', async (req, res) => {
     try {
-      const { IgPostModel, IgRuleModel } = require('../database/models');
+      const { IgPostModel } = require('../database/models');
       const post = IgPostModel.getById(parseInt(req.params.id));
       if (!post) {
         return res.status(404).json({ success: false, error: 'Postingan tidak ditemukan' });
       }
       
-      const { target_group, target_admin } = req.body;
+      let { target_group, target_admin } = req.body;
       if (!target_group && !target_admin) {
-         return res.status(400).json({ success: false, error: 'Harap sediakan target group atau admin' });
+         target_group = ConfigModel.get('ig_default_group') || '';
+         target_admin = ConfigModel.get('ig_default_admin') || '';
+         if (!target_group && !target_admin) {
+           return res.status(400).json({ success: false, error: 'Target Group atau Admin belum disetel di pengaturan.' });
+         }
       }
       
       const username = ConfigModel.get('ig_username').split(',')[0].trim();
@@ -928,6 +932,41 @@ function createRoutes() {
       const { phone } = req.body || {};
       const result = await sendExecutiveReportToKanwil(phone);
       res.json(result);
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // ==========================================
+  // Web to WP Scraper Routes
+  // ==========================================
+  
+  router.get('/web-articles', (req, res) => {
+    try {
+      const articles = WebArticleModel.getAll();
+      res.json({ success: true, data: articles });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  router.post('/web-scraper/fetch', async (req, res) => {
+    try {
+      const { fetchLatestLinks } = require('../scraper/web-scraper');
+      // Async so we don't block
+      fetchLatestLinks().catch(e => console.error(e));
+      res.json({ success: true, message: 'Proses penarikan link sedang berjalan di latar belakang.' });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  router.post('/web-scraper/post', async (req, res) => {
+    try {
+      const { postArticlesToWP } = require('../scraper/web-scraper');
+      // Async so we don't block
+      postArticlesToWP().catch(e => console.error(e));
+      res.json({ success: true, message: 'Proses auto-post ke WordPress sedang berjalan di latar belakang.' });
     } catch (error) {
       res.status(500).json({ success: false, error: error.message });
     }

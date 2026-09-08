@@ -1,0 +1,7 @@
+{
+    "auto_fetch": true,
+    "auto_post": true,
+    "interval_minutes": 60,
+    "target_pages": 2,
+    "source_url": "https://www.atrbpn.go.id/berita"
+}

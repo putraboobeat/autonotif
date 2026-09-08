@@ -537,12 +537,60 @@ const IgPostModel = {
   }
 };
 
+
+// ============================================
+// Web Article History Model
+// ============================================
+const WebArticleModel = {
+  save(data) {
+    const { url, title, post_date, category, wp_post_url, status, error_msg } = data;
+    const stmt = getDb().prepare(`
+      INSERT INTO website_articles (url, title, post_date, category, wp_post_url, status, error_msg)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(url) DO UPDATE SET
+        title = excluded.title,
+        post_date = excluded.post_date,
+        category = excluded.category,
+        wp_post_url = excluded.wp_post_url,
+        status = excluded.status,
+        error_msg = excluded.error_msg,
+        updated_at = CURRENT_TIMESTAMP
+    `);
+    return stmt.run(url, title || '', post_date || '', category || '', wp_post_url || '', status || 'pending', error_msg || '');
+  },
+
+  getAll() {
+    return getDb().prepare("SELECT * FROM website_articles ORDER BY created_at DESC").all();
+  },
+
+  getUnposted() {
+    return getDb().prepare("SELECT * FROM website_articles WHERE status = 'pending' ORDER BY id ASC").all();
+  },
+  
+  getPosted() {
+    return getDb().prepare("SELECT * FROM website_articles WHERE status = 'posted' ORDER BY id DESC").all();
+  },
+
+  getByUrl(url) {
+    return getDb().prepare("SELECT * FROM website_articles WHERE url = ?").get(url);
+  },
+
+  updateStatus(id, status, errorMsg = '', wpUrl = '') {
+    const stmt = getDb().prepare(`
+      UPDATE website_articles 
+      SET status = ?, error_msg = ?, wp_post_url = CASE WHEN ? != '' THEN ? ELSE wp_post_url END, updated_at = CURRENT_TIMESTAMP 
+      WHERE id = ?
+    `);
+    return stmt.run(status, errorMsg, wpUrl, wpUrl, id);
+  }
+};
+
 module.exports = {
   AdminModel,
   TicketModel,
   NotificationLogModel,
   ConfigModel,
   HolidayModel,
-  IgRuleModel,
   IgPostModel,
+  WebArticleModel
 };

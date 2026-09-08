@@ -133,3 +133,36 @@ INSERT OR IGNORE INTO system_config (key, value) VALUES ('ig_scraper_status', 's
 INSERT OR IGNORE INTO system_config (key, value) VALUES ('last_ig_scrape_time', '');
 INSERT OR IGNORE INTO system_config (key, value) VALUES ('ig_template_msg', '📸 *INFO POSTINGAN BARU* 📸\n\nAda postingan Instagram terbaru (@{{username}}) yang terkait dengan instansi Anda.\n\n*Kode:* {{kode}}\n*Caption:* {{caption}}\n\n*Link:* {{link}}');
 INSERT OR IGNORE INTO system_config (key, value) VALUES ('ig_watermark', '_Pesan otomatis dari Auto Notif Pengaduan_');
+
+-- ============================================
+-- Web to WP Scraper
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS website_articles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    url VARCHAR(255) NOT NULL UNIQUE,
+    title VARCHAR(500),
+    post_date VARCHAR(100),
+    category VARCHAR(100),
+    wp_post_url VARCHAR(255),
+    status VARCHAR(50) DEFAULT 'pending',
+    error_msg TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_website_articles_url ON website_articles(url);
+CREATE INDEX IF NOT EXISTS idx_website_articles_status ON website_articles(status);
+
+-- Insert default config for Web to WP
+INSERT OR IGNORE INTO system_config (key, value) VALUES ('web_enabled', '0');
+INSERT OR IGNORE INTO system_config (key, value) VALUES ('web_source_url', 'https://www.atrbpn.go.id/berita');
+INSERT OR IGNORE INTO system_config (key, value) VALUES ('web_wp_url', '');
+INSERT OR IGNORE INTO system_config (key, value) VALUES ('web_wp_username', '');
+INSERT OR IGNORE INTO system_config (key, value) VALUES ('web_wp_password', '');
+INSERT OR IGNORE INTO system_config (key, value) VALUES ('web_wp_status', 'draft');
+INSERT OR IGNORE INTO system_config (key, value) VALUES ('web_auto_fetch', '0');
+INSERT OR IGNORE INTO system_config (key, value) VALUES ('web_auto_post', '0');
+INSERT OR IGNORE INTO system_config (key, value) VALUES ('web_interval_minutes', '60');
+INSERT OR IGNORE INTO system_config (key, value) VALUES ('last_web_fetch_time', '');
+INSERT OR IGNORE INTO system_config (key, value) VALUES ('web_scraper_status', 'stopped');

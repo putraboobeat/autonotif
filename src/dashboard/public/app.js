@@ -126,6 +126,7 @@ function initTabs() {
         case 'analytics': loadAnalytics(); break;
         case 'logs': loadLogs(); break;
         case 'instagram': break;
+        case 'website': loadWebArticles(); break;
         case 'settings': 
           loadSettings(); 
           loadTemplates(); 
@@ -1034,6 +1035,24 @@ async function loadSettings() {
         if (res.data.last_ig_scrape_time) text += ` (Terakhir cek: ${new Date(res.data.last_ig_scrape_time).toLocaleTimeString()})`;
         elIgStatus.innerHTML = `Status: ${text}`;
       }
+
+      const elWebWpUrl = document.getElementById('setting-web-wp-url');
+      if (elWebWpUrl) {
+        elWebWpUrl.value = res.data.web_wp_url || '';
+        document.getElementById('setting-web-wp-user').value = res.data.web_wp_username || '';
+        document.getElementById('setting-web-wp-pass').value = res.data.web_wp_password || '';
+        document.getElementById('setting-web-wp-status').value = res.data.web_wp_status || 'draft';
+        document.getElementById('setting-web-enabled').checked = res.data.web_enabled === '1';
+        document.getElementById('setting-web-source-url').value = res.data.web_source_url || 'https://www.atrbpn.go.id/berita';
+        document.getElementById('setting-web-interval').value = res.data.web_interval_minutes || '60';
+        
+        const elWebStatus = document.getElementById('web-scraper-status-text');
+        if (elWebStatus) {
+           let wtext = res.data.web_scraper_status || 'idle';
+           if (res.data.last_web_fetch_time) wtext += ` (Terakhir tarik: ${new Date(res.data.last_web_fetch_time).toLocaleTimeString()})`;
+           elWebStatus.textContent = wtext;
+        }
+      }
     }
   } catch (err) {
     console.error('Error loading settings:', err);
@@ -1711,18 +1730,11 @@ async function loadIgPosts() {
 }
 
 async function resendIgPost(id) {
-  const targetGroup = prompt("Kirim ulang ke Group apa? (Biarkan kosong jika tidak kirim ke group)");
-  const targetAdmin = prompt("Kirim ulang ke Admin mana? (Nomor HP, biarkan kosong jika tidak kirim ke admin)");
-  
-  if (targetGroup === null && targetAdmin === null) return;
-  if (!targetGroup && !targetAdmin) {
-    showToast("Anda harus mengisi minimal salah satu (Group atau Admin)", "error");
-    return;
-  }
+  if (!confirm("Apakah Anda yakin ingin mengirim ulang postingan ini ke pengaturan (Group & Admin) default?")) return;
   
   try {
     showToast("Mengirim ulang...", "info");
-    const res = await apiPost(`/ig-posts/${id}/resend`, { target_group: targetGroup, target_admin: targetAdmin });
+    const res = await apiPost(`/ig-posts/${id}/resend`, { target_group: "", target_admin: "" });
     if (res.success) {
       showToast(res.message, 'success');
       loadIgPosts();
@@ -1758,3 +1770,96 @@ async function pingIgAdmin() {
   }
 }
 
+
+// ==========================================
+// Web to WP Scraper UI Logic
+// ==========================================
+
+async function loadWebArticles() {
+  try {
+    const res = await apiGet('/web-articles');
+    if (res.success) {
+      const tbody = document.getElementById('web-articles-table-body');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+      if (res.data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">Belum ada data artikel. Klik "Tarik Link Baru".</td></tr>';
+        return;
+      }
+      res.data.forEach((article) => {
+        let statusBadge = '';
+        if (article.status === 'posted') statusBadge = '<span class="badge badge-success">Sukses Posted</span>';
+        else if (article.status === 'pending') statusBadge = '<span class="badge" style="background:#f59e0b; color:white;">Pending</span>';
+        else statusBadge = `<span class="badge badge-danger" title="${article.error_msg}">Gagal</span>`;
+        
+        let linkLabel = article.wp_post_url ? `<a href="${article.wp_post_url}" target="_blank" style="color: #38b6ff; text-decoration:none; font-size:11px;">Buka di WP ↗</a>` : '-';
+        let sourceLink = `<a href="${article.url}" target="_blank" style="color: #ec4899; text-decoration:none; font-size:11px;">Sumber Asli ↗</a>`;
+        
+        tbody.innerHTML += `
+          <tr>
+            <td style="font-size:12px;"><strong>Publikasi:</strong> ${article.post_date}<br><strong>Ditarik:</strong> ${new Date(article.created_at).toLocaleString('id-ID')}</td>
+            <td style="font-size:12px; max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${article.title || article.url}"><strong>${article.title || 'Menunggu Scraping...'}</strong><br>${sourceLink}</td>
+            <td><span class="badge" style="background: rgba(16,185,129,0.2); color: #10b981; border: 1px solid rgba(16,185,129,0.4);">${article.category || '-'}</span></td>
+            <td style="font-size:12px;">${statusBadge}<br>${linkLabel}</td>
+          </tr>
+        `;
+      });
+    }
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+async function forceWebFetch() {
+  try {
+    const res = await apiPost('/web-scraper/fetch', {});
+    if (res.success) {
+      showToast(res.message, 'info');
+      pollWebStatus();
+    } else {
+      showToast(res.error, 'error');
+    }
+  } catch (err) {
+    showToast('Terjadi kesalahan', 'error');
+  }
+}
+
+async function forceWebPost() {
+  try {
+    const res = await apiPost('/web-scraper/post', {});
+    if (res.success) {
+      showToast(res.message, 'info');
+      pollWebStatus();
+    } else {
+      showToast(res.error, 'error');
+    }
+  } catch (err) {
+    showToast('Terjadi kesalahan', 'error');
+  }
+}
+
+let webPoller = null;
+function pollWebStatus() {
+  if (webPoller) clearInterval(webPoller);
+  
+  webPoller = setInterval(async () => {
+    try {
+      const res = await apiGet('/settings');
+      if (res.success) {
+        const text = document.getElementById('web-scraper-status-text');
+        if (!text) return;
+        const status = res.data.web_scraper_status;
+        if (status && status !== 'idle' && status !== 'stopped' && status !== 'error') {
+          text.innerHTML = `<span style="color:#f59e0b">⏳ ${status}</span>`;
+        } else {
+          clearInterval(webPoller);
+          let color = status === 'error' ? '#ef4444' : '#10b981';
+          let displayStatus = status === 'error' ? 'Error' : 'Selesai / Idle';
+          text.innerHTML = `<span style="color:${color}">${displayStatus}</span>`;
+          loadWebArticles();
+        }
+      }
+    } catch (e) {
+    }
+  }, 2000);
+}
