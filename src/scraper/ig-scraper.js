@@ -84,11 +84,9 @@ async function scrapeInstagram() {
           const match = href.match(/\/p\/(.+?)\//);
           if (match) {
             const shortcode = match[1];
-            const img = el.querySelector('img');
-            const caption = img ? img.getAttribute('alt') || '' : '';
-            // Only add if not already in results
+            // We will fetch the true caption by visiting the post page directly
             if (!results.some(r => r.shortcode === shortcode)) {
-              results.push({ shortcode, caption, link: `https://www.instagram.com/p/${shortcode}/` });
+              results.push({ shortcode, caption: '', link: `https://www.instagram.com/p/${shortcode}/` });
             }
           }
         });
@@ -105,6 +103,29 @@ async function scrapeInstagram() {
         if (IgPostModel.isProcessed(post.shortcode)) {
           continue;
         }
+        
+        // Fetch true caption from the post page
+        let caption = post.caption;
+        try {
+          const postPage = await browser.newPage();
+          await postPage.goto(post.link, { waitUntil: 'domcontentloaded', timeout: 20000 });
+          caption = await postPage.evaluate(() => {
+            const meta = document.querySelector('meta[property="og:title"]');
+            if (meta) {
+              const content = meta.getAttribute('content');
+              // Format: "Author on Instagram: \"Caption text...\""
+              const match = content.match(/on Instagram: "([\s\S]+)"/);
+              if (match) return match[1];
+              return content;
+            }
+            return '';
+          });
+          await postPage.close();
+        } catch (e) {
+          log.warn(`Could not fetch caption for ${post.shortcode}: ${e.message}`);
+        }
+
+        post.caption = caption || 'Tanpa Caption';
         
         let matchedRule = null;
         const lowerCaption = post.caption.toLowerCase();
