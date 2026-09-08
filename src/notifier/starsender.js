@@ -54,15 +54,20 @@ function applyAntiBanProtection(message) {
  */
 async function executeStarSender(to, text, isGroup = false, options = {}) {
   const url = isGroup ? config.starsender.groupUrl : config.starsender.sendUrl;
+  let imgUrl = options.imageUrl || '';
+  if (imgUrl) {
+    imgUrl = imgUrl.replace(/\.webp(?=\?|$)/gi, '.jpg').replace(/dst-webp/gi, 'dst-jpg');
+  }
+
   const payload = {
-    messageType: options.imageUrl ? 'media' : 'text',
+    messageType: imgUrl ? 'media' : 'text',
     to: to,
     delay: 2,
   };
   
-  if (options.imageUrl) {
-    payload.file = options.imageUrl;
-    payload.url = options.imageUrl; // backward compatibility
+  if (imgUrl) {
+    payload.file = imgUrl;
+    payload.url = imgUrl; // backward compatibility
     payload.body = text;
     payload.caption = text; // backward compatibility
   } else {

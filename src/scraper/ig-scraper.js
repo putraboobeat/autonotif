@@ -171,6 +171,9 @@ async function scrapeInstagram(options = {}) {
           });
           caption = extracted.cap;
           imageUrl = extracted.img;
+          if (imageUrl) {
+            imageUrl = imageUrl.replace(/\.webp(?=\?|$)/gi, '.jpg').replace(/dst-webp/gi, 'dst-jpg');
+          }
           postDate = extracted.pDate;
           await postPage.close();
         } catch (e) {
@@ -188,19 +191,23 @@ async function scrapeInstagram(options = {}) {
         let targetAdmin = (ConfigModel.get('ig_default_admin') || '').trim();
         
         // Get templates
-        const templateMsg = ConfigModel.get('ig_template_msg') || '📸 *INFO POSTINGAN BARU* 📸\n\nAda postingan Instagram terbaru (@{{username}}).\n\n*Caption:* {{caption}}\n\n*Link:* {{link}}';
-        const watermark = ConfigModel.get('ig_watermark') || '_Pesan otomatis dari Auto Notif Pengaduan_';
+        const defaultTemplate = '📸 *POSTINGAN TERBARU INSTAGRAM*\n@{{username}}\n\n{{caption}}\n\nSelengkapnya : {{link}}';
+        let templateMsg = ConfigModel.get('ig_template_msg');
+        if (!templateMsg || templateMsg.includes('Kode:') || templateMsg.includes('terkait dengan instansi Anda')) {
+          templateMsg = defaultTemplate;
+        }
         
-        // Format message
-        const captionSnippet = post.caption.substring(0, 500) + (post.caption.length > 500 ? '...' : '');
+        // Format message (50 karakter pertama + selengkapnya link)
+        const rawCaption = (post.caption || '').replace(/\s+/g, ' ').trim();
+        const captionSnippet = rawCaption.length > 50 ? rawCaption.substring(0, 50).trim() + '...' : (rawCaption || 'Postingan baru');
+        
         let message = templateMsg
           .replace(/\{\{username\}\}/g, username)
           .replace(/\{\{caption\}\}/g, captionSnippet)
           .replace(/\{\{link\}\}/g, post.link)
           .replace(/Kode:\s*\{\{kode\}\}\n*/gi, '')
-          .replace(/\{\{kode\}\}/g, '');
-          
-        message += `\n\n${watermark}`;
+          .replace(/\{\{kode\}\}/g, '')
+          .trim();
         
         let status = 'success';
         let errorMsg = '';

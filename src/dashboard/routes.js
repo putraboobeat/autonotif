@@ -308,29 +308,35 @@ function createRoutes() {
          }
       }
       
-      const username = ConfigModel.get('ig_username').split(',')[0].trim();
-      const templateMsg = ConfigModel.get('ig_template_msg') || '📸 *INFO POSTINGAN BARU* 📸\n\nAda postingan Instagram terbaru (@{{username}}).\n\n*Caption:* {{caption}}\n\n*Link:* {{link}}';
-      const watermark = ConfigModel.get('ig_watermark') || '_Pesan otomatis dari Auto Notif Pengaduan_';
+      const defaultTemplate = '📸 *POSTINGAN TERBARU INSTAGRAM*\n@{{username}}\n\n{{caption}}\n\nSelengkapnya : {{link}}';
+      let templateMsg = ConfigModel.get('ig_template_msg');
+      if (!templateMsg || templateMsg.includes('Kode:') || templateMsg.includes('terkait dengan instansi Anda')) {
+        templateMsg = defaultTemplate;
+      }
       
       let imageUrl = post.image_url || '';
       if (!imageUrl && post.link) {
         try {
-          const resHtml = await fetch(post.link, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(5000) });
+          const resHtml = await fetch(post.link, { headers: { 'User-Agent': 'curl/7.68.0' }, signal: AbortSignal.timeout(5000) });
           const html = await resHtml.text();
           const m = html.match(/property="og:image" content="([^"]+)"/);
           if (m) imageUrl = m[1].replace(/&amp;/g, '&');
         } catch {}
       }
+      if (imageUrl) {
+        imageUrl = imageUrl.replace(/\.webp(?=\?|$)/gi, '.jpg').replace(/dst-webp/gi, 'dst-jpg');
+      }
 
-      const captionSnippet = post.caption ? (post.caption.substring(0, 500) + (post.caption.length > 500 ? '...' : '')) : '';
+      const rawCaption = (post.caption || '').replace(/\s+/g, ' ').trim();
+      const captionSnippet = rawCaption.length > 50 ? rawCaption.substring(0, 50).trim() + '...' : (rawCaption || 'Postingan baru');
+      
       let message = templateMsg
         .replace(/\{\{username\}\}/g, username || 'Instagram')
         .replace(/\{\{caption\}\}/g, captionSnippet)
         .replace(/\{\{link\}\}/g, post.link || '')
         .replace(/Kode:\s*\{\{kode\}\}\n*/gi, '')
-        .replace(/\{\{kode\}\}/g, '');
-        
-      message += `\n\n${watermark}`;
+        .replace(/\{\{kode\}\}/g, '')
+        .trim();
       
       let status = 'success';
       let errorMsg = '';

@@ -192,6 +192,17 @@ function initDatabase() {
     log.error('Kanwil naming migration failed', { error: err.message });
   }
 
+  // Auto-update ig_template_msg to concise group format
+  try {
+    const tmplRow = db.prepare("SELECT value FROM system_config WHERE key = 'ig_template_msg'").get();
+    if (!tmplRow || tmplRow.value.includes('Kode:') || tmplRow.value.includes('terkait dengan instansi Anda')) {
+      db.prepare("INSERT INTO system_config (key, value) VALUES ('ig_template_msg', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
+        .run("📸 *POSTINGAN TERBARU INSTAGRAM*\n@{{username}}\n\n{{caption}}\n\nSelengkapnya : {{link}}");
+    }
+  } catch (err) {
+    log.error('Template migration failed', { error: err.message });
+  }
+
   log.info('Database initialized successfully', { path: DB_PATH });
   return db;
 }
