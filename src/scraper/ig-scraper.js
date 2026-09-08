@@ -138,13 +138,8 @@ async function scrapeInstagram(options = {}) {
         
         // Check if already processed
         if (IgPostModel.isProcessed(post.shortcode)) {
-          const mode = ConfigModel.get('ig_scrape_mode') || 'normal';
-          if (mode !== 'deep') {
-             log.info(`Post ${post.shortcode} already processed. Stopping normal scrape for @${username} to save time.`);
-             break; // Karena postingan berurutan dari yang terbaru, jika ini sudah diproses, sisanya pasti sudah.
-          } else {
-             continue;
-          }
+          log.info(`Post ${post.shortcode} already processed. Skipping...`);
+          continue;
         }
         
         // Fetch true caption, image, and date from the post page
