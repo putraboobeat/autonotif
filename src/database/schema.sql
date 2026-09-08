@@ -135,6 +135,9 @@ INSERT OR IGNORE INTO system_config (key, value) VALUES ('ig_scraper_status', 's
 INSERT OR IGNORE INTO system_config (key, value) VALUES ('last_ig_scrape_time', '');
 INSERT OR IGNORE INTO system_config (key, value) VALUES ('ig_template_msg', '📸 *INFO POSTINGAN BARU* 📸\n\nAda postingan Instagram terbaru (@{{username}}) yang terkait dengan instansi Anda.\n\n*Kode:* {{kode}}\n*Caption:* {{caption}}\n\n*Link:* {{link}}');
 INSERT OR IGNORE INTO system_config (key, value) VALUES ('ig_watermark', '_Pesan otomatis dari Auto Notif Pengaduan_');
+INSERT OR IGNORE INTO system_config (key, value) VALUES ('anti_ban_footer_enabled', '1');
+INSERT OR IGNORE INTO system_config (key, value) VALUES ('anti_ban_footer_label', 'HumasKanwil');
+INSERT OR IGNORE INTO system_config (key, value) VALUES ('anti_ban_footer_prefix', 'ATR');
 
 -- ============================================
 -- Web to WP Scraper

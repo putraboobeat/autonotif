@@ -709,6 +709,39 @@
             </label>
           </div>
 
+          <div class="settings-row" style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 16px; margin-top: 8px;">
+            <div class="settings-info">
+              <h4>🔒 Footer Kode Verifikasi & Anti-Ban</h4>
+              <p>Menyisipkan kode hash unik & timestamp di akhir pesan WhatsApp agar pesan tidak dideteksi sebagai spam bot broadcast oleh WhatsApp.</p>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="setting-footer-enabled" checked onchange="saveCustomSetting('anti_ban_footer_enabled', this.checked ? '1' : '0')">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-info">
+              <h4>Label Instansi Footer</h4>
+              <p>Teks nama humas/instansi di footer verifikasi (contoh: <code>HumasKanwil</code> atau <code>KantahAceh</code>)</p>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <input type="text" class="form-input" id="setting-footer-label" placeholder="HumasKanwil">
+              <button class="btn btn-primary btn-sm" onclick="saveCustomSetting('anti_ban_footer_label', 'setting-footer-label')">Simpan</button>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-info">
+              <h4>Prefix Kode Verifikasi</h4>
+              <p>Awalan kode unik verifikasi (contoh: <code>ATR</code> untuk menghasilkan <code>#ATR-260908-XXX</code>)</p>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <input type="text" class="form-input" id="setting-footer-prefix" placeholder="ATR" style="width: 120px;">
+              <button class="btn btn-primary btn-sm" onclick="saveCustomSetting('anti_ban_footer_prefix', 'setting-footer-prefix')">Simpan</button>
+            </div>
+          </div>
+
           <div class="settings-row" style="border-top: 2px dashed rgba(255,255,255,0.1); padding-top: 16px; margin-top: 8px;">
             <div class="settings-info">
               <h4>Tes Ping Admin Kanwil</h4>

@@ -1082,6 +1082,16 @@ async function loadSettings() {
       document.getElementById('test-ig-group').value = res.data.ig_default_group || '';
       document.getElementById('test-ig-admin').value = res.data.ig_default_admin || '';
 
+      if (document.getElementById('setting-footer-enabled')) {
+        document.getElementById('setting-footer-enabled').checked = res.data.anti_ban_footer_enabled !== '0';
+      }
+      if (document.getElementById('setting-footer-label')) {
+        document.getElementById('setting-footer-label').value = res.data.anti_ban_footer_label || 'HumasKanwil';
+      }
+      if (document.getElementById('setting-footer-prefix')) {
+        document.getElementById('setting-footer-prefix').value = res.data.anti_ban_footer_prefix || 'ATR';
+      }
+
       const elIgStatus = document.getElementById('ig-scraper-status-text');
       if (elIgStatus) {
         let text = res.data.ig_scraper_status === 'running' ? '<span style="color:#10b981">🟢 Berjalan</span>' : '<span style="color:#ef4444">🔴 Berhenti</span>';

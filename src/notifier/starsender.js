@@ -29,8 +29,26 @@ function getActiveApiKey() {
 function applyAntiBanProtection(message) {
   if (!message || typeof message !== 'string') return message;
 
+  // Cek apakah fitur footer verifikasi diaktifkan (default: aktif / 1)
+  let footerEnabled = '1';
+  let footerLabel = 'HumasKanwil';
+  let prefix = 'ATR';
+  try {
+    const { ConfigModel } = require('../database/models');
+    const dbEnabled = ConfigModel.get('anti_ban_footer_enabled');
+    if (dbEnabled !== undefined && dbEnabled !== null) footerEnabled = dbEnabled;
+    const dbLabel = ConfigModel.get('anti_ban_footer_label');
+    if (dbLabel) footerLabel = dbLabel.trim();
+    const dbPrefix = ConfigModel.get('anti_ban_footer_prefix');
+    if (dbPrefix) prefix = dbPrefix.trim();
+  } catch {}
+
+  if (footerEnabled === '0' || footerEnabled === 'false') {
+    return message;
+  }
+
   // Mencegah penambahan token ganda jika sudah ada
-  if (message.includes('Ref. Verifikasi:') || message.includes('HumasKanwil')) {
+  if (message.includes('Ref. Verifikasi:') || (footerLabel && message.includes(footerLabel))) {
     return message;
   }
 
@@ -40,7 +58,7 @@ function applyAntiBanProtection(message) {
   const dateCode = now.toISOString().slice(2, 10).replace(/-/g, ''); // YYMMDD
   const randomHash = Math.random().toString(36).substring(2, 6).toUpperCase() + Math.floor(100 + Math.random() * 900);
 
-  const verificationFooter = `\n\n───\n_🔒 HumasKanwil | Ref. Verifikasi: *#ATR-${dateCode}-${randomHash}* (${timestamp} WIB)_`;
+  const verificationFooter = `\n\n───\n_🔒 ${footerLabel} | Ref. Verifikasi: *#${prefix}-${dateCode}-${randomHash}* (${timestamp} WIB)_`;
 
   return message + verificationFooter;
 }
