@@ -1648,9 +1648,9 @@ async function handleIgRuleSubmit(e) {
   try {
     let res;
     if (id) {
-      res = await apiCall(`/ig-rules/${id}`, 'PUT', data);
+      res = await apiPut(`/ig-rules/${id}`, data);
     } else {
-      res = await apiCall('/ig-rules', 'POST', data);
+      res = await apiPost('/ig-rules', data);
     }
 
     if (res.success) {
@@ -1668,7 +1668,7 @@ async function handleIgRuleSubmit(e) {
 async function deleteIgRule(id) {
   if (!confirm('Yakin ingin menghapus rule ini?')) return;
   try {
-    const res = await apiCall(`/ig-rules/${id}`, 'DELETE');
+    const res = await apiDelete(`/ig-rules/${id}`);
     if (res.success) {
       showToast('Rule berhasil dihapus', 'success');
       loadIgRules();
@@ -1684,7 +1684,7 @@ let igPoller = null;
 
 async function forceCheckIg() {
   try {
-    const res = await apiCall('/ig-scraper/force', 'POST');
+    const res = await apiPost('/ig-scraper/force', {});
     if (res.success) {
       showToast(res.message || 'Pengecekan Instagram sedang berjalan', 'success');
       startIgStatusPoller();
@@ -1727,7 +1727,7 @@ function startIgStatusPoller() {
 async function saveCustomSetting(key, elementId) {
   const value = document.getElementById(elementId).value;
   try {
-    const res = await apiCall('/settings', 'POST', { key, value });
+    const res = await apiPost('/settings', { key, value });
     if (res.success) {
       showToast('Pengaturan berhasil disimpan', 'success');
     } else {
@@ -1795,7 +1795,7 @@ async function resendIgPost(id) {
   
   try {
     showToast("Mengirim ulang...", "info");
-    const res = await apiCall(`/ig-posts/${id}/resend`, 'POST', { target_group: targetGroup, target_admin: targetAdmin });
+    const res = await apiPost(`/ig-posts/${id}/resend`, { target_group: targetGroup, target_admin: targetAdmin });
     if (res.success) {
       showToast(res.message, 'success');
       loadIgPosts();
@@ -1811,7 +1811,7 @@ async function pingIgGroup() {
   const group = document.getElementById('test-ig-group').value;
   if (!group) return showToast('Isi nama/ID group dulu', 'error');
   try {
-    const res = await apiCall('/ig-scraper/ping-group', 'POST', { group });
+    const res = await apiPost('/ig-scraper/ping-group', { group });
     if (res.success) showToast(res.message, 'success');
     else showToast(res.error, 'error');
   } catch(e) {
@@ -1823,7 +1823,7 @@ async function pingIgAdmin() {
   const phone = document.getElementById('test-ig-admin').value;
   if (!phone) return showToast('Isi nomor HP dulu', 'error');
   try {
-    const res = await apiCall('/ig-scraper/ping-admin', 'POST', { phone });
+    const res = await apiPost('/ig-scraper/ping-admin', { phone });
     if (res.success) showToast(res.message, 'success');
     else showToast(res.error, 'error');
   } catch(e) {
