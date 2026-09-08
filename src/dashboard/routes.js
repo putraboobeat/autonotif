@@ -1,5 +1,5 @@
 const express = require('express');
-const { AdminModel, TicketModel, NotificationLogModel, ConfigModel, HolidayModel } = require('../database/models');
+const { AdminModel, TicketModel, NotificationLogModel, ConfigModel, HolidayModel, IgRuleModel } = require('../database/models');
 const { sendPersonalMessage, sendGroupMessage } = require('../notifier/starsender');
 const { buildTestMessage } = require('../notifier/message-builder');
 const { config } = require('../config');
@@ -9,6 +9,7 @@ const { getAuthStatus, startLoginInteractive, submitOtpInteractive } = require('
 const { getAllTemplates, renderTemplate } = require('../notifier/templates');
 const { getSlaMetrics } = require('../analytics/sla-service');
 const { generateCsvReport, generateHtmlReport, generatePdfReport, sendExecutiveReportToKanwil } = require('../analytics/report-generator');
+const { scrapeInstagram } = require('../scraper/ig-scraper');
 
 const log = createLogger('ROUTES');
 
@@ -18,7 +19,6 @@ function createRoutes() {
   // ============================================
   // StarSender API Health Check (Realtime)
   // ============================================
-
   router.get('/starsender/status', async (req, res) => {
     try {
       const apiKey = (() => {
@@ -245,6 +245,67 @@ function createRoutes() {
       res.status(500).json({ success: false, error: error.message });
     }
   });
+
+  // ============================================
+  // Instagram Rules CRUD
+  // ============================================
+
+  router.get('/ig-rules', (req, res) => {
+    try {
+      const rules = IgRuleModel.getAll();
+      res.json({ success: true, data: rules });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  router.post('/ig-rules', (req, res) => {
+    try {
+      const { code, target_group } = req.body;
+      if (!code || !target_group) {
+        return res.status(400).json({ success: false, error: 'Kode dan Target Group wajib diisi' });
+      }
+      IgRuleModel.create({ code, target_group });
+      res.json({ success: true });
+    } catch (error) {
+      if (error.message.includes('UNIQUE constraint')) {
+        return res.status(400).json({ success: false, error: 'Kode sudah terdaftar' });
+      }
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  router.put('/ig-rules/:id', (req, res) => {
+    try {
+      const { code, target_group, is_active } = req.body;
+      IgRuleModel.update(parseInt(req.params.id), {
+        code, target_group, is_active: is_active !== undefined ? is_active : true
+      });
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  router.delete('/ig-rules/:id', (req, res) => {
+    try {
+      IgRuleModel.delete(parseInt(req.params.id));
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  router.post('/ig-scraper/force', async (req, res) => {
+    try {
+      // Trigger IG scrape asynchronously
+      scrapeInstagram().catch(e => log.error('Manual IG Scrape Error', { error: e.message }));
+      res.json({ success: true, message: 'Instagram scraper dijalankan di latar belakang.' });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
 
   router.post('/holidays/:id/send', async (req, res) => {
     try {

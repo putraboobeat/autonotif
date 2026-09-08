@@ -8,6 +8,7 @@ const { performLogin } = require('./scraper/login');
 const { scrapeAllOpenTickets } = require('./scraper/ticket-scraper');
 const { detectNewOpenTickets, markTicketProcessed } = require('./detector/ticket-detector');
 const { checkAndSendHolidayReminders } = require('./detector/holiday-detector');
+const { scrapeInstagram } = require('./scraper/ig-scraper');
 const { sendTicketNotification, sendPersonalMessage, sendGroupMessage } = require('./notifier/starsender');
 const { 
   buildKanwilMessage, 
@@ -369,6 +370,19 @@ async function scrapeCycle() {
   }
 }
 
+let isIgScraping = false;
+async function igScrapeCycle() {
+  if (isIgScraping) return;
+  isIgScraping = true;
+  try {
+    await scrapeInstagram();
+  } catch (error) {
+    log.error('Error in IG scrape cycle', { error: error.message });
+  } finally {
+    isIgScraping = false;
+  }
+}
+
 global.triggerManualScrape = () => scrapeCycle();
 
 /**
@@ -410,14 +424,27 @@ async function main() {
     log.info('Already logged in!');
   }
 
-  // Start scraping loop
+  // Start scraping loops
   isRunning = true;
-  log.info(`Starting scrape loop (interval: ${config.app.scrapeInterval / 1000}s)...`);
+  log.info(`Starting OCA scrape loop (interval: ${config.app.scrapeInterval / 1000}s)...`);
 
-  while (isRunning) {
-    await scrapeCycle();
-    await sleep(config.app.scrapeInterval);
-  }
+  // OCA Loop
+  (async () => {
+    while (isRunning) {
+      await scrapeCycle();
+      await sleep(config.app.scrapeInterval);
+    }
+  })();
+
+  // IG Loop
+  (async () => {
+    while (isRunning) {
+      const igIntervalStr = ConfigModel.get('ig_scrape_interval');
+      const igInterval = parseInt(igIntervalStr, 10) || 300000;
+      await igScrapeCycle();
+      await sleep(igInterval);
+    }
+  })();
 }
 
 // Graceful shutdown

@@ -92,3 +92,37 @@ CREATE TABLE IF NOT EXISTS holidays (
 );
 
 CREATE INDEX IF NOT EXISTS idx_holidays_date ON holidays(event_date);
+
+-- ============================================
+-- Instagram Auto Notif
+-- ============================================
+
+-- Tabel rule pemetaan kode ke target WA
+CREATE TABLE IF NOT EXISTS ig_rules (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    code VARCHAR(100) NOT NULL UNIQUE,
+    target_group VARCHAR(255) NOT NULL,
+    is_active INTEGER DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_ig_rules_code ON ig_rules(code);
+
+-- Tabel post IG yang sudah diproses (mencegah duplikat)
+CREATE TABLE IF NOT EXISTS processed_ig_posts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    shortcode VARCHAR(50) NOT NULL UNIQUE,
+    caption TEXT,
+    matched_code VARCHAR(100),
+    notified_group VARCHAR(255),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_ig_posts_shortcode ON processed_ig_posts(shortcode);
+
+-- Insert default config untuk Instagram
+INSERT OR IGNORE INTO system_config (key, value) VALUES ('ig_enabled', '0');
+INSERT OR IGNORE INTO system_config (key, value) VALUES ('ig_username', '');
+INSERT OR IGNORE INTO system_config (key, value) VALUES ('ig_scrape_interval', '300000'); -- default 5 menit
+INSERT OR IGNORE INTO system_config (key, value) VALUES ('ig_scraper_status', 'stopped');
+INSERT OR IGNORE INTO system_config (key, value) VALUES ('last_ig_scrape_time', '');

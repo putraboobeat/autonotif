@@ -119,6 +119,9 @@
       <button class="tab-btn" data-tab="analytics" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(16, 185, 129, 0.15)); border: 1px solid rgba(59, 130, 246, 0.4);">
         <span class="tab-icon">🚀</span> Radar SLA (Level 6)
       </button>
+      <button class="tab-btn" data-tab="instagram" style="background: linear-gradient(135deg, rgba(236, 72, 153, 0.15), rgba(245, 158, 11, 0.15)); border: 1px solid rgba(236, 72, 153, 0.4);">
+        <span class="tab-icon">📸</span> Instagram Notif
+      </button>
       <button class="tab-btn" data-tab="logs">
         <span class="tab-icon">📨</span> Log Notifikasi
       </button>
@@ -341,6 +344,63 @@
             </thead>
             <tbody id="holiday-table-body">
               <tr><td colspan="7" style="text-align: center;">Memuat data...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Instagram Notif -->
+    <div class="tab-content" id="tab-instagram">
+      <div class="card">
+        <div class="card-header" style="flex-wrap: wrap; gap: 12px; border-left: 4px solid #ec4899;">
+          <div>
+            <h2>📸 Instagram Auto Notif</h2>
+            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px;">Pantau akun Instagram dan otomatis forward caption ke Group WA jika mengandung kode tertentu.</p>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-primary btn-sm" onclick="forceCheckIg()">⚡ Cek Sekarang</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <h3 style="margin-top: 0; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color); color: #ec4899;">⚙️ Konfigurasi Scraper</h3>
+          <div class="settings-row">
+            <div class="settings-info">
+              <h4>Status Aktif Scraper Instagram</h4>
+              <p>Aktifkan untuk mulai memonitor post IG secara periodik (setiap 5 menit).</p>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="setting-ig-enabled" onchange="updateSetting('ig_enabled', this.checked ? '1' : '0')">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="settings-row">
+            <div class="settings-info">
+              <h4>Username Instagram yang Dipantau</h4>
+              <p>Masukkan username tanpa @. Bisa lebih dari satu, pisahkan dengan koma (contoh: kanwilbpnaceh, kantaacehbesar)</p>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <input type="text" class="form-input" id="setting-ig-username" placeholder="username1, username2">
+              <button class="btn btn-primary btn-sm" onclick="saveCustomSetting('ig_username', 'setting-ig-username')">Simpan</button>
+            </div>
+          </div>
+          
+          <h3 style="margin-top: 30px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color); color: #ec4899; display: flex; justify-content: space-between; align-items: center;">
+            <span>📋 Rule Pemetaan Kode -> Group WA</span>
+            <button class="btn btn-primary btn-sm" onclick="openIgRuleModal()">+ Tambah Rule</button>
+          </h3>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>Kode Caption</th>
+                <th>Target Group WA</th>
+                <th>Status</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="ig-rule-table-body">
+              <tr><td colspan="5" style="text-align: center;">Memuat data...</td></tr>
             </tbody>
           </table>
         </div>
@@ -593,6 +653,45 @@
           <div class="modal-footer" style="margin-top: 25px;">
             <button type="button" class="btn btn-secondary" onclick="closeHolidayModal()">Batal</button>
             <button type="submit" class="btn btn-primary" id="btn-save-holiday">Simpan</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Form: Tambah/Edit IG Rule -->
+  <div class="modal-overlay" id="igRuleModal" style="display: none;">
+    <div class="modal" style="max-width: 500px;">
+      <div class="modal-header">
+        <h3 id="igRuleModalTitle">Tambah Rule Instagram</h3>
+        <span class="modal-close" onclick="closeIgRuleModal()">&times;</span>
+      </div>
+      <div class="modal-body">
+        <form id="igRuleForm" onsubmit="handleIgRuleSubmit(event)">
+          <input type="hidden" id="ig_rule_id">
+          
+          <div class="form-group">
+            <label for="ig_rule_code">Kode di Caption <span style="color:red">*</span></label>
+            <input type="text" id="ig_rule_code" class="form-control" placeholder="Contoh: #BPNACEHBESAR atau [ACEH_BESAR]" required style="width: 100%; padding: 10px; border-radius: 8px;">
+            <div class="form-hint" style="font-size: 12px; margin-top: 5px; color: #888;">Teks yang akan dicari di dalam caption (case-insensitive).</div>
+          </div>
+          
+          <div class="form-group">
+            <label for="ig_rule_target">Target Group WhatsApp <span style="color:red">*</span></label>
+            <input type="text" id="ig_rule_target" class="form-control" placeholder="ID atau Nama Group" required style="width: 100%; padding: 10px; border-radius: 8px; margin-top: 10px;">
+          </div>
+          
+          <div class="form-group" style="display: flex; align-items: center; gap: 10px; margin-top: 15px;">
+            <label class="switch">
+              <input type="checkbox" id="ig_rule_active" checked>
+              <span class="slider round"></span>
+            </label>
+            <label for="ig_rule_active" style="margin: 0; font-weight: 500;">Aktif</label>
+          </div>
+          
+          <div class="modal-footer" style="margin-top: 25px;">
+            <button type="button" class="btn btn-ghost" onclick="closeIgRuleModal()">Batal</button>
+            <button type="submit" class="btn btn-primary">Simpan</button>
           </div>
         </form>
       </div>

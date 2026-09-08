@@ -444,10 +444,75 @@ const HolidayModel = {
   }
 };
 
+// ============================================
+// Instagram Auto Notif Operations
+// ============================================
+
+const IgRuleModel = {
+  getAll() {
+    const db = getDb();
+    return db.prepare('SELECT * FROM ig_rules ORDER BY id DESC').all();
+  },
+
+  getActive() {
+    const db = getDb();
+    return db.prepare('SELECT * FROM ig_rules WHERE is_active = 1 ORDER BY id DESC').all();
+  },
+
+  getById(id) {
+    const db = getDb();
+    return db.prepare('SELECT * FROM ig_rules WHERE id = ?').get(id);
+  },
+
+  create({ code, target_group }) {
+    const db = getDb();
+    const stmt = db.prepare(
+      'INSERT INTO ig_rules (code, target_group) VALUES (?, ?)'
+    );
+    const result = stmt.run(code, target_group);
+    return result;
+  },
+
+  update(id, { code, target_group, is_active }) {
+    const db = getDb();
+    const stmt = db.prepare(
+      'UPDATE ig_rules SET code = ?, target_group = ?, is_active = ? WHERE id = ?'
+    );
+    const result = stmt.run(code, target_group, is_active ? 1 : 0, id);
+    return result;
+  },
+
+  delete(id) {
+    const db = getDb();
+    return db.prepare('DELETE FROM ig_rules WHERE id = ?').run(id);
+  }
+};
+
+const IgPostModel = {
+  isProcessed(shortcode) {
+    const db = getDb();
+    const stmt = db.prepare('SELECT * FROM processed_ig_posts WHERE shortcode = ?');
+    const result = stmt.get(shortcode);
+    return result || null;
+  },
+
+  save({ shortcode, caption, matched_code, notified_group }) {
+    const db = getDb();
+    const stmt = db.prepare(`
+      INSERT INTO processed_ig_posts 
+      (shortcode, caption, matched_code, notified_group)
+      VALUES (?, ?, ?, ?)
+    `);
+    return stmt.run(shortcode, caption || '', matched_code || '', notified_group || '');
+  }
+};
+
 module.exports = {
   AdminModel,
   TicketModel,
   NotificationLogModel,
   ConfigModel,
   HolidayModel,
+  IgRuleModel,
+  IgPostModel,
 };

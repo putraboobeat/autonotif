@@ -125,6 +125,7 @@ function initTabs() {
         case 'tickets': loadTickets(); break;
         case 'analytics': loadAnalytics(); break;
         case 'logs': loadLogs(); break;
+        case 'instagram': loadIgRules(); break;
         case 'settings': 
           loadSettings(); 
           loadTemplates(); 
@@ -1026,6 +1027,19 @@ async function loadSettings() {
       const elPers = document.getElementById('setting-personal');
       if (elPers) elPers.checked = res.data.personal_notification_enabled !== '0';
 
+      const elIgEn = document.getElementById('setting-ig-enabled');
+      if (elIgEn) elIgEn.checked = res.data.ig_enabled === '1';
+
+      const elIgUser = document.getElementById('setting-ig-username');
+      if (elIgUser) elIgUser.value = res.data.ig_username || '';
+
+      const elIgStatus = document.getElementById('ig-scraper-status-text');
+      if (elIgStatus) {
+        let text = res.data.ig_scraper_status === 'running' ? '<span style="color:#10b981">🟢 Berjalan</span>' : '<span style="color:#ef4444">🔴 Berhenti</span>';
+        if (res.data.last_ig_scrape_time) text += ` (Terakhir cek: ${new Date(res.data.last_ig_scrape_time).toLocaleTimeString()})`;
+        elIgStatus.innerHTML = `Status: ${text}`;
+      }
+
       const elHolGroup = document.getElementById('setting-holiday-wa-group');
       if (elHolGroup) elHolGroup.value = res.data.holiday_wa_group_id || '';
 
@@ -1571,3 +1585,132 @@ async function seedHolidays() {
     btn.disabled = false;
   }
 }
+
+// ============================================
+// Instagram Auto Notif
+// ============================================
+
+async function loadIgRules() {
+  try {
+    const res = await apiGet('/ig-rules');
+    if (res.success) {
+      const tbody = document.getElementById('ig-rule-table-body');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+      if (res.data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Belum ada data rule Instagram</td></tr>';
+        return;
+      }
+      res.data.forEach((rule, idx) => {
+        tbody.innerHTML += `
+          <tr>
+            <td>${idx + 1}</td>
+            <td><span class="badge" style="background: rgba(236,72,153,0.2); color: #ec4899; border: 1px solid rgba(236,72,153,0.4);">${rule.code}</span></td>
+            <td>${rule.target_group}</td>
+            <td><span class="badge badge-${rule.is_active ? 'success' : 'danger'}">${rule.is_active ? 'Aktif' : 'Nonaktif'}</span></td>
+            <td>
+              <button class="btn btn-sm" onclick='editIgRule(${JSON.stringify(rule)})'>Edit</button>
+              <button class="btn btn-danger btn-sm" onclick="deleteIgRule(${rule.id})">Hapus</button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+function openIgRuleModal() {
+  document.getElementById('ig_rule_id').value = '';
+  document.getElementById('ig_rule_code').value = '';
+  document.getElementById('ig_rule_target').value = '';
+  document.getElementById('ig_rule_active').checked = true;
+  document.getElementById('igRuleModalTitle').textContent = 'Tambah Rule Instagram';
+  document.getElementById('igRuleModal').style.display = 'flex';
+}
+
+function closeIgRuleModal() {
+  document.getElementById('igRuleModal').style.display = 'none';
+}
+
+function editIgRule(rule) {
+  document.getElementById('ig_rule_id').value = rule.id;
+  document.getElementById('ig_rule_code').value = rule.code;
+  document.getElementById('ig_rule_target').value = rule.target_group;
+  document.getElementById('ig_rule_active').checked = rule.is_active === 1;
+  document.getElementById('igRuleModalTitle').textContent = 'Edit Rule Instagram';
+  document.getElementById('igRuleModal').style.display = 'flex';
+}
+
+async function handleIgRuleSubmit(event) {
+  event.preventDefault();
+  const id = document.getElementById('ig_rule_id').value;
+  const data = {
+    code: document.getElementById('ig_rule_code').value,
+    target_group: document.getElementById('ig_rule_target').value,
+    is_active: document.getElementById('ig_rule_active').checked
+  };
+
+  try {
+    let res;
+    if (id) {
+      res = await apiCall(`/ig-rules/${id}`, 'PUT', data);
+    } else {
+      res = await apiCall('/ig-rules', 'POST', data);
+    }
+
+    if (res.success) {
+      showToast('Rule berhasil disimpan', 'success');
+      closeIgRuleModal();
+      loadIgRules();
+    } else {
+      showToast(res.error || 'Gagal menyimpan rule', 'error');
+    }
+  } catch (error) {
+    showToast('Terjadi kesalahan sistem', 'error');
+  }
+}
+
+async function deleteIgRule(id) {
+  if (!confirm('Yakin ingin menghapus rule ini?')) return;
+  try {
+    const res = await apiCall(`/ig-rules/${id}`, 'DELETE');
+    if (res.success) {
+      showToast('Rule berhasil dihapus', 'success');
+      loadIgRules();
+    } else {
+      showToast(res.error || 'Gagal menghapus rule', 'error');
+    }
+  } catch (error) {
+    showToast('Terjadi kesalahan sistem', 'error');
+  }
+}
+
+async function forceCheckIg() {
+  try {
+    const res = await apiCall('/ig-scraper/force', 'POST');
+    if (res.success) {
+      showToast(res.message || 'Pengecekan Instagram sedang berjalan', 'success');
+    } else {
+      showToast(res.error || 'Gagal', 'error');
+    }
+  } catch (error) {
+    showToast('Terjadi kesalahan', 'error');
+  }
+}
+
+async function saveCustomSetting(key, elementId) {
+  const value = document.getElementById(elementId).value;
+  try {
+    const res = await apiCall('/settings', 'POST', { key, value });
+    if (res.success) {
+      showToast('Pengaturan berhasil disimpan', 'success');
+    } else {
+      showToast(res.error || 'Gagal menyimpan pengaturan', 'error');
+    }
+  } catch (error) {
+    showToast('Terjadi kesalahan', 'error');
+  }
+}
+
