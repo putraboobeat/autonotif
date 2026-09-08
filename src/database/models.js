@@ -264,6 +264,16 @@ const TicketModel = {
   delete(ticketId) {
     const db = getDb();
     return db.prepare('DELETE FROM processed_tickets WHERE ticket_id = ?').run(ticketId);
+  },
+
+  /**
+   * Delete multiple tickets by their ticket_ids
+   */
+  deleteMany(ticketIds) {
+    if (!Array.isArray(ticketIds) || ticketIds.length === 0) return { changes: 0 };
+    const db = getDb();
+    const placeholders = ticketIds.map(() => '?').join(',');
+    return db.prepare(`DELETE FROM processed_tickets WHERE ticket_id IN (${placeholders})`).run(...ticketIds);
   }
 };
 
@@ -542,6 +552,18 @@ const IgPostModel = {
   getById(id) {
     const db = getDb();
     return db.prepare('SELECT * FROM processed_ig_posts WHERE id = ?').get(id);
+  },
+
+  delete(id) {
+    const db = getDb();
+    return db.prepare('DELETE FROM processed_ig_posts WHERE id = ?').run(id);
+  },
+
+  deleteMany(ids) {
+    if (!Array.isArray(ids) || ids.length === 0) return { changes: 0 };
+    const db = getDb();
+    const placeholders = ids.map(() => '?').join(',');
+    return db.prepare(`DELETE FROM processed_ig_posts WHERE id IN (${placeholders})`).run(...ids);
   }
 };
 

@@ -972,11 +972,40 @@ function createRoutes() {
     }
   });
 
+  router.post('/ig-posts/batch-delete', async (req, res) => {
+    try {
+      const { ids } = req.body;
+      if (!ids || !Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ success: false, error: 'Pilih minimal satu postingan untuk dihapus.' });
+      }
+      const { IgPostModel } = require('../database/models');
+      const numIds = ids.map(id => parseInt(id)).filter(id => !isNaN(id));
+      IgPostModel.deleteMany(numIds);
+      res.json({ success: true, message: `${numIds.length} postingan IG berhasil dihapus dari riwayat.` });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
   router.delete('/ig-posts/:id', async (req, res) => {
     try {
       const { IgPostModel } = require('../database/models');
       IgPostModel.delete(parseInt(req.params.id));
       res.json({ success: true, message: 'Postingan IG berhasil dihapus dari riwayat.' });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  router.post('/tickets/batch-delete', async (req, res) => {
+    try {
+      const { ids } = req.body;
+      if (!ids || !Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ success: false, error: 'Pilih minimal satu tiket untuk dihapus.' });
+      }
+      const { TicketModel } = require('../database/models');
+      TicketModel.deleteMany(ids);
+      res.json({ success: true, message: `${ids.length} tiket berhasil dihapus dari riwayat terpantau.` });
     } catch (error) {
       res.status(500).json({ success: false, error: error.message });
     }

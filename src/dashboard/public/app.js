@@ -746,7 +746,7 @@ function filterTickets() {
   if (filtered.length === 0) {
     tbody.innerHTML = `
       <tr class="empty-row">
-        <td colspan="9">
+        <td colspan="10">
           <div class="empty-state">
             <div class="empty-icon">🔍</div>
             <h3>Tidak ada tiket yang cocok</h3>
@@ -755,11 +755,13 @@ function filterTickets() {
         </td>
       </tr>
     `;
+    updateSelectedTicketsCount();
     return;
   }
 
   tbody.innerHTML = filtered.map((ticket) => `
     <tr>
+      <td style="text-align: center;"><input type="checkbox" class="ticket-checkbox" value="${escapeHtml(ticket.ticket_id)}" onchange="updateSelectedTicketsCount()" style="cursor: pointer;"></td>
       <td><strong>${escapeHtml(ticket.ticket_id)}</strong></td>
       <td>${escapeHtml(ticket.customer || '-')}</td>
       <td>${escapeHtml(ticket.kantor_pertanahan || '-')}</td>
@@ -776,6 +778,53 @@ function filterTickets() {
       </td>
     </tr>
   `).join('');
+  updateSelectedTicketsCount();
+}
+
+function toggleSelectAllTickets(master) {
+  const checkboxes = document.querySelectorAll('.ticket-checkbox');
+  checkboxes.forEach(cb => cb.checked = master.checked);
+  updateSelectedTicketsCount();
+}
+
+function updateSelectedTicketsCount() {
+  const checkboxes = document.querySelectorAll('.ticket-checkbox:checked');
+  const count = checkboxes.length;
+  const btn = document.getElementById('btn-batch-delete-tickets');
+  const countSpan = document.getElementById('count-selected-tickets');
+  const master = document.getElementById('check-all-tickets');
+  
+  if (countSpan) countSpan.textContent = count;
+  if (btn) btn.style.display = count > 0 ? 'inline-block' : 'none';
+  
+  const allCheckboxes = document.querySelectorAll('.ticket-checkbox');
+  if (master && allCheckboxes.length > 0) {
+    master.checked = (count === allCheckboxes.length);
+  }
+}
+
+async function deleteSelectedTickets() {
+  const checked = Array.from(document.querySelectorAll('.ticket-checkbox:checked')).map(cb => cb.value);
+  if (checked.length === 0) return;
+  
+  if (!confirm(`Apakah Anda yakin ingin menghapus ${checked.length} tiket terpilih dari riwayat terpantau?`)) return;
+  
+  try {
+    const res = await fetch(`${API_BASE}/tickets/batch-delete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: checked })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast(data.message, 'success');
+      loadTickets();
+    } else {
+      showToast(data.error, 'error');
+    }
+  } catch (error) {
+    showToast('Gagal menghapus tiket terpilih', 'error');
+  }
 }
 
 async function resendReminder(ticketId, btn) {
@@ -1702,7 +1751,8 @@ async function loadIgPosts() {
       if (!tbody) return;
       tbody.innerHTML = '';
       if (res.data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">Belum ada data postingan ter-scrape</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Belum ada data postingan ter-scrape</td></tr>';
+        updateSelectedIgCount();
         return;
       }
       res.data.forEach((post) => {
@@ -1724,6 +1774,7 @@ async function loadIgPosts() {
         
         tbody.innerHTML += `
           <tr>
+            <td style="text-align: center;"><input type="checkbox" class="ig-post-checkbox" value="${post.id}" onchange="updateSelectedIgCount()" style="cursor: pointer;"></td>
             <td style="font-size:12px;"><strong>Posting:</strong> ${timeLabel}<br><strong>Scrape:</strong> ${scrapeLabel} ${linkLabel}</td>
             <td style="font-size:12px; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${post.caption}">${post.caption || '-'}</td>
             <td>${statusBadge}</td>
@@ -1731,9 +1782,56 @@ async function loadIgPosts() {
           </tr>
         `;
       });
+      updateSelectedIgCount();
     }
   } catch (error) {
     console.error(error);
+  }
+}
+
+function toggleSelectAllIg(master) {
+  const checkboxes = document.querySelectorAll('.ig-post-checkbox');
+  checkboxes.forEach(cb => cb.checked = master.checked);
+  updateSelectedIgCount();
+}
+
+function updateSelectedIgCount() {
+  const checkboxes = document.querySelectorAll('.ig-post-checkbox:checked');
+  const count = checkboxes.length;
+  const btn = document.getElementById('btn-batch-delete-ig');
+  const countSpan = document.getElementById('count-selected-ig');
+  const master = document.getElementById('check-all-ig');
+  
+  if (countSpan) countSpan.textContent = count;
+  if (btn) btn.style.display = count > 0 ? 'inline-block' : 'none';
+  
+  const allCheckboxes = document.querySelectorAll('.ig-post-checkbox');
+  if (master && allCheckboxes.length > 0) {
+    master.checked = (count === allCheckboxes.length);
+  }
+}
+
+async function deleteSelectedIgPosts() {
+  const checked = Array.from(document.querySelectorAll('.ig-post-checkbox:checked')).map(cb => parseInt(cb.value));
+  if (checked.length === 0) return;
+  
+  if (!confirm(`Apakah Anda yakin ingin menghapus ${checked.length} postingan IG terpilih dari riwayat? Jika dihapus, scraper akan memposting ulang saat menemukan postingan ini lagi.`)) return;
+  
+  try {
+    const res = await fetch(`${API_BASE}/ig-posts/batch-delete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: checked })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast(data.message, 'success');
+      loadIgPosts();
+    } else {
+      showToast(data.error, 'error');
+    }
+  } catch (error) {
+    showToast('Gagal menghapus data postingan terpilih', 'error');
   }
 }
 

@@ -178,6 +178,7 @@
         <div class="card-header" style="flex-wrap: wrap; gap: 12px;">
           <h2>📋 Tiket Terpantau</h2>
           <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+            <button class="btn btn-danger btn-sm" id="btn-batch-delete-tickets" onclick="deleteSelectedTickets()" style="display: none; font-size: 11px;">🗑️ Hapus Terpilih (<span id="count-selected-tickets">0</span>)</button>
             <a href="/api/tickets/export" target="_blank" class="btn btn-success btn-sm" style="text-decoration: none; display: inline-flex; align-items: center; gap: 4px; background-color: #2e7d32; border-color: #2e7d32; color: #fff;">📥 Download Laporan (Excel/CSV)</a>
             <button class="btn btn-primary btn-sm" id="btn-refresh-tickets" onclick="refreshLiveTickets(this)">⚡ Ambil Data & Update Status Terbaru</button>
             <button class="btn btn-ghost btn-sm" onclick="loadTickets()">↻ Refresh Tabel</button>
@@ -198,6 +199,7 @@
           <table class="data-table">
             <thead>
               <tr>
+                <th style="width: 40px; text-align: center;"><input type="checkbox" id="check-all-tickets" onchange="toggleSelectAllTickets(this)" style="cursor: pointer;"></th>
                 <th>Ticket ID</th>
                 <th>Customer</th>
                 <th>Kantor Pertanahan</th>
@@ -437,14 +439,18 @@
             </div>
           </div>
           
-          <h3 style="margin-top: 30px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color); color: #ec4899; display: flex; justify-content: space-between; align-items: center;">
+          <h3 style="margin-top: 30px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color); color: #ec4899; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
             <span>📰 Riwayat Postingan IG (Scraped)</span>
-            <button class="btn btn-ghost btn-sm" onclick="loadIgPosts()">↻ Refresh Tabel</button>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <button class="btn btn-danger btn-sm" id="btn-batch-delete-ig" onclick="deleteSelectedIgPosts()" style="display: none; font-size: 11px;">🗑️ Hapus Terpilih (<span id="count-selected-ig">0</span>)</button>
+              <button class="btn btn-ghost btn-sm" onclick="loadIgPosts()">↻ Refresh Tabel</button>
+            </div>
           </h3>
           <div class="table-container" style="margin-top: 16px;">
             <table class="data-table" id="ig-posts-table">
               <thead>
                 <tr>
+                  <th style="width: 40px; text-align: center;"><input type="checkbox" id="check-all-ig" onchange="toggleSelectAllIg(this)" style="cursor: pointer;"></th>
                   <th>Waktu & Link</th>
                   <th>Cuplikan Caption</th>
                   <th>Status Notif</th>
@@ -452,7 +458,7 @@
                 </tr>
               </thead>
               <tbody id="ig-posts-table-body">
-                <tr><td colspan="4" style="text-align: center;">Memuat data...</td></tr>
+                <tr><td colspan="5" style="text-align: center;">Memuat data...</td></tr>
               </tbody>
             </table>
           </div>
