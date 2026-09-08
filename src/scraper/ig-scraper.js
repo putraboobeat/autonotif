@@ -142,9 +142,10 @@ async function scrapeInstagram(options = {}) {
           continue;
         }
         
-        // Fetch true caption, image, and date from the post page
+        // Fetch true caption, image, video, and date from the post page
         let caption = post.caption;
         let imageUrl = '';
+        let videoUrl = '';
         let postDate = '';
         try {
           const postPage = await browser.newPage();
@@ -152,6 +153,7 @@ async function scrapeInstagram(options = {}) {
           const extracted = await postPage.evaluate(() => {
             let cap = '';
             let img = '';
+            let vid = '';
             let pDate = '';
             const metaCap = document.querySelector('meta[property="og:title"]');
             if (metaCap) {
@@ -163,15 +165,32 @@ async function scrapeInstagram(options = {}) {
             if (metaImg) {
               img = metaImg.getAttribute('content');
             }
+            const metaVid = document.querySelector('meta[property="og:video"], meta[property="og:video:secure_url"], meta[name="twitter:player:stream"]');
+            if (metaVid) {
+              vid = metaVid.getAttribute('content');
+            }
             const timeEl = document.querySelector('time');
             if (timeEl) {
               pDate = timeEl.getAttribute('datetime');
             }
-            return { cap, img, pDate };
+            return { cap, img, vid, pDate };
           });
           caption = extracted.cap;
           imageUrl = extracted.img || '';
+          videoUrl = extracted.vid || '';
           postDate = extracted.pDate;
+
+          // Jika videoUrl belum didapat dari meta tags (sering terjadi pada format reels terbaru),
+          // cari pola video_versions langsung dari HTML halaman
+          if (!videoUrl) {
+            const pageHtml = await postPage.content();
+            const mVid = pageHtml.match(/"video_versions":\[\{"type":\d+,"url":"([^"]+)"/) ||
+                         pageHtml.match(/"video_url":"([^"]+)"/);
+            if (mVid) {
+              videoUrl = mVid[1].replace(/\\u0026/g, '&').replace(/\\\//g, '/');
+            }
+          }
+
           await postPage.close();
         } catch (e) {
           log.warn(`Could not fetch data for ${post.shortcode}: ${e.message}`);
@@ -179,6 +198,7 @@ async function scrapeInstagram(options = {}) {
 
         post.caption = caption || 'Tanpa Caption';
         post.imageUrl = imageUrl || '';
+        post.videoUrl = videoUrl || '';
         post.postDate = postDate || '';
         
         let targetGroup = (ConfigModel.get('ig_default_group') || '').trim();
@@ -188,10 +208,14 @@ async function scrapeInstagram(options = {}) {
         let targetAdmin = (ConfigModel.get('ig_default_admin') || '').trim();
         
         // Get templates
-        const defaultTemplate = '📸 *POSTINGAN TERBARU INSTAGRAM*\n@{{username}}\n\n{{caption}}\n\nSelengkapnya : {{link}}';
+        const defaultTemplate = post.videoUrl 
+          ? '🎬 *REELS / VIDEO TERBARU INSTAGRAM*\n@{{username}}\n\n{{caption}}\n\nSelengkapnya : {{link}}'
+          : '📸 *POSTINGAN TERBARU INSTAGRAM*\n@{{username}}\n\n{{caption}}\n\nSelengkapnya : {{link}}';
         let templateMsg = ConfigModel.get('ig_template_msg');
         if (!templateMsg || templateMsg.includes('Kode:') || templateMsg.includes('terkait dengan instansi Anda')) {
           templateMsg = defaultTemplate;
+        } else if (post.videoUrl && templateMsg.includes('📸 *POSTINGAN TERBARU INSTAGRAM*')) {
+          templateMsg = templateMsg.replace('📸 *POSTINGAN TERBARU INSTAGRAM*', '🎬 *REELS / VIDEO TERBARU INSTAGRAM*');
         }
         
         // Format message (panjang caption sesuai setting ig_caption_max_length, default 50)
@@ -218,7 +242,7 @@ async function scrapeInstagram(options = {}) {
           // Send to group
           if (targetGroup) {
             try {
-              const resGroup = await sendGroupMessage(targetGroup, message, { imageUrl: post.imageUrl });
+              const resGroup = await sendGroupMessage(targetGroup, message, { imageUrl: post.imageUrl, videoUrl: post.videoUrl });
               if (!resGroup.success) {
                 status = 'failed';
                 errorMsg += `Group (${targetGroup}): ${resGroup.error || 'Gagal'}. `;
@@ -250,7 +274,7 @@ async function scrapeInstagram(options = {}) {
           // Send to admin
           if (targetAdmin) {
             try {
-              const resAdmin = await sendPersonalMessage(targetAdmin, message, { imageUrl: post.imageUrl });
+              const resAdmin = await sendPersonalMessage(targetAdmin, message, { imageUrl: post.imageUrl, videoUrl: post.videoUrl });
               if (!resAdmin.success) {
                 status = 'failed';
                 errorMsg += `Admin (${targetAdmin}): ${resAdmin.error || 'Gagal'}. `;
@@ -290,7 +314,8 @@ async function scrapeInstagram(options = {}) {
           status: status,
           error_msg: errorMsg.trim(),
           post_date: post.postDate,
-          image_url: post.imageUrl || ''
+          image_url: post.imageUrl || '',
+          video_url: post.videoUrl || ''
         });
       }
     } // End of loop over usernames

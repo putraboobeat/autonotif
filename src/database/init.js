@@ -120,6 +120,14 @@ function initDatabase() {
             ALTER TABLE processed_ig_posts ADD COLUMN image_url TEXT;
           `);
         }
+
+        const hasVideoUrl = postCols.some(c => c.name === 'video_url');
+        if (!hasVideoUrl) {
+          log.info('Migrating database: Adding video_url column to processed_ig_posts');
+          db.exec(`
+            ALTER TABLE processed_ig_posts ADD COLUMN video_url TEXT;
+          `);
+        }
       }
     } catch (e) {
       log.error('IG migration failed', { error: e.message });

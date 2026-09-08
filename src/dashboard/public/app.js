@@ -1771,7 +1771,10 @@ async function loadIgPosts() {
         
         let timeLabel = post.post_date ? new Date(post.post_date).toLocaleString('id-ID') : new Date(post.created_at).toLocaleString('id-ID');
         let scrapeLabel = new Date(post.created_at).toLocaleString('id-ID');
-        let linkLabel = post.link ? `<br><a href="${post.link}" target="_blank" style="color: #38b6ff; text-decoration:none; font-size:11px;">Buka Post ↗</a>` : '';
+        let mediaBadge = (post.video_url || (post.link && post.link.includes('/reel/')))
+          ? '<span class="badge" style="background:#7c3aed; color:white; font-size:10px; padding:2px 6px; border-radius:4px; margin-left:4px;">🎬 Reels</span>' 
+          : '<span class="badge" style="background:#0284c7; color:white; font-size:10px; padding:2px 6px; border-radius:4px; margin-left:4px;">📸 Foto</span>';
+        let linkLabel = post.link ? `<br><a href="${post.link}" target="_blank" style="color: #38b6ff; text-decoration:none; font-size:11px;">Buka Post ↗</a> ${mediaBadge}` : mediaBadge;
         
         tbody.innerHTML += `
           <tr>

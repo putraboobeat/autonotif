@@ -120,6 +120,8 @@ CREATE TABLE IF NOT EXISTS processed_ig_posts (
     status VARCHAR(50) DEFAULT 'success',
     error_msg TEXT,
     post_date DATETIME,
+    image_url TEXT,
+    video_url TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 

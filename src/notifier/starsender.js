@@ -164,9 +164,19 @@ async function resolveImageAsJpgUrl(imageUrl) {
  */
 async function executeStarSender(to, text, isGroup = false, options = {}) {
   const url = isGroup ? config.starsender.groupUrl : config.starsender.sendUrl;
-  let fileData = options.imageUrl || '';
-  if (fileData && fileData.startsWith('http')) {
-    fileData = await resolveImageAsJpgUrl(fileData);
+  let fileData = '';
+  
+  if (options.videoUrl) {
+    // Media berupa video reels / MP4 asli
+    fileData = options.videoUrl;
+    log.info(`[MEDIA] 🎬 Mengirim video reels: ${fileData.substring(0, 80)}...`);
+  } else if (options.imageUrl) {
+    let rawImg = options.imageUrl;
+    if (rawImg.startsWith('http')) {
+      fileData = await resolveImageAsJpgUrl(rawImg);
+    } else {
+      fileData = rawImg;
+    }
   }
 
   const payload = {
@@ -221,9 +231,10 @@ async function executeGoWA(to, text, isGroup = false, options = {}) {
   }
 
   const payload = isGroup ? { group: to, message: text } : { phone: to, message: text };
-  if (options.imageUrl) {
-    payload.image = options.imageUrl; // basic fallback for GoWA
-    // Note: If GoWA expects a different endpoint for image (e.g. /send/image), it will gracefully degrade or fail, causing fallback.
+  if (options.videoUrl) {
+    payload.image = options.videoUrl;
+  } else if (options.imageUrl) {
+    payload.image = options.imageUrl;
   }
 
   const response = await fetch(url, { method: 'POST', headers, body: JSON.stringify(payload) });

@@ -520,17 +520,18 @@ const IgPostModel = {
     return result || null;
   },
 
-  save({ shortcode, link, caption, matched_code, notified_group, status, error_msg, post_date, image_url }) {
+  save({ shortcode, link, caption, matched_code, notified_group, status, error_msg, post_date, image_url, video_url }) {
     const db = getDb();
     const stmt = db.prepare(`
       INSERT INTO processed_ig_posts 
-      (shortcode, link, caption, matched_code, notified_group, status, error_msg, post_date, image_url)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (shortcode, link, caption, matched_code, notified_group, status, error_msg, post_date, image_url, video_url)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(shortcode) DO UPDATE SET
       status = excluded.status,
       error_msg = excluded.error_msg,
       post_date = excluded.post_date,
-      image_url = excluded.image_url
+      image_url = excluded.image_url,
+      video_url = excluded.video_url
     `);
     return stmt.run(
       shortcode, 
@@ -541,7 +542,8 @@ const IgPostModel = {
       status || 'success',
       error_msg || '',
       post_date || null,
-      image_url || ''
+      image_url || '',
+      video_url || ''
     );
   },
   

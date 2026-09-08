@@ -308,14 +308,35 @@ function createRoutes() {
          }
       }
       
-      const defaultTemplate = '📸 *POSTINGAN TERBARU INSTAGRAM*\n@{{username}}\n\n{{caption}}\n\nSelengkapnya : {{link}}';
-      let templateMsg = ConfigModel.get('ig_template_msg');
-      if (!templateMsg || templateMsg.includes('Kode:') || templateMsg.includes('terkait dengan instansi Anda')) {
-        templateMsg = defaultTemplate;
-      }
+
       
       let imageUrl = post.image_url || '';
-      if (!imageUrl && post.link) {
+      let videoUrl = post.video_url || '';
+
+      // Jika video_url belum tersimpan di DB tapi merupakan reel / video
+      if (!videoUrl && post.link && post.link.includes('/reel/')) {
+        try {
+          const { launchBrowser } = require('../scraper/browser');
+          const { browser } = await launchBrowser();
+          const pPage = await browser.newPage();
+          await pPage.goto(post.link, { waitUntil: 'domcontentloaded', timeout: 15000 });
+          const pHtml = await pPage.content();
+          const mVid = pHtml.match(/"video_versions":\[\{"type":\d+,"url":"([^"]+)"/) ||
+                       pHtml.match(/"video_url":"([^"]+)"/);
+          if (mVid) {
+            videoUrl = mVid[1].replace(/\\u0026/g, '&').replace(/\\\//g, '/');
+            if (post.id) {
+              try {
+                const { getDb } = require('../database/init');
+                getDb().prepare('UPDATE processed_ig_posts SET video_url = ? WHERE id = ?').run(videoUrl, post.id);
+              } catch {}
+            }
+          }
+          await pPage.close();
+        } catch {}
+      }
+
+      if (!imageUrl && !videoUrl && post.link) {
         try {
           const resHtml = await fetch(post.link, { headers: { 'User-Agent': 'curl/7.68.0' }, signal: AbortSignal.timeout(6000) });
           const html = await resHtml.text();
@@ -330,6 +351,16 @@ function createRoutes() {
             }
           }
         } catch {}
+      }
+
+      const defaultTemplate = videoUrl 
+        ? '🎬 *REELS / VIDEO TERBARU INSTAGRAM*\n@{{username}}\n\n{{caption}}\n\nSelengkapnya : {{link}}'
+        : '📸 *POSTINGAN TERBARU INSTAGRAM*\n@{{username}}\n\n{{caption}}\n\nSelengkapnya : {{link}}';
+      let templateMsg = ConfigModel.get('ig_template_msg');
+      if (!templateMsg || templateMsg.includes('Kode:') || templateMsg.includes('terkait dengan instansi Anda')) {
+        templateMsg = defaultTemplate;
+      } else if (videoUrl && templateMsg.includes('📸 *POSTINGAN TERBARU INSTAGRAM*')) {
+        templateMsg = templateMsg.replace('📸 *POSTINGAN TERBARU INSTAGRAM*', '🎬 *REELS / VIDEO TERBARU INSTAGRAM*');
       }
 
       const maxLen = parseInt(ConfigModel.get('ig_caption_max_length'), 10) || 50;
@@ -349,7 +380,7 @@ function createRoutes() {
       
       if (target_group) {
         try {
-          const resGroup = await sendGroupMessage(target_group, message, { imageUrl });
+          const resGroup = await sendGroupMessage(target_group, message, { imageUrl, videoUrl });
           if (!resGroup.success) {
             status = 'failed';
             errorMsg += `Group (${target_group}): ${resGroup.error || 'Gagal'}. `;
@@ -380,7 +411,7 @@ function createRoutes() {
       
       if (target_admin) {
         try {
-          const resAdmin = await sendPersonalMessage(target_admin, message, { imageUrl });
+          const resAdmin = await sendPersonalMessage(target_admin, message, { imageUrl, videoUrl });
           if (!resAdmin.success) {
             status = 'failed';
             errorMsg += `Admin (${target_admin}): ${resAdmin.error || 'Gagal'}. `;
