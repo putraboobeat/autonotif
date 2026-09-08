@@ -203,6 +203,11 @@ function initDatabase() {
     log.error('Template migration failed', { error: err.message });
   }
 
+  // Default ig_caption_max_length
+  try {
+    db.prepare("INSERT OR IGNORE INTO system_config (key, value) VALUES ('ig_caption_max_length', '50')").run();
+  } catch {}
+
   log.info('Database initialized successfully', { path: DB_PATH });
   return db;
 }

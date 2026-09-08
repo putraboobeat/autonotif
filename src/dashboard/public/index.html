@@ -411,6 +411,18 @@
 
           <div class="settings-row">
             <div class="settings-info">
+              <h4>Panjang Maksimal Caption</h4>
+              <p>Jumlah karakter cuplikan caption sebelum dipotong (...)</p>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <input type="number" class="form-input" id="setting-ig-caption-length" placeholder="50" min="10" max="2000" style="width: 100px;">
+              <span style="font-size: 13px; color: var(--text-secondary);">karakter</span>
+              <button class="btn btn-primary btn-sm" onclick="saveCustomSetting('ig_caption_max_length', 'setting-ig-caption-length')">Simpan</button>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-info">
               <h4>Watermark Instagram</h4>
               <p>Tambahan teks di akhir pesan</p>
             </div>

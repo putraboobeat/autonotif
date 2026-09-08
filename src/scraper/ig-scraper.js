@@ -197,9 +197,10 @@ async function scrapeInstagram(options = {}) {
           templateMsg = defaultTemplate;
         }
         
-        // Format message (50 karakter pertama + selengkapnya link)
+        // Format message (panjang caption sesuai setting ig_caption_max_length, default 50)
+        const maxLen = parseInt(ConfigModel.get('ig_caption_max_length'), 10) || 50;
         const rawCaption = (post.caption || '').replace(/\s+/g, ' ').trim();
-        const captionSnippet = rawCaption.length > 50 ? rawCaption.substring(0, 50).trim() + '...' : (rawCaption || 'Postingan baru');
+        const captionSnippet = rawCaption.length > maxLen ? rawCaption.substring(0, maxLen).trim() + '...' : (rawCaption || 'Postingan baru');
         
         let message = templateMsg
           .replace(/\{\{username\}\}/g, username)

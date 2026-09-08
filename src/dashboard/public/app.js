@@ -1077,6 +1077,7 @@ async function loadSettings() {
       document.getElementById('setting-ig-enabled').checked = res.data.ig_enabled === '1';
       document.getElementById('setting-ig-username').value = res.data.ig_username || '';
       document.getElementById('setting-ig-template').value = res.data.ig_template_msg || '';
+      document.getElementById('setting-ig-caption-length').value = res.data.ig_caption_max_length || '50';
       document.getElementById('setting-ig-watermark').value = res.data.ig_watermark || '';
       document.getElementById('test-ig-group').value = res.data.ig_default_group || '';
       document.getElementById('test-ig-admin').value = res.data.ig_default_admin || '';
