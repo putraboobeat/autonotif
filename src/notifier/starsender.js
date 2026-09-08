@@ -50,28 +50,113 @@ function applyAntiBanProtection(message) {
 // ============================================
 
 /**
- * Convert an image URL to a JPEG base64 data URI.
- * Ini menjamin WhatsApp mendeteksi MIME type sebagai image/jpeg,
- * sehingga tampil sebagai FOTO TERBUKA PENUH (imageMessage) dan bukan file dokumen (.webp).
+ * Convert an Instagram / CDN image URL to a clean public .jpg URL.
+ * Catatan penting:
+ * 1. URL Instagram CDN berakhiran '_n.webp' membuat gateway WhatsApp mendeteksinya sebagai file Dokumen.
+ * 2. Mengubah ekstensi di URL CDN langsung membuat HMAC signature Meta rusak (HTTP 403 Forbidden).
+ * 3. Base64 Data URI ('data:image/...') tidak didukung oleh StarSender (harus public URL HTTP/HTTPS).
+ * 4. Solusi: Unduh buffer gambar asli (yang sebenarnya berformat JPEG byte), lalu unggah
+ *    sebagai file .jpg ke public host (Catbox / Litterbox / tmpfiles) agar StarSender menerima
+ *    URL berakhiran .jpg murni dan WhatsApp menampilkannya sebagai FOTO TERBUKA PENUH (imageMessage).
  */
-async function resolveImageAsBase64(imageUrl) {
+async function resolveImageAsJpgUrl(imageUrl) {
   if (!imageUrl || typeof imageUrl !== 'string') return '';
-  if (imageUrl.startsWith('data:image/')) return imageUrl;
+  
+  // Jika sudah URL .jpg bersih yang bukan dari cdninstagram, langsung gunakan
+  if (imageUrl.endsWith('.jpg') && !imageUrl.includes('cdninstagram.com')) {
+    return imageUrl;
+  }
   
   try {
     const res = await fetch(imageUrl, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
-      signal: AbortSignal.timeout(10000)
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
+      },
+      signal: AbortSignal.timeout(12000)
     });
-    if (!res.ok) return imageUrl;
+    
+    if (!res.ok) {
+      log.warn(`[MEDIA] Gagal mengunduh gambar Instagram (HTTP ${res.status}): ${imageUrl}`);
+      return imageUrl;
+    }
     
     const arrayBuffer = await res.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-    return `data:image/jpeg;base64,${buffer.toString('base64')}`;
+    if (buffer.length < 100) {
+      log.warn(`[MEDIA] Ukuran buffer gambar terlalu kecil (${buffer.length} bytes)`);
+      return imageUrl;
+    }
+
+    // Provider 1: Catbox (https://catbox.moe)
+    try {
+      const form = new FormData();
+      form.append('reqtype', 'fileupload');
+      const blob = new Blob([buffer], { type: 'image/jpeg' });
+      form.append('fileToUpload', blob, 'post.jpg');
+      
+      const catboxRes = await fetch('https://catbox.moe/user/api.php', {
+        method: 'POST',
+        body: form,
+        signal: AbortSignal.timeout(10000)
+      });
+      const catboxUrl = (await catboxRes.text()).trim();
+      if (catboxUrl.startsWith('http')) {
+        log.info(`[MEDIA] ✅ Gambar berhasil di-convert ke JPG via Catbox: ${catboxUrl}`);
+        return catboxUrl;
+      }
+    } catch (e1) {
+      log.warn(`[MEDIA] Catbox gagal: ${e1.message}, mencoba Litterbox...`);
+    }
+
+    // Provider 2: Litterbox (Temporary 24h retention)
+    try {
+      const form = new FormData();
+      form.append('reqtype', 'fileupload');
+      form.append('time', '24h');
+      const blob = new Blob([buffer], { type: 'image/jpeg' });
+      form.append('fileToUpload', blob, 'post.jpg');
+      
+      const litterRes = await fetch('https://litterbox.catbox.moe/resources/internals/api.php', {
+        method: 'POST',
+        body: form,
+        signal: AbortSignal.timeout(10000)
+      });
+      const litterUrl = (await litterRes.text()).trim();
+      if (litterUrl.startsWith('http')) {
+        log.info(`[MEDIA] ✅ Gambar berhasil di-convert ke JPG via Litterbox: ${litterUrl}`);
+        return litterUrl;
+      }
+    } catch (e2) {
+      log.warn(`[MEDIA] Litterbox gagal: ${e2.message}, mencoba tmpfiles...`);
+    }
+
+    // Provider 3: tmpfiles.org
+    try {
+      const form = new FormData();
+      const blob = new Blob([buffer], { type: 'image/jpeg' });
+      form.append('file', blob, 'post.jpg');
+      
+      const tmpRes = await fetch('https://tmpfiles.org/api/v1/upload', {
+        method: 'POST',
+        body: form,
+        signal: AbortSignal.timeout(10000)
+      });
+      const tmpData = await tmpRes.json();
+      if (tmpData?.data?.url) {
+        const directUrl = tmpData.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
+        log.info(`[MEDIA] ✅ Gambar berhasil di-convert ke JPG via tmpfiles: ${directUrl}`);
+        return directUrl;
+      }
+    } catch (e3) {
+      log.warn(`[MEDIA] tmpfiles gagal: ${e3.message}`);
+    }
+
   } catch (err) {
-    log.warn(`Failed to convert image to base64: ${err.message}. Using original URL.`);
-    return imageUrl;
+    log.error(`[MEDIA] Gagal resolve image ke JPG: ${err.message}`);
   }
+
+  return imageUrl;
 }
 
 /**
@@ -81,7 +166,7 @@ async function executeStarSender(to, text, isGroup = false, options = {}) {
   const url = isGroup ? config.starsender.groupUrl : config.starsender.sendUrl;
   let fileData = options.imageUrl || '';
   if (fileData && fileData.startsWith('http')) {
-    fileData = await resolveImageAsBase64(fileData);
+    fileData = await resolveImageAsJpgUrl(fileData);
   }
 
   const payload = {

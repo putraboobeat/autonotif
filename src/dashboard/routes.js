@@ -317,13 +317,20 @@ function createRoutes() {
       let imageUrl = post.image_url || '';
       if (!imageUrl && post.link) {
         try {
-          const resHtml = await fetch(post.link, { headers: { 'User-Agent': 'curl/7.68.0' }, signal: AbortSignal.timeout(5000) });
+          const resHtml = await fetch(post.link, { headers: { 'User-Agent': 'curl/7.68.0' }, signal: AbortSignal.timeout(6000) });
           const html = await resHtml.text();
           const m = html.match(/property="og:image" content="([^"]+)"/);
-          if (m) imageUrl = m[1].replace(/&amp;/g, '&');
+          if (m) {
+            imageUrl = m[1].replace(/&amp;/g, '&');
+            if (post.id) {
+              try {
+                const { getDb } = require('../database/init');
+                getDb().prepare('UPDATE processed_ig_posts SET image_url = ? WHERE id = ?').run(imageUrl, post.id);
+              } catch {}
+            }
+          }
         } catch {}
       }
-      // imageUrl tetap menggunakan URL asli bertoken valid untuk diunduh menjadi base64 JPEG oleh resolveImageAsBase64
 
       const maxLen = parseInt(ConfigModel.get('ig_caption_max_length'), 10) || 50;
       const rawCaption = (post.caption || '').replace(/\s+/g, ' ').trim();
