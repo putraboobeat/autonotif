@@ -220,12 +220,43 @@ async function scrapeInstagram(options = {}) {
             if (timeEl) {
               pDate = timeEl.getAttribute('datetime');
             }
-            return { cap, img, vid, pDate };
+            // Transcode Slide 1 langsung menggunakan Canvas Chromium ke format JPEG murni
+            // Ini mencegah bug text outline/rusak dan menjamin kompatibilitas 100% dengan WhatsApp
+            let jpegBase64 = '';
+            const targetImg = aagv || document.querySelector('main img, article img');
+            if (targetImg && (targetImg.naturalWidth || targetImg.width) > 250) {
+              try {
+                const canvas = document.createElement('canvas');
+                canvas.width = targetImg.naturalWidth || targetImg.width;
+                canvas.height = targetImg.naturalHeight || targetImg.height;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(targetImg, 0, 0);
+                jpegBase64 = canvas.toDataURL('image/jpeg', 0.95);
+              } catch (e) {}
+            }
+
+            return { cap, img, vid, pDate, jpegBase64 };
           });
           caption = extracted.cap;
           imageUrl = extracted.img || '';
           videoUrl = extracted.vid || '';
           postDate = extracted.pDate;
+
+          // Jika berhasil di-transcode ke JPEG murni via Canvas, upload langsung ke temporary host
+          if (extracted.jpegBase64 && extracted.jpegBase64.startsWith('data:image/jpeg;base64,')) {
+            try {
+              const { uploadJpegBuffer } = require('../notifier/starsender');
+              const buf = Buffer.from(extracted.jpegBase64.replace(/^data:image\/jpeg;base64,/, ''), 'base64');
+              const hostedUrl = await uploadJpegBuffer(buf);
+              if (hostedUrl) {
+                imageUrl = hostedUrl;
+              }
+            } catch (upErr) {
+              log.warn(`[SCRAPER] Gagal upload JPEG canvas: ${upErr.message}`);
+            }
+          }
 
           // Jika videoUrl belum didapat dari meta tags (sering terjadi pada format reels terbaru),
           // cari pola video_versions langsung dari HTML halaman

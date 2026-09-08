@@ -329,9 +329,10 @@ function createRoutes() {
       let imageUrl = post.image_url || '';
       let videoUrl = post.video_url || '';
 
-      // Cek apakah imageUrl kosong atau masih berupa thumbnail persegi terpotong (og:image / stp=c...s640x640)
+      // Cek apakah imageUrl kosong, thumbnail terpotong, atau CDN Instagram yang butuh transcode JPEG murni
+      const isInstagramCdn = imageUrl && (imageUrl.includes('cdninstagram.com') || imageUrl.includes('fbcdn.net'));
       const isCroppedImage = imageUrl && (imageUrl.includes('stp=c') || imageUrl.includes('s640x640'));
-      const needsImageFetch = (!imageUrl || isCroppedImage) && !videoUrl && post.link;
+      const needsImageFetch = (!imageUrl || isCroppedImage || isInstagramCdn) && !videoUrl && post.link;
       const needsVideoFetch = !videoUrl && post.link && post.link.includes('/reel/');
 
       if (needsVideoFetch || needsImageFetch) {
@@ -361,45 +362,78 @@ function createRoutes() {
               await pPage.waitForSelector('div._aagv img, main img, meta[property="og:image"]', { timeout: 3500 });
             } catch {}
 
-            const extImg = await pPage.evaluate(() => {
+            const extResult = await pPage.evaluate(() => {
               // 1. div._aagv img (container slide Instagram)
               const aagv = document.querySelector('div._aagv img');
+              let slide1Img = '';
               if (aagv && aagv.src) {
                 if (aagv.srcset) {
                   const parts = aagv.srcset.split(',').map(s => s.trim().split(' '));
-                  return parts[parts.length - 1][0];
+                  slide1Img = parts[parts.length - 1][0];
+                } else {
+                  slide1Img = aagv.src;
                 }
-                return aagv.src;
               }
               // 2. Gambar pertama di main/article (bukan avatar)
-              const allImgs = Array.from(document.querySelectorAll('main img, article img'));
-              const firstSlide = allImgs.find(i => {
-                const alt = (i.alt || '').toLowerCase();
-                if (alt.includes('profile picture') || alt.includes('avatar')) return false;
-                if (i.closest('header')) return false;
-                const w = i.naturalWidth || i.width || 0;
-                const h = i.naturalHeight || i.height || 0;
-                return (w > 250 || h > 250);
-              });
-              if (firstSlide) {
-                if (firstSlide.srcset) {
-                  const parts = firstSlide.srcset.split(',').map(s => s.trim().split(' '));
-                  return parts[parts.length - 1][0];
+              if (!slide1Img) {
+                const allImgs = Array.from(document.querySelectorAll('main img, article img'));
+                const firstSlide = allImgs.find(i => {
+                  const alt = (i.alt || '').toLowerCase();
+                  if (alt.includes('profile picture') || alt.includes('avatar')) return false;
+                  if (i.closest('header')) return false;
+                  const w = i.naturalWidth || i.width || 0;
+                  const h = i.naturalHeight || i.height || 0;
+                  return (w > 250 || h > 250);
+                });
+                if (firstSlide) {
+                  if (firstSlide.srcset) {
+                    const parts = firstSlide.srcset.split(',').map(s => s.trim().split(' '));
+                    slide1Img = parts[parts.length - 1][0];
+                  } else {
+                    slide1Img = firstSlide.src;
+                  }
                 }
-                return firstSlide.src;
               }
               // 3. Fallback meta og:image
-              return document.querySelector('meta[property="og:image"]')?.getAttribute('content') || '';
+              if (!slide1Img) {
+                slide1Img = document.querySelector('meta[property="og:image"]')?.getAttribute('content') || '';
+              }
+
+              // 4. Transcode via Canvas ke format JPEG murni
+              let jpegBase64 = '';
+              const targetImg = aagv || document.querySelector('main img, article img');
+              if (targetImg && (targetImg.naturalWidth || targetImg.width) > 250) {
+                try {
+                  const canvas = document.createElement('canvas');
+                  canvas.width = targetImg.naturalWidth || targetImg.width;
+                  canvas.height = targetImg.naturalHeight || targetImg.height;
+                  const ctx = canvas.getContext('2d');
+                  ctx.fillStyle = '#FFFFFF';
+                  ctx.fillRect(0, 0, canvas.width, canvas.height);
+                  ctx.drawImage(targetImg, 0, 0);
+                  jpegBase64 = canvas.toDataURL('image/jpeg', 0.95);
+                } catch (e) {}
+              }
+
+              return { slide1Img, jpegBase64 };
             });
 
-            if (extImg) {
-              imageUrl = extImg;
-              if (post.id) {
-                try {
-                  const { getDb } = require('../database/init');
-                  getDb().prepare('UPDATE processed_ig_posts SET image_url = ? WHERE id = ?').run(imageUrl, post.id);
-                } catch {}
-              }
+            if (extResult.jpegBase64 && extResult.jpegBase64.startsWith('data:image/jpeg;base64,')) {
+              try {
+                const { uploadJpegBuffer } = require('../notifier/starsender');
+                const buf = Buffer.from(extResult.jpegBase64.replace(/^data:image\/jpeg;base64,/, ''), 'base64');
+                const hostedUrl = await uploadJpegBuffer(buf);
+                if (hostedUrl) imageUrl = hostedUrl;
+              } catch (upErr) {}
+            } else if (extResult.slide1Img) {
+              imageUrl = extResult.slide1Img;
+            }
+
+            if (imageUrl && post.id) {
+              try {
+                const { getDb } = require('../database/init');
+                getDb().prepare('UPDATE processed_ig_posts SET image_url = ? WHERE id = ?').run(imageUrl, post.id);
+              } catch {}
             }
           }
 

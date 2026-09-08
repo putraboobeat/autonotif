@@ -89,10 +89,97 @@ function applyAntiBanProtection(message) {
  *    sebagai file .jpg ke public host (Catbox / Litterbox / tmpfiles) agar StarSender menerima
  *    URL berakhiran .jpg murni dan WhatsApp menampilkannya sebagai FOTO TERBUKA PENUH (imageMessage).
  */
+/**
+ * Upload buffer JPEG ke temporary host (Catbox / Litterbox / tmpfiles)
+ * Menghasilkan URL langsung .jpg yang valid
+ */
+async function uploadJpegBuffer(buffer) {
+  if (!buffer || buffer.length < 100) return '';
+
+  // Provider 1: Catbox (https://catbox.moe)
+  try {
+    const form = new FormData();
+    form.append('reqtype', 'fileupload');
+    const blob = new Blob([buffer], { type: 'image/jpeg' });
+    form.append('fileToUpload', blob, 'post.jpg');
+    
+    const catboxRes = await fetch('https://catbox.moe/user/api.php', {
+      method: 'POST',
+      body: form,
+      signal: AbortSignal.timeout(10000)
+    });
+    const catboxUrl = (await catboxRes.text()).trim();
+    if (catboxUrl.startsWith('http')) {
+      log.info(`[MEDIA] ✅ Gambar JPEG berhasil di-host via Catbox: ${catboxUrl}`);
+      return catboxUrl;
+    }
+  } catch (e1) {
+    log.warn(`[MEDIA] Catbox gagal: ${e1.message}, mencoba Litterbox...`);
+  }
+
+  // Provider 2: Litterbox (Temporary 24h retention)
+  try {
+    const form = new FormData();
+    form.append('reqtype', 'fileupload');
+    form.append('time', '24h');
+    const blob = new Blob([buffer], { type: 'image/jpeg' });
+    form.append('fileToUpload', blob, 'post.jpg');
+    
+    const litterRes = await fetch('https://litterbox.catbox.moe/resources/internals/api.php', {
+      method: 'POST',
+      body: form,
+      signal: AbortSignal.timeout(10000)
+    });
+    const litterUrl = (await litterRes.text()).trim();
+    if (litterUrl.startsWith('http')) {
+      log.info(`[MEDIA] ✅ Gambar JPEG berhasil di-host via Litterbox: ${litterUrl}`);
+      return litterUrl;
+    }
+  } catch (e2) {
+    log.warn(`[MEDIA] Litterbox gagal: ${e2.message}, mencoba tmpfiles...`);
+  }
+
+  // Provider 3: tmpfiles.org
+  try {
+    const form = new FormData();
+    const blob = new Blob([buffer], { type: 'image/jpeg' });
+    form.append('file', blob, 'post.jpg');
+    
+    const tmpRes = await fetch('https://tmpfiles.org/api/v1/upload', {
+      method: 'POST',
+      body: form,
+      signal: AbortSignal.timeout(10000)
+    });
+    const tmpData = await tmpRes.json();
+    if (tmpData?.data?.url) {
+      const directUrl = tmpData.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
+      log.info(`[MEDIA] ✅ Gambar JPEG berhasil di-host via tmpfiles: ${directUrl}`);
+      return directUrl;
+    }
+  } catch (e3) {
+    log.warn(`[MEDIA] tmpfiles gagal: ${e3.message}`);
+  }
+
+  return '';
+}
+
+/**
+ * Pastikan image URL berformat JPG yang kompatibel dengan WhatsApp.
+ */
 async function resolveImageAsJpgUrl(imageUrl) {
   if (!imageUrl || typeof imageUrl !== 'string') return '';
   
-  // Jika sudah URL .jpg bersih yang bukan dari cdninstagram / fbcdn, langsung gunakan
+  // Jika berupa base64 data URL JPEG murni dari Canvas
+  if (imageUrl.startsWith('data:image/jpeg;base64,')) {
+    const buf = Buffer.from(imageUrl.replace(/^data:image\/jpeg;base64,/, ''), 'base64');
+    const hosted = await uploadJpegBuffer(buf);
+    return hosted || imageUrl;
+  }
+
+  // Jika sudah URL .jpg bersih yang sudah di-host pihak ketiga, langsung gunakan
+  if (imageUrl.includes('catbox.moe') || imageUrl.includes('tmpfiles.org')) {
+    return imageUrl;
+  }
   if (imageUrl.endsWith('.jpg') && !imageUrl.includes('cdninstagram.com') && !imageUrl.includes('fbcdn.net') && !imageUrl.includes('instagram.')) {
     return imageUrl;
   }
@@ -118,69 +205,8 @@ async function resolveImageAsJpgUrl(imageUrl) {
       return imageUrl;
     }
 
-    // Provider 1: Catbox (https://catbox.moe)
-    try {
-      const form = new FormData();
-      form.append('reqtype', 'fileupload');
-      const blob = new Blob([buffer], { type: 'image/jpeg' });
-      form.append('fileToUpload', blob, 'post.jpg');
-      
-      const catboxRes = await fetch('https://catbox.moe/user/api.php', {
-        method: 'POST',
-        body: form,
-        signal: AbortSignal.timeout(10000)
-      });
-      const catboxUrl = (await catboxRes.text()).trim();
-      if (catboxUrl.startsWith('http')) {
-        log.info(`[MEDIA] ✅ Gambar berhasil di-convert ke JPG via Catbox: ${catboxUrl}`);
-        return catboxUrl;
-      }
-    } catch (e1) {
-      log.warn(`[MEDIA] Catbox gagal: ${e1.message}, mencoba Litterbox...`);
-    }
-
-    // Provider 2: Litterbox (Temporary 24h retention)
-    try {
-      const form = new FormData();
-      form.append('reqtype', 'fileupload');
-      form.append('time', '24h');
-      const blob = new Blob([buffer], { type: 'image/jpeg' });
-      form.append('fileToUpload', blob, 'post.jpg');
-      
-      const litterRes = await fetch('https://litterbox.catbox.moe/resources/internals/api.php', {
-        method: 'POST',
-        body: form,
-        signal: AbortSignal.timeout(10000)
-      });
-      const litterUrl = (await litterRes.text()).trim();
-      if (litterUrl.startsWith('http')) {
-        log.info(`[MEDIA] ✅ Gambar berhasil di-convert ke JPG via Litterbox: ${litterUrl}`);
-        return litterUrl;
-      }
-    } catch (e2) {
-      log.warn(`[MEDIA] Litterbox gagal: ${e2.message}, mencoba tmpfiles...`);
-    }
-
-    // Provider 3: tmpfiles.org
-    try {
-      const form = new FormData();
-      const blob = new Blob([buffer], { type: 'image/jpeg' });
-      form.append('file', blob, 'post.jpg');
-      
-      const tmpRes = await fetch('https://tmpfiles.org/api/v1/upload', {
-        method: 'POST',
-        body: form,
-        signal: AbortSignal.timeout(10000)
-      });
-      const tmpData = await tmpRes.json();
-      if (tmpData?.data?.url) {
-        const directUrl = tmpData.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
-        log.info(`[MEDIA] ✅ Gambar berhasil di-convert ke JPG via tmpfiles: ${directUrl}`);
-        return directUrl;
-      }
-    } catch (e3) {
-      log.warn(`[MEDIA] tmpfiles gagal: ${e3.message}`);
-    }
+    const hosted = await uploadJpegBuffer(buffer);
+    if (hosted) return hosted;
 
   } catch (err) {
     log.error(`[MEDIA] Gagal resolve image ke JPG: ${err.message}`);
@@ -531,4 +557,6 @@ module.exports = {
   sendPersonalMessage,
   sendGroupMessage,
   sendTicketNotification,
+  uploadJpegBuffer,
+  resolveImageAsJpgUrl,
 };
