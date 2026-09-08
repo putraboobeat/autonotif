@@ -1,0 +1,44 @@
+PANDUAN DEPLOY & UPDATE SERVER (Auto Notif Pengaduan)
+=====================================================
+
+Dokumen ini berisi perintah cepat (cheat sheet) untuk meng-update
+aplikasi Auto Notif Pengaduan di server VPS Anda.
+
+CARA CEPAT (COPY-PASTE):
+------------------------
+Copy seluruh blok perintah di bawah ini, lalu paste ke terminal SSH server
+Anda dan tekan Enter:
+
+cd $(find /home /var/www /opt -maxdepth 3 -type d \( -name "autonotif" -o -name "Auto Notif Pengaduan" \) 2>/dev/null | head -n 1)
+git fetch origin
+git reset --hard origin/main
+npm install
+pm2 restart autonotif || pm2 restart index || pm2 restart all
+
+
+
+PENJELASAN PERINTAH:
+--------------------
+1. cd $(find ...) : Perintah ini mencari folder proyek Anda secara otomatis 
+                    (baik bernama 'autonotif' atau 'Auto Notif Pengaduan') 
+                    lalu masuk ke dalamnya.
+2. git fetch ...  : Menarik versi kode terbaru dari repositori GitHub.
+3. git reset ...  : Memaksa kode lokal di server 100% sama dengan di GitHub.
+                    (Jangan khawatir, file .env dan database.sqlite aman).
+4. npm install    : Memastikan semua library pendukung sudah terinstall.
+5. pm2 restart .. : Me-restart background service aplikasi Anda.
+
+
+
+PANDUAN TROUBLESHOOTING:
+------------------------
+1. Cek Status Aplikasi Terkini:
+   Ketik: pm2 list
+   
+2. Lihat Log Error/Realtime:
+   Ketik: pm2 logs
+
+3. Jika Perintah "cd" Gagal:
+   Cari foldernya secara manual dengan perintah: 
+   find / -name "autonotif" 2>/dev/null
+   Kemudian masuk dengan: cd /path/hasil/pencarian
