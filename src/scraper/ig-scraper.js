@@ -1,13 +1,13 @@
 const { getBrowser, getPage } = require('./browser');
-const { IgRuleModel, IgPostModel, ConfigModel } = require('../database/models');
+const { IgRuleModel, IgPostModel, ConfigModel, NotificationLogModel } = require('../database/models');
 const { sendGroupMessage, sendPersonalMessage } = require('../notifier/starsender');
 const { createLogger } = require('../utils/logger');
 
 const log = createLogger('IG-SCRAPER');
 
-async function scrapeInstagram() {
+async function scrapeInstagram(options = {}) {
   const isEnabled = ConfigModel.get('ig_enabled');
-  if (isEnabled !== '1') {
+  if (isEnabled !== '1' && !options.isManual) {
     return;
   }
 
@@ -186,8 +186,11 @@ async function scrapeInstagram() {
         post.imageUrl = imageUrl || '';
         post.postDate = postDate || '';
         
-        const targetGroup = ConfigModel.get('ig_default_group') || '';
-        const targetAdmin = ConfigModel.get('ig_default_admin') || '';
+        let targetGroup = (ConfigModel.get('ig_default_group') || '').trim();
+        if (!targetGroup) {
+          targetGroup = (ConfigModel.get('wa_group_id') || '').trim();
+        }
+        let targetAdmin = (ConfigModel.get('ig_default_admin') || '').trim();
         
         // Get templates
         const templateMsg = ConfigModel.get('ig_template_msg') || '📸 *INFO POSTINGAN BARU* 📸\n\nAda postingan Instagram terbaru (@{{username}}).\n\n*Caption:* {{caption}}\n\n*Link:* {{link}}';
@@ -205,31 +208,73 @@ async function scrapeInstagram() {
         let status = 'success';
         let errorMsg = '';
         
-        // Send to group
-        if (targetGroup) {
-          try {
-            const resGroup = await sendGroupMessage(targetGroup, message, { imageUrl: post.imageUrl });
-            if (!resGroup.success) {
+        if (!targetGroup && !targetAdmin) {
+          status = 'failed';
+          errorMsg = 'Tujuan Group / Nomor Admin WhatsApp belum diatur di form Default Target Pengiriman Instagram atau Pengaturan Utama.';
+          log.warn(`[IG] No target group or admin configured. Post ${post.shortcode} marked as failed.`);
+        } else {
+          // Send to group
+          if (targetGroup) {
+            try {
+              const resGroup = await sendGroupMessage(targetGroup, message);
+              if (!resGroup.success) {
+                status = 'failed';
+                errorMsg += `Group (${targetGroup}): ${resGroup.error || 'Gagal'}. `;
+              }
+              NotificationLogModel.create({
+                ticketId: `IG-${post.shortcode}`,
+                targetType: 'group',
+                targetName: targetGroup,
+                targetNumber: '',
+                message: resGroup.sentMessage || message,
+                status: resGroup.success ? 'sent' : 'failed',
+                response: JSON.stringify(resGroup)
+              });
+            } catch (err) {
               status = 'failed';
-              errorMsg += `Group: ${resGroup.error}. `;
+              errorMsg += `Group Exception: ${err.message}. `;
+              NotificationLogModel.create({
+                ticketId: `IG-${post.shortcode}`,
+                targetType: 'group',
+                targetName: targetGroup,
+                targetNumber: '',
+                message: message,
+                status: 'failed',
+                response: JSON.stringify({ error: err.message })
+              });
             }
-          } catch (err) {
-            status = 'failed';
-            errorMsg += `Group Exception: ${err.message}. `;
           }
-        }
-        
-        // Send to admin
-        if (targetAdmin) {
-          try {
-            const resAdmin = await sendPersonalMessage(targetAdmin, message, { imageUrl: post.imageUrl });
-            if (!resAdmin.success) {
+          
+          // Send to admin
+          if (targetAdmin) {
+            try {
+              const resAdmin = await sendPersonalMessage(targetAdmin, message);
+              if (!resAdmin.success) {
+                status = 'failed';
+                errorMsg += `Admin (${targetAdmin}): ${resAdmin.error || 'Gagal'}. `;
+              }
+              NotificationLogModel.create({
+                ticketId: `IG-${post.shortcode}`,
+                targetType: 'personal',
+                targetName: 'Admin IG',
+                targetNumber: targetAdmin,
+                message: resAdmin.sentMessage || message,
+                status: resAdmin.success ? 'sent' : 'failed',
+                response: JSON.stringify(resAdmin)
+              });
+            } catch (err) {
               status = 'failed';
-              errorMsg += `Admin: ${resAdmin.error}. `;
+              errorMsg += `Admin Exception: ${err.message}. `;
+              NotificationLogModel.create({
+                ticketId: `IG-${post.shortcode}`,
+                targetType: 'personal',
+                targetName: 'Admin IG',
+                targetNumber: targetAdmin,
+                message: message,
+                status: 'failed',
+                response: JSON.stringify({ error: err.message })
+              });
             }
-          } catch (err) {
-            status = 'failed';
-            errorMsg += `Admin Exception: ${err.message}. `;
           }
         }
         
@@ -239,7 +284,7 @@ async function scrapeInstagram() {
           link: post.link,
           caption: post.caption,
           matched_code: 'ALL',
-          notified_group: targetGroup,
+          notified_group: targetGroup || targetAdmin || '-',
           status: status,
           error_msg: errorMsg.trim(),
           post_date: post.postDate

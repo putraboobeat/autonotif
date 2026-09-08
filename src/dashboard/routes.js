@@ -254,7 +254,7 @@ function createRoutes() {
     try {
       ConfigModel.set('ig_scrape_mode', 'normal');
       // Trigger IG scrape asynchronously
-      scrapeInstagram().catch(e => log.error('Manual IG Scrape Error', { error: e.message }));
+      scrapeInstagram({ isManual: true }).catch(e => log.error('Manual IG Scrape Error', { error: e.message }));
       res.json({ success: true, message: 'Instagram scraper dijalankan di latar belakang.' });
     } catch (error) {
       res.status(500).json({ success: false, error: error.message });
@@ -265,7 +265,7 @@ function createRoutes() {
     try {
       ConfigModel.set('ig_scrape_mode', 'deep');
       // Trigger IG scrape asynchronously
-      scrapeInstagram().catch(e => log.error('Deep IG Scrape Error', { error: e.message }));
+      scrapeInstagram({ isManual: true }).catch(e => log.error('Deep IG Scrape Error', { error: e.message }));
       res.json({ success: true, message: 'Instagram Scraper (Unlimited Scroll Mode) dimulai.' });
     } catch (error) {
       res.status(500).json({ success: false, error: error.message });
@@ -324,23 +324,73 @@ function createRoutes() {
       let errorMsg = '';
       
       if (target_group) {
-        const resGroup = await sendGroupMessage(target_group, message);
-        if (!resGroup.success) {
+        try {
+          const resGroup = await sendGroupMessage(target_group, message);
+          if (!resGroup.success) {
+            status = 'failed';
+            errorMsg += `Group (${target_group}): ${resGroup.error || 'Gagal'}. `;
+          }
+          NotificationLogModel.create({
+            ticketId: `IG-${post.shortcode}`,
+            targetType: 'group',
+            targetName: target_group,
+            targetNumber: '',
+            message: resGroup.sentMessage || message,
+            status: resGroup.success ? 'sent' : 'failed',
+            response: JSON.stringify(resGroup)
+          });
+        } catch (err) {
           status = 'failed';
-          errorMsg += `Group: ${resGroup.error}. `;
+          errorMsg += `Group Exception: ${err.message}. `;
+          NotificationLogModel.create({
+            ticketId: `IG-${post.shortcode}`,
+            targetType: 'group',
+            targetName: target_group,
+            targetNumber: '',
+            message: message,
+            status: 'failed',
+            response: JSON.stringify({ error: err.message })
+          });
         }
       }
       
       if (target_admin) {
-        const resAdmin = await sendPersonalMessage(target_admin, message);
-        if (!resAdmin.success) {
+        try {
+          const resAdmin = await sendPersonalMessage(target_admin, message);
+          if (!resAdmin.success) {
+            status = 'failed';
+            errorMsg += `Admin (${target_admin}): ${resAdmin.error || 'Gagal'}. `;
+          }
+          NotificationLogModel.create({
+            ticketId: `IG-${post.shortcode}`,
+            targetType: 'personal',
+            targetName: 'Admin IG',
+            targetNumber: target_admin,
+            message: resAdmin.sentMessage || message,
+            status: resAdmin.success ? 'sent' : 'failed',
+            response: JSON.stringify(resAdmin)
+          });
+        } catch (err) {
           status = 'failed';
-          errorMsg += `Admin: ${resAdmin.error}. `;
+          errorMsg += `Admin Exception: ${err.message}. `;
+          NotificationLogModel.create({
+            ticketId: `IG-${post.shortcode}`,
+            targetType: 'personal',
+            targetName: 'Admin IG',
+            targetNumber: target_admin,
+            message: message,
+            status: 'failed',
+            response: JSON.stringify({ error: err.message })
+          });
         }
       }
       
       IgPostModel.updateStatus(post.id, status, errorMsg.trim());
-      res.json({ success: true, message: 'Kirim ulang berhasil dijalankan.' });
+      if (status === 'failed') {
+        res.json({ success: false, error: `Pengiriman gagal: ${errorMsg.trim()}` });
+      } else {
+        res.json({ success: true, message: 'Kirim ulang berhasil dikirim via WhatsApp!' });
+      }
       
     } catch (error) {
       res.status(500).json({ success: false, error: error.message });
