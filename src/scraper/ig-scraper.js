@@ -65,7 +65,9 @@ async function scrapeInstagram() {
       // Wait for articles to load
       try {
         ConfigModel.set('ig_scraper_status', `Menunggu data postingan @${username}...`);
-        await igPage.waitForSelector('article a[href^="/p/"]', { timeout: 10000 });
+        await igPage.waitForFunction(() => {
+          return Array.from(document.querySelectorAll('a')).some(a => a.href && a.href.includes('/p/'));
+        }, { timeout: 10000 });
       } catch (err) {
         log.warn(`Could not find posts for @${username}. Maybe private or blocked.`);
         await igPage.close();
@@ -74,17 +76,20 @@ async function scrapeInstagram() {
 
       // Extract posts
       const posts = await igPage.evaluate(() => {
-        const postElements = document.querySelectorAll('article a[href^="/p/"]');
+        const postElements = Array.from(document.querySelectorAll('a')).filter(a => a.href && a.href.includes('/p/'));
         const results = [];
         
         postElements.forEach(el => {
-          const href = el.getAttribute('href');
+          const href = el.href;
           const match = href.match(/\/p\/(.+?)\//);
           if (match) {
             const shortcode = match[1];
             const img = el.querySelector('img');
             const caption = img ? img.getAttribute('alt') || '' : '';
-            results.push({ shortcode, caption, link: `https://www.instagram.com/p/${shortcode}/` });
+            // Only add if not already in results
+            if (!results.some(r => r.shortcode === shortcode)) {
+              results.push({ shortcode, caption, link: `https://www.instagram.com/p/${shortcode}/` });
+            }
           }
         });
         return results;
