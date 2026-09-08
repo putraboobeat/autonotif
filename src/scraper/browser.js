@@ -37,6 +37,8 @@ async function launchBrowser() {
       '--disable-popup-blocking',
       '--no-first-run',
       '--no-default-browser-check',
+      '--disk-cache-size=0',
+      '--media-cache-size=0',
     ],
     defaultViewport: {
       width: 1920,

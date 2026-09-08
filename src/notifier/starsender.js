@@ -414,6 +414,18 @@ async function sendPersonalMessage(phoneNumber, message, options = {}) {
 
     // Tidak ada fallback
     return { success: false, error: primaryError.message, provider: resolvedProvider };
+  } finally {
+    if (options.tempFilePath) {
+      try {
+        const fs = require('fs');
+        if (fs.existsSync(options.tempFilePath)) {
+          fs.unlinkSync(options.tempFilePath);
+          log.info(`[MEDIA] 🗑️ File media lokal langsung dihapus: ${options.tempFilePath}`);
+        }
+      } catch (cleanupErr) {
+        log.warn(`[MEDIA] Gagal menghapus file media lokal: ${cleanupErr.message}`);
+      }
+    }
   }
 }
 
@@ -446,6 +458,18 @@ async function sendGroupMessage(groupName, message, options = {}) {
 
     log.error(`Failed to send group message to "${groupName}"`, { error: error.message });
     return { success: false, error: error.message, provider };
+  } finally {
+    if (options.tempFilePath) {
+      try {
+        const fs = require('fs');
+        if (fs.existsSync(options.tempFilePath)) {
+          fs.unlinkSync(options.tempFilePath);
+          log.info(`[MEDIA] 🗑️ File media lokal langsung dihapus setelah kirim ke group: ${options.tempFilePath}`);
+        }
+      } catch (cleanupErr) {
+        log.warn(`[MEDIA] Gagal menghapus file media lokal: ${cleanupErr.message}`);
+      }
+    }
   }
 }
 
