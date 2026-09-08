@@ -1761,38 +1761,96 @@ async function loadIgPosts() {
       const tbody = document.getElementById('ig-posts-table-body');
       if (!tbody) return;
       tbody.innerHTML = '';
-      if (res.data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Belum ada data postingan ter-scrape</td></tr>';
+      if (!res.data || res.data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 30px; color: var(--text-secondary);">Belum ada data postingan ter-scrape</td></tr>';
         updateSelectedIgCount();
         return;
       }
       res.data.forEach((post) => {
         let statusBadge = '';
-        if (post.status === 'success') statusBadge = '<span class="badge badge-success">Sukses</span>';
-        else if (post.status === 'ignored') statusBadge = '<span class="badge" style="background:#4b5563; color:white;">Abaikan (No Match)</span>';
-        else statusBadge = `<span class="badge badge-danger" title="${post.error_msg}">Gagal</span>`;
+        if (post.status === 'success') statusBadge = '<span class="badge badge-success" style="font-size:10px; padding:2px 6px;">Sukses</span>';
+        else if (post.status === 'ignored') statusBadge = '<span class="badge" style="background:#4b5563; color:white; font-size:10px; padding:2px 6px;">Abaikan</span>';
+        else statusBadge = `<span class="badge badge-danger" style="font-size:10px; padding:2px 6px;" title="${post.error_msg}">Gagal</span>`;
         
-        let actions = `
-          <div style="display: flex; gap: 4px; flex-wrap: wrap;">
-            <button class="btn btn-primary btn-sm" style="font-size:11px;" onclick="resendIgPost(${post.id})">Kirim Ulang</button>
-            <button class="btn btn-danger btn-sm" style="font-size:11px;" onclick="deleteIgPost(${post.id})">Hapus</button>
+        // 1. Kategori (Reels vs Feed)
+        const isReels = post.category === 'reels' || !!post.video_url || (post.link && post.link.includes('/reel/'));
+        const categoryBadge = isReels
+          ? '<span class="badge" style="background: linear-gradient(135deg, #7c3aed, #a855f7); color:white; font-size:11px; font-weight:600; padding:4px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:4px; box-shadow: 0 2px 6px rgba(124,58,237,0.3);">🎬 Reels</span>'
+          : '<span class="badge" style="background: linear-gradient(135deg, #0284c7, #38bdf8); color:white; font-size:11px; font-weight:600; padding:4px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:4px; box-shadow: 0 2px 6px rgba(2,132,199,0.3);">📸 Feed</span>';
+        
+        // 2. Akun Asal
+        const acc = (post.account_username || 'kanwilbpnaceh').replace(/^@/, '');
+        const accountHtml = `
+          <a href="https://www.instagram.com/${acc}/" target="_blank" style="text-decoration:none; display:inline-flex; align-items:center; gap:5px; color:#f43f5e; font-weight:600; font-size:12px;">
+            <span style="background: rgba(244,63,94,0.12); padding: 4px 8px; border-radius: 6px; border: 1px solid rgba(244,63,94,0.25);">@${acc}</span>
+          </a>
+        `;
+
+        // 3. Tgl Posting (dipisah rapi tanggal & jam)
+        let postingDateHtml = '<span style="color:var(--text-muted); font-size:12px;">-</span>';
+        if (post.post_date) {
+          const pDate = new Date(post.post_date);
+          const pDateStr = pDate.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
+          const pTimeStr = pDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+          postingDateHtml = `
+            <div style="font-size:12px; font-weight:600; color:var(--text-primary);">${pDateStr}</div>
+            <div style="font-size:11px; color:var(--text-secondary); margin-top:2px;">🕐 ${pTimeStr} WIB</div>
+          `;
+        }
+
+        // 4. Tgl Scrape (dipisah rapi tanggal & jam)
+        let scrapeDateHtml = '<span style="color:var(--text-muted); font-size:12px;">-</span>';
+        if (post.created_at) {
+          const sDate = new Date(post.created_at);
+          const sDateStr = sDate.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
+          const sTimeStr = sDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+          scrapeDateHtml = `
+            <div style="font-size:12px; font-weight:600; color:var(--text-primary);">${sDateStr}</div>
+            <div style="font-size:11px; color:var(--text-secondary); margin-top:2px;">⚡ ${sTimeStr} WIB</div>
+          `;
+        }
+
+        // 5. Caption & Link
+        const cleanCaption = (post.caption || '-').replace(/\s+/g, ' ').trim();
+        const linkHtml = post.link ? `
+          <div style="margin-top: 4px;">
+            <a href="${post.link}" target="_blank" style="color: #38b6ff; text-decoration:none; font-size:11px; font-weight:500; display:inline-flex; align-items:center; gap:3px;">
+              🔗 Buka Instagram ↗ <span style="color:var(--text-muted); font-size:10px;">(${post.shortcode})</span>
+            </a>
+          </div>
+        ` : '';
+        const captionHtml = `
+          <div style="font-size:12px; max-width: 260px; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${cleanCaption.replace(/"/g, '&quot;')}">${cleanCaption}</div>
+          ${linkHtml}
+        `;
+
+        // 6. Status & Target
+        let targetLabel = post.notified_group ? `🎯 ${post.notified_group}` : '🎯 Default';
+        const statusTargetHtml = `
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <div>${statusBadge}</div>
+            <span style="font-size: 10px; color: var(--text-secondary); max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${post.notified_group || ''}">${targetLabel}</span>
           </div>
         `;
-        
-        let timeLabel = post.post_date ? new Date(post.post_date).toLocaleString('id-ID') : new Date(post.created_at).toLocaleString('id-ID');
-        let scrapeLabel = new Date(post.created_at).toLocaleString('id-ID');
-        let mediaBadge = (post.video_url || (post.link && post.link.includes('/reel/')))
-          ? '<span class="badge" style="background:#7c3aed; color:white; font-size:10px; padding:2px 6px; border-radius:4px; margin-left:4px;">🎬 Reels</span>' 
-          : '<span class="badge" style="background:#0284c7; color:white; font-size:10px; padding:2px 6px; border-radius:4px; margin-left:4px;">📸 Foto</span>';
-        let linkLabel = post.link ? `<br><a href="${post.link}" target="_blank" style="color: #38b6ff; text-decoration:none; font-size:11px;">Buka Post ↗</a> ${mediaBadge}` : mediaBadge;
+
+        // 7. Aksi
+        let actions = `
+          <div style="display: flex; gap: 6px; justify-content: flex-end;">
+            <button class="btn btn-primary btn-sm" style="font-size:11px; padding: 4px 8px;" onclick="resendIgPost(${post.id})" title="Kirim Ulang notifikasi ke WhatsApp">🔄 Kirim</button>
+            <button class="btn btn-danger btn-sm" style="font-size:11px; padding: 4px 8px;" onclick="deleteIgPost(${post.id})" title="Hapus dari riwayat">🗑️ Hapus</button>
+          </div>
+        `;
         
         tbody.innerHTML += `
           <tr>
             <td style="text-align: center;"><input type="checkbox" class="ig-post-checkbox" value="${post.id}" onchange="updateSelectedIgCount()" style="cursor: pointer;"></td>
-            <td style="font-size:12px;"><strong>Posting:</strong> ${timeLabel}<br><strong>Scrape:</strong> ${scrapeLabel} ${linkLabel}</td>
-            <td style="font-size:12px; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${post.caption}">${post.caption || '-'}</td>
-            <td>${statusBadge}</td>
-            <td>${actions}</td>
+            <td>${categoryBadge}</td>
+            <td>${accountHtml}</td>
+            <td>${postingDateHtml}</td>
+            <td>${scrapeDateHtml}</td>
+            <td>${captionHtml}</td>
+            <td>${statusTargetHtml}</td>
+            <td style="text-align: right;">${actions}</td>
           </tr>
         `;
       });

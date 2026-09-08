@@ -122,6 +122,7 @@ CREATE TABLE IF NOT EXISTS processed_ig_posts (
     post_date DATETIME,
     image_url TEXT,
     video_url TEXT,
+    account_username VARCHAR(100),
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 

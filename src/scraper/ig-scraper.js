@@ -315,7 +315,8 @@ async function scrapeInstagram(options = {}) {
           error_msg: errorMsg.trim(),
           post_date: post.postDate,
           image_url: post.imageUrl || '',
-          video_url: post.videoUrl || ''
+          video_url: post.videoUrl || '',
+          account_username: username || ''
         });
       }
     } // End of loop over usernames

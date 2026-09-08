@@ -458,19 +458,22 @@
               <button class="btn btn-ghost btn-sm" onclick="loadIgPosts()">↻ Refresh Tabel</button>
             </div>
           </h3>
-          <div class="table-container" style="margin-top: 16px;">
-            <table class="data-table" id="ig-posts-table">
+          <div class="table-container" style="margin-top: 16px; overflow-x: auto;">
+            <table class="data-table" id="ig-posts-table" style="min-width: 960px;">
               <thead>
                 <tr>
-                  <th style="width: 40px; text-align: center;"><input type="checkbox" id="check-all-ig" onchange="toggleSelectAllIg(this)" style="cursor: pointer;"></th>
-                  <th>Waktu & Link</th>
-                  <th>Cuplikan Caption</th>
-                  <th>Status Notif</th>
-                  <th>Aksi</th>
+                  <th style="width: 36px; text-align: center;"><input type="checkbox" id="check-all-ig" onchange="toggleSelectAllIg(this)" style="cursor: pointer;"></th>
+                  <th style="width: 90px;">Kategori</th>
+                  <th style="width: 130px;">Akun Asal</th>
+                  <th style="width: 140px;">Tgl Posting</th>
+                  <th style="width: 140px;">Tgl Scrape</th>
+                  <th style="min-width: 200px;">Caption & Link</th>
+                  <th style="width: 130px;">Status & Target</th>
+                  <th style="text-align: right; width: 150px;">Aksi</th>
                 </tr>
               </thead>
               <tbody id="ig-posts-table-body">
-                <tr><td colspan="5" style="text-align: center;">Memuat data...</td></tr>
+                <tr><td colspan="8" style="text-align: center;">Memuat data...</td></tr>
               </tbody>
             </table>
           </div>

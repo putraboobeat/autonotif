@@ -283,9 +283,25 @@ function createRoutes() {
   
   router.get('/ig-posts', (req, res) => {
     try {
-      const { IgPostModel } = require('../database/models');
+      const { IgPostModel, ConfigModel } = require('../database/models');
       const posts = IgPostModel.getAll();
-      res.json({ success: true, data: posts });
+      const defaultUser = (ConfigModel.get('ig_username') || '').trim() || 'kanwilbpnaceh';
+      const enrichedPosts = posts.map(p => {
+        const isReel = !!(p.video_url || (p.link && p.link.includes('/reel/')));
+        let account = p.account_username;
+        if (!account && p.link) {
+          const matchUser = p.link.match(/instagram\.com\/([^\/]+)\/(p|reel)\//);
+          if (matchUser && matchUser[1] && !['p', 'reel', 'tv'].includes(matchUser[1])) {
+            account = matchUser[1];
+          }
+        }
+        return {
+          ...p,
+          category: isReel ? 'reels' : 'feed',
+          account_username: account || defaultUser
+        };
+      });
+      res.json({ success: true, data: enrichedPosts });
     } catch (error) {
       res.status(500).json({ success: false, error: error.message });
     }

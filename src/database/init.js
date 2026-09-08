@@ -128,6 +128,14 @@ function initDatabase() {
             ALTER TABLE processed_ig_posts ADD COLUMN video_url TEXT;
           `);
         }
+
+        const hasAccountUsername = postCols.some(c => c.name === 'account_username');
+        if (!hasAccountUsername) {
+          log.info('Migrating database: Adding account_username column to processed_ig_posts');
+          db.exec(`
+            ALTER TABLE processed_ig_posts ADD COLUMN account_username VARCHAR(100);
+          `);
+        }
       }
     } catch (e) {
       log.error('IG migration failed', { error: e.message });
