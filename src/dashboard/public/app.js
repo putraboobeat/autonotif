@@ -1025,8 +1025,9 @@ async function loadSettings() {
       document.getElementById('setting-ig-username').value = res.data.ig_username || '';
       document.getElementById('setting-ig-template').value = res.data.ig_template_msg || '';
       document.getElementById('setting-ig-watermark').value = res.data.ig_watermark || '';
-      document.getElementById('test-ig-group').value = res.data.ig_test_group || '';
-      document.getElementById('test-ig-admin').value = res.data.ig_test_admin || '';
+      document.getElementById('test-ig-group').value = res.data.ig_default_group || '';
+      document.getElementById('test-ig-admin').value = res.data.ig_default_admin || '';
+      document.getElementById('setting-ig-forward-all').checked = res.data.ig_forward_all === '1';
 
       const elIgStatus = document.getElementById('ig-scraper-status-text');
       if (elIgStatus) {

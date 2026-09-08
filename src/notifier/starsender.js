@@ -52,14 +52,20 @@ function applyAntiBanProtection(message) {
 /**
  * Execute send via StarSender API
  */
-async function executeStarSender(to, text, isGroup = false) {
+async function executeStarSender(to, text, isGroup = false, options = {}) {
   const url = isGroup ? config.starsender.groupUrl : config.starsender.sendUrl;
   const payload = {
-    messageType: 'text',
+    messageType: options.imageUrl ? 'image' : 'text',
     to: to,
-    body: text,
     delay: 2,
   };
+  
+  if (options.imageUrl) {
+    payload.url = options.imageUrl;
+    payload.caption = text;
+  } else {
+    payload.body = text;
+  }
 
   if (isGroup) {
     const mentionMatches = text.match(/@(62\d+|08\d+|8\d+)/g) || [];
@@ -90,7 +96,9 @@ async function executeStarSender(to, text, isGroup = false) {
  * Execute send via GoWA (aldinokemal/go-whatsapp-web-multidevice) REST API
  * GoWA bisa kirim ke nomor manapun tanpa harus punya riwayat chat — sakti untuk cold numbers.
  */
-async function executeGoWA(to, text, isGroup = false) {
+async function executeGoWA(to, text, isGroup = false, options = {}) {
+  // GoWA image endpoint differs or takes different payload
+  // Assume generic GoWA JSON format: { phone, message, image: url } or similar
   const url = isGroup ? config.gateway.gowaGroupUrl : config.gateway.gowaSendUrl;
   const headers = { 'Content-Type': 'application/json' };
   if (config.gateway.gowaApiKey) {
@@ -98,6 +106,10 @@ async function executeGoWA(to, text, isGroup = false) {
   }
 
   const payload = isGroup ? { group: to, message: text } : { phone: to, message: text };
+  if (options.imageUrl) {
+    payload.image = options.imageUrl; // basic fallback for GoWA
+    // Note: If GoWA expects a different endpoint for image (e.g. /send/image), it will gracefully degrade or fail, causing fallback.
+  }
 
   const response = await fetch(url, { method: 'POST', headers, body: JSON.stringify(payload) });
   const data = await response.json().catch(() => ({}));
@@ -111,13 +123,13 @@ async function executeGoWA(to, text, isGroup = false) {
 /**
  * Unified gateway executor — routes to the correct provider
  */
-async function executeGatewaySend(to, text, isGroup = false, forceProvider = null) {
+async function executeGatewaySend(to, text, isGroup = false, forceProvider = null, options = {}) {
   const provider = forceProvider || (config.gateway && config.gateway.provider ? config.gateway.provider : 'starsender');
 
   if (provider === 'gowa') {
-    return executeGoWA(to, text, isGroup);
+    return executeGoWA(to, text, isGroup, options);
   } else {
-    return executeStarSender(to, text, isGroup);
+    return executeStarSender(to, text, isGroup, options);
   }
 }
 
@@ -222,7 +234,7 @@ async function sendPersonalMessage(phoneNumber, message, options = {}) {
 
   // === ATTEMPT 1: Kirim via resolved provider ===
   try {
-    const result = await retry(() => executeGatewaySend(formattedPhone, protectedMessage, false, resolvedProvider), 3, 2000);
+    const result = await retry(() => executeGatewaySend(formattedPhone, protectedMessage, false, resolvedProvider, options), 3, 2000);
     log.info(`[SEND] ✅ Message sent to ${formattedPhone} via ${resolvedProvider.toUpperCase()}`, { success: true });
     return { success: true, data: result, sentMessage: protectedMessage, provider: result._provider || resolvedProvider };
   } catch (primaryError) {
@@ -235,7 +247,7 @@ async function sendPersonalMessage(phoneNumber, message, options = {}) {
     if (fallbackProvider === 'gowa' && config.gateway.fallbackEnabled && isGowaAvailable()) {
       log.info(`[FALLBACK] Retrying ${formattedPhone} via ${fallbackProvider.toUpperCase()}...`);
       try {
-        const fallbackResult = await retry(() => executeGatewaySend(formattedPhone, protectedMessage, false, fallbackProvider), 2, 2000);
+        const fallbackResult = await retry(() => executeGatewaySend(formattedPhone, protectedMessage, false, fallbackProvider, options), 2, 2000);
         log.info(`[FALLBACK] ✅ Message sent to ${formattedPhone} via ${fallbackProvider.toUpperCase()} (fallback)`, { success: true });
         return { success: true, data: fallbackResult, sentMessage: protectedMessage, provider: fallbackResult._provider || fallbackProvider, wasFallback: true };
       } catch (fallbackError) {
@@ -252,14 +264,14 @@ async function sendPersonalMessage(phoneNumber, message, options = {}) {
 /**
  * Send a WhatsApp message to a group via StarSender or GoWA with anti-ban protection
  */
-async function sendGroupMessage(groupName, message) {
+async function sendGroupMessage(groupName, message, options = {}) {
   const protectedMessage = applyAntiBanProtection(message);
   const provider = config.gateway && config.gateway.provider ? config.gateway.provider : 'starsender';
 
   log.info(`Sending group message to "${groupName}" via ${provider.toUpperCase()}...`);
 
   try {
-    const result = await retry(() => executeGatewaySend(groupName, protectedMessage, true, provider), 3, 2000);
+    const result = await retry(() => executeGatewaySend(groupName, protectedMessage, true, provider, options), 3, 2000);
 
     log.info(`Group message sent to "${groupName}"`, { success: true });
     return { success: true, data: result, sentMessage: protectedMessage, provider: result._provider || provider };
@@ -268,7 +280,7 @@ async function sendGroupMessage(groupName, message) {
     if (provider === 'starsender' && config.gateway.fallbackEnabled && isGowaAvailable()) {
       log.info(`[FALLBACK] Retrying group "${groupName}" via GOWA...`);
       try {
-        const fallbackResult = await retry(() => executeGoWA(groupName, protectedMessage, true), 2, 2000);
+        const fallbackResult = await retry(() => executeGatewaySend(groupName, protectedMessage, true, 'gowa', options), 2, 2000);
         log.info(`[FALLBACK] ✅ Group message sent to "${groupName}" via GOWA (fallback)`);
         return { success: true, data: fallbackResult, sentMessage: protectedMessage, provider: 'gowa', wasFallback: true };
       } catch (fallbackError) {

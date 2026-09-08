@@ -104,42 +104,60 @@ async function scrapeInstagram() {
           continue;
         }
         
-        // Fetch true caption from the post page
+        // Fetch true caption and image from the post page
         let caption = post.caption;
+        let imageUrl = '';
         try {
           const postPage = await browser.newPage();
           await postPage.goto(post.link, { waitUntil: 'domcontentloaded', timeout: 20000 });
-          caption = await postPage.evaluate(() => {
-            const meta = document.querySelector('meta[property="og:title"]');
-            if (meta) {
-              const content = meta.getAttribute('content');
-              // Format: "Author on Instagram: \"Caption text...\""
+          const extracted = await postPage.evaluate(() => {
+            let cap = '';
+            let img = '';
+            const metaCap = document.querySelector('meta[property="og:title"]');
+            if (metaCap) {
+              const content = metaCap.getAttribute('content');
               const match = content.match(/on Instagram: "([\s\S]+)"/);
-              if (match) return match[1];
-              return content;
+              cap = match ? match[1] : content;
             }
-            return '';
+            const metaImg = document.querySelector('meta[property="og:image"]');
+            if (metaImg) {
+              img = metaImg.getAttribute('content');
+            }
+            return { cap, img };
           });
+          caption = extracted.cap;
+          imageUrl = extracted.img;
           await postPage.close();
         } catch (e) {
-          log.warn(`Could not fetch caption for ${post.shortcode}: ${e.message}`);
+          log.warn(`Could not fetch data for ${post.shortcode}: ${e.message}`);
         }
 
         post.caption = caption || 'Tanpa Caption';
+        post.imageUrl = imageUrl || '';
         
+        const isForwardAll = ConfigModel.get('ig_forward_all') === '1';
         let matchedRule = null;
-        const lowerCaption = post.caption.toLowerCase();
         
-        for (const rule of activeRules) {
-          const lowerCode = rule.code.toLowerCase();
-          if (lowerCaption.includes(lowerCode)) {
-            matchedRule = rule;
-            break; // First match wins
+        if (isForwardAll) {
+          matchedRule = {
+            code: 'FORWARD_ALL',
+            target_group: ConfigModel.get('ig_default_group') || '',
+            target_admin: ConfigModel.get('ig_default_admin') || ''
+          };
+          log.info(`Post ${post.shortcode} matched by FORWARD_ALL mode`);
+        } else {
+          const lowerCaption = post.caption.toLowerCase();
+          for (const rule of activeRules) {
+            const lowerCode = rule.code.toLowerCase();
+            if (lowerCaption.includes(lowerCode)) {
+              matchedRule = rule;
+              break; // First match wins
+            }
           }
         }
         
         if (matchedRule) {
-          log.info(`Post ${post.shortcode} matched rule code: ${matchedRule.code}`);
+          if (!isForwardAll) log.info(`Post ${post.shortcode} matched rule code: ${matchedRule.code}`);
           
           // Get templates
           const templateMsg = ConfigModel.get('ig_template_msg') || '📸 *INFO POSTINGAN BARU* 📸\n\nAda postingan Instagram terbaru (@{{username}}) yang terkait dengan instansi Anda.\n\n*Kode:* {{kode}}\n*Caption:* {{caption}}\n\n*Link:* {{link}}';
@@ -161,7 +179,7 @@ async function scrapeInstagram() {
           // Send to group
           if (matchedRule.target_group) {
             try {
-              const resGroup = await sendGroupMessage(matchedRule.target_group, message);
+              const resGroup = await sendGroupMessage(matchedRule.target_group, message, { imageUrl: post.imageUrl });
               if (!resGroup.success) {
                 status = 'failed';
                 errorMsg += `Group: ${resGroup.error}. `;
@@ -175,7 +193,7 @@ async function scrapeInstagram() {
           // Send to admin
           if (matchedRule.target_admin) {
             try {
-              const resAdmin = await sendPersonalMessage(matchedRule.target_admin, message);
+              const resAdmin = await sendPersonalMessage(matchedRule.target_admin, message, { imageUrl: post.imageUrl });
               if (!resAdmin.success) {
                 status = 'failed';
                 errorMsg += `Admin: ${resAdmin.error}. `;
