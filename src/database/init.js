@@ -101,6 +101,15 @@ function initDatabase() {
             ALTER TABLE processed_ig_posts ADD COLUMN link VARCHAR(255);
             ALTER TABLE processed_ig_posts ADD COLUMN status VARCHAR(50) DEFAULT 'success';
             ALTER TABLE processed_ig_posts ADD COLUMN error_msg TEXT;
+            ALTER TABLE processed_ig_posts ADD COLUMN post_date DATETIME;
+          `);
+        }
+        
+        const hasPostDate = postCols.some(c => c.name === 'post_date');
+        if (!hasPostDate && hasLink) {
+          log.info('Migrating database: Adding post_date column to processed_ig_posts');
+          db.exec(`
+            ALTER TABLE processed_ig_posts ADD COLUMN post_date DATETIME;
           `);
         }
       }

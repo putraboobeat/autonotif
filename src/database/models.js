@@ -491,7 +491,8 @@ const IgRuleModel = {
 const IgPostModel = {
   getAll() {
     const db = getDb();
-    return db.prepare('SELECT * FROM processed_ig_posts ORDER BY id DESC LIMIT 200').all();
+    // Urutkan berdasarkan tanggal postingan terbaru, jika tidak ada fallback ke created_at
+    return db.prepare('SELECT * FROM processed_ig_posts ORDER BY COALESCE(post_date, created_at) DESC LIMIT 200').all();
   },
 
   isProcessed(shortcode) {
@@ -501,15 +502,16 @@ const IgPostModel = {
     return result || null;
   },
 
-  save({ shortcode, link, caption, matched_code, notified_group, status, error_msg }) {
+  save({ shortcode, link, caption, matched_code, notified_group, status, error_msg, post_date }) {
     const db = getDb();
     const stmt = db.prepare(`
       INSERT INTO processed_ig_posts 
-      (shortcode, link, caption, matched_code, notified_group, status, error_msg)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      (shortcode, link, caption, matched_code, notified_group, status, error_msg, post_date)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(shortcode) DO UPDATE SET
       status = excluded.status,
-      error_msg = excluded.error_msg
+      error_msg = excluded.error_msg,
+      post_date = excluded.post_date
     `);
     return stmt.run(
       shortcode, 
@@ -518,7 +520,8 @@ const IgPostModel = {
       matched_code || '', 
       notified_group || '',
       status || 'success',
-      error_msg || ''
+      error_msg || '',
+      post_date || null
     );
   },
   

@@ -119,6 +119,7 @@ CREATE TABLE IF NOT EXISTS processed_ig_posts (
     notified_group VARCHAR(255),
     status VARCHAR(50) DEFAULT 'success',
     error_msg TEXT,
+    post_date DATETIME,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 

@@ -1697,6 +1697,37 @@ async function forceCheckIg() {
   }
 }
 
+async function forceIgScrapeDeep() {
+  if (!confirm('Peringatan: Fitur ini akan menscroll profil IG ke bawah hingga Anda menekan Stop. Proses ini bisa memakan waktu lama. Lanjutkan?')) return;
+  try {
+    const res = await apiPost('/ig-scraper/deep');
+    if (res.success) {
+      showToast(res.message, 'success');
+      document.getElementById('btn-deep-scrape').style.display = 'none';
+      document.getElementById('btn-stop-scrape').style.display = 'inline-block';
+      startIgStatusPoller();
+    } else {
+      showToast(res.error || 'Gagal memulai deep scraper', 'error');
+    }
+  } catch (error) {
+    console.error(error);
+    showToast('Terjadi kesalahan jaringan', 'error');
+  }
+}
+
+async function stopIgScrape() {
+  try {
+    const res = await apiPost('/ig-scraper/stop');
+    if (res.success) {
+      showToast(res.message, 'success');
+      document.getElementById('btn-stop-scrape').style.display = 'none';
+      document.getElementById('btn-deep-scrape').style.display = 'inline-block';
+    }
+  } catch (error) {
+    console.error(error);
+  }
+}
+
 function startIgStatusPoller() {
   const badge = document.getElementById('ig-scraper-live-status');
   const text = document.getElementById('ig-scraper-live-text');
@@ -1765,12 +1796,13 @@ async function loadIgPosts() {
             actions = `<button class="btn btn-primary btn-sm" style="font-size:11px;" onclick="resendIgPost(${post.id})">Kirim Ulang</button>`;
         }
         
-        let timeLabel = new Date(post.created_at).toLocaleString('id-ID');
+        let timeLabel = post.post_date ? new Date(post.post_date).toLocaleString('id-ID') : new Date(post.created_at).toLocaleString('id-ID');
+        let scrapeLabel = new Date(post.created_at).toLocaleString('id-ID');
         let linkLabel = post.link ? `<br><a href="${post.link}" target="_blank" style="color: #38b6ff; text-decoration:none; font-size:11px;">Buka Post ↗</a>` : '';
         
         tbody.innerHTML += `
           <tr>
-            <td style="font-size:12px;">${timeLabel} ${linkLabel}</td>
+            <td style="font-size:12px;"><strong>Posting:</strong> ${timeLabel}<br><strong>Scrape:</strong> ${scrapeLabel} ${linkLabel}</td>
             <td><span class="badge" style="background: rgba(236,72,153,0.2); color: #ec4899; border: 1px solid rgba(236,72,153,0.4);">${post.matched_code || '-'}</span></td>
             <td style="font-size:12px; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${post.caption}">${post.caption || '-'}</td>
             <td>${statusBadge}</td>

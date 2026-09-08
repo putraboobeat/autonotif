@@ -62,57 +62,107 @@ async function scrapeInstagram() {
       ConfigModel.set('ig_scraper_status', `Membuka halaman @${username}...`);
       await igPage.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
       
-      // Wait for articles to load
-      try {
-        ConfigModel.set('ig_scraper_status', `Menunggu data postingan @${username}...`);
-        await igPage.waitForFunction(() => {
-          return Array.from(document.querySelectorAll('a')).some(a => a.href && a.href.includes('/p/'));
-        }, { timeout: 10000 });
-      } catch (err) {
-        log.warn(`Could not find posts for @${username}. Maybe private or blocked.`);
-        await igPage.close();
-        continue; // Try next user
-      }
-
-      // Extract posts
-      const posts = await igPage.evaluate(() => {
-        const postElements = Array.from(document.querySelectorAll('a')).filter(a => a.href && a.href.includes('/p/'));
-        const results = [];
-        
-        postElements.forEach(el => {
-          const href = el.href;
-          const match = href.match(/\/p\/(.+?)\//);
-          if (match) {
-            const shortcode = match[1];
-            // We will fetch the true caption by visiting the post page directly
-            if (!results.some(r => r.shortcode === shortcode)) {
-              results.push({ shortcode, caption: '', link: `https://www.instagram.com/p/${shortcode}/` });
+      // Scrape posts logic
+      let posts = [];
+      let previousHeight = 0;
+      let scrollAttempts = 0;
+      
+      while (true) {
+        // Wait for articles to load
+        try {
+          ConfigModel.set('ig_scraper_status', `Sedang membaca data postingan @${username}... (${posts.length} ditemukan)`);
+          await igPage.waitForFunction(() => {
+            return Array.from(document.querySelectorAll('a')).some(a => a.href && a.href.includes('/p/'));
+          }, { timeout: 10000 });
+        } catch (err) {
+          log.warn(`Could not find more posts for @${username}.`);
+          break; // Stop scrolling if no posts found
+        }
+  
+        // Extract posts from current view
+        const currentPosts = await igPage.evaluate(() => {
+          const postElements = Array.from(document.querySelectorAll('a')).filter(a => a.href && a.href.includes('/p/'));
+          const results = [];
+          
+          postElements.forEach(el => {
+            const href = el.href;
+            const match = href.match(/\/p\/(.+?)\//);
+            if (match) {
+              const shortcode = match[1];
+              if (!results.some(r => r.shortcode === shortcode)) {
+                results.push({ shortcode, caption: '', link: `https://www.instagram.com/p/${shortcode}/` });
+              }
             }
-          }
+          });
+          return results;
         });
-        return results;
-      });
+        
+        // Merge into total posts without duplicates
+        for (const p of currentPosts) {
+           if (!posts.some(existing => existing.shortcode === p.shortcode)) {
+              posts.push(p);
+           }
+        }
+        
+        const mode = ConfigModel.get('ig_scrape_mode') || 'normal';
+        if (mode === 'stopping') {
+          log.info('Scraper received stop signal.');
+          break;
+        }
+        
+        if (mode !== 'deep') {
+          // Normal mode: just grab what is visible initially and stop
+          break;
+        }
+        
+        // Deep mode: try to scroll
+        const newHeight = await igPage.evaluate('document.body.scrollHeight');
+        if (newHeight === previousHeight) {
+          scrollAttempts++;
+          if (scrollAttempts >= 3) {
+             log.info('Reached bottom of profile.');
+             break; // No more content after 3 attempts
+          }
+        } else {
+          scrollAttempts = 0;
+        }
+        previousHeight = newHeight;
+        await igPage.evaluate('window.scrollTo(0, document.body.scrollHeight)');
+        await new Promise(r => setTimeout(r, 3000)); // wait for load
+      }
       
       await igPage.close();
       
       log.info(`Found ${posts.length} posts for @${username}`);
-      ConfigModel.set('ig_scraper_status', `Menemukan ${posts.length} postingan di @${username}. Mengecek filter...`);
+      ConfigModel.set('ig_scraper_status', `Memproses ${posts.length} postingan dari @${username}...`);
+      let processedCount = 0;
 
       for (const post of posts) {
+        processedCount++;
+        ConfigModel.set('ig_scraper_status', `Memproses postingan ${processedCount}/${posts.length} di @${username}...`);
+        
         // Check if already processed
         if (IgPostModel.isProcessed(post.shortcode)) {
-          continue;
+          const mode = ConfigModel.get('ig_scrape_mode') || 'normal';
+          if (mode !== 'deep') {
+             log.info(`Post ${post.shortcode} already processed. Stopping normal scrape for @${username} to save time.`);
+             break; // Karena postingan berurutan dari yang terbaru, jika ini sudah diproses, sisanya pasti sudah.
+          } else {
+             continue;
+          }
         }
         
-        // Fetch true caption and image from the post page
+        // Fetch true caption, image, and date from the post page
         let caption = post.caption;
         let imageUrl = '';
+        let postDate = '';
         try {
           const postPage = await browser.newPage();
           await postPage.goto(post.link, { waitUntil: 'domcontentloaded', timeout: 20000 });
           const extracted = await postPage.evaluate(() => {
             let cap = '';
             let img = '';
+            let pDate = '';
             const metaCap = document.querySelector('meta[property="og:title"]');
             if (metaCap) {
               const content = metaCap.getAttribute('content');
@@ -123,10 +173,15 @@ async function scrapeInstagram() {
             if (metaImg) {
               img = metaImg.getAttribute('content');
             }
-            return { cap, img };
+            const timeEl = document.querySelector('time');
+            if (timeEl) {
+              pDate = timeEl.getAttribute('datetime');
+            }
+            return { cap, img, pDate };
           });
           caption = extracted.cap;
           imageUrl = extracted.img;
+          postDate = extracted.pDate;
           await postPage.close();
         } catch (e) {
           log.warn(`Could not fetch data for ${post.shortcode}: ${e.message}`);
@@ -134,6 +189,7 @@ async function scrapeInstagram() {
 
         post.caption = caption || 'Tanpa Caption';
         post.imageUrl = imageUrl || '';
+        post.postDate = postDate || '';
         
         const isForwardAll = ConfigModel.get('ig_forward_all') === '1';
         let matchedRule = null;
@@ -212,7 +268,8 @@ async function scrapeInstagram() {
             matched_code: matchedRule.code,
             notified_group: matchedRule.target_group,
             status: status,
-            error_msg: errorMsg.trim()
+            error_msg: errorMsg.trim(),
+            post_date: post.postDate
           });
           
         } else {
@@ -224,7 +281,8 @@ async function scrapeInstagram() {
             matched_code: '',
             notified_group: '',
             status: 'ignored',
-            error_msg: ''
+            error_msg: '',
+            post_date: post.postDate
           });
         }
       }

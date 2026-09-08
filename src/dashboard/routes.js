@@ -298,9 +298,30 @@ function createRoutes() {
 
   router.post('/ig-scraper/force', async (req, res) => {
     try {
+      ConfigModel.set('ig_scrape_mode', 'normal');
       // Trigger IG scrape asynchronously
       scrapeInstagram().catch(e => log.error('Manual IG Scrape Error', { error: e.message }));
       res.json({ success: true, message: 'Instagram scraper dijalankan di latar belakang.' });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+  
+  router.post('/ig-scraper/deep', async (req, res) => {
+    try {
+      ConfigModel.set('ig_scrape_mode', 'deep');
+      // Trigger IG scrape asynchronously
+      scrapeInstagram().catch(e => log.error('Deep IG Scrape Error', { error: e.message }));
+      res.json({ success: true, message: 'Instagram Scraper (Unlimited Scroll Mode) dimulai.' });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  router.post('/ig-scraper/stop', (req, res) => {
+    try {
+      ConfigModel.set('ig_scrape_mode', 'stopping');
+      res.json({ success: true, message: 'Perintah berhenti dikirim ke Scraper.' });
     } catch (error) {
       res.status(500).json({ success: false, error: error.message });
     }

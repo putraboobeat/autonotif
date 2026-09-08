@@ -363,7 +363,11 @@
               <span class="loading-spinner" style="width: 14px; height: 14px; border-width: 2px;"></span>
               <span id="ig-scraper-live-text">Memeriksa...</span>
             </div>
-            <button class="btn btn-primary btn-sm" onclick="forceCheckIg()">⚡ Cek Sekarang</button>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-primary" onclick="forceCheckIg()">⚡ Cek Sekarang</button>
+              <button class="btn btn-ghost" onclick="forceIgScrapeDeep()" style="border: 1px solid var(--border-color);" id="btn-deep-scrape">🚀 Scrape Unlimited</button>
+              <button class="btn btn-ghost" onclick="stopIgScrape()" style="border: 1px solid var(--border-color); color: #ef4444; display: none;" id="btn-stop-scrape">🛑 Stop</button>
+            </div>
           </div>
         </div>
         <div class="card-body">
@@ -435,9 +439,9 @@
               <h4>Teruskan Semua Postingan (Tanpa Rule)</h4>
               <p>Jika dihidupkan, scraper akan mengabaikan Rule Kode dan otomatis meneruskan semua postingan baru ke Default Target di atas.</p>
             </div>
-            <label class="toggle">
-              <input type="checkbox" id="setting-ig-forward-all" onchange="toggleSetting('ig_forward_all', this.checked)">
-              <span class="slider"></span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="setting-ig-forward-all" onchange="updateSetting('ig_forward_all', this.checked ? '1' : '0')">
+              <span class="toggle-slider"></span>
             </label>
           </div>
           
