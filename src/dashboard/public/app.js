@@ -2026,29 +2026,29 @@ async function checkStreamlitStatus() {
     if (res.running) {
       if (badge) {
         badge.className = 'badge badge-success';
-        badge.textContent = '🟢 Online (Port 8501)';
+        badge.textContent = '🟢 Online (Aktif 24 Jam)';
       }
-      if (iframe && (!iframe.src || iframe.src === 'about:blank' || iframe.src.includes('error'))) {
-        iframe.src = 'http://localhost:8501/?embed=true';
+      if (iframe && (!iframe.src || iframe.src === 'about:blank' || iframe.src.includes('error') || iframe.src.includes(':8501'))) {
+        iframe.src = '/streamlit/?embed=true';
       }
     } else {
       if (badge) {
         badge.className = 'badge badge-danger';
-        badge.textContent = '🟡 Menyalakan server Streamlit...';
+        badge.textContent = '🟡 Sedang menghubungkan...';
       }
-      showToast('Menyalakan server Streamlit di latar belakang...', 'info');
+      showToast('Menghubungkan ke server Streamlit...', 'info');
       await apiPost('/streamlit/start', {});
       setTimeout(async () => {
         const check = await apiGet('/streamlit/status');
         if (check.running && iframe) {
-          iframe.src = 'http://localhost:8501/?embed=true';
+          iframe.src = '/streamlit/?embed=true';
           if (badge) {
             badge.className = 'badge badge-success';
-            badge.textContent = '🟢 Online (Port 8501)';
+            badge.textContent = '🟢 Online (Aktif 24 Jam)';
           }
           showToast('Dashboard Web Scraping siap digunakan!', 'success');
         }
-      }, 3500);
+      }, 3000);
     }
   } catch (e) {
     console.error('Failed to check Streamlit status:', e);
