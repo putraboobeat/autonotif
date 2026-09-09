@@ -216,7 +216,7 @@ function generateHtmlReport(metrics = null) {
   </table>
 
   <div class="footer">
-    Dokumen ini dihasilkan secara otomatis oleh <strong>Sistem Auto Notif Pengaduan Kanwil BPN Provinsi Aceh</strong> (Level 6 Intelligent Oversight).
+    Dokumen ini dihasilkan secara otomatis oleh <strong>Sistem Monitoring Humas Kanwil BPN Provinsi Aceh</strong> (Level 6 Intelligent Oversight).
   </div>
 </body>
 </html>`;
@@ -302,7 +302,7 @@ function buildExecutiveSummaryMessage(metrics = null) {
     `Laporan lengkap dalam format PDF & CSV kini tersedia melalui Dashboard Pengawasan Level 6.`,
     '',
     `Terima kasih,`,
-    `_Sistem Auto Notif Pengaduan Kanwil BPN Prov. Aceh_`
+    `_Sistem Monitoring Humas Kanwil BPN Prov. Aceh_`
   );
 
   return lines.join('\n');

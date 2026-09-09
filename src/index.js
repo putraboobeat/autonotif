@@ -388,8 +388,8 @@ global.triggerManualScrape = () => scrapeCycle();
 async function main() {
   console.log('\n');
   console.log('╔══════════════════════════════════════════════════╗');
-  console.log('║     🔔 Auto Notif Pengaduan — WhatsApp Bot     ║');
-  console.log('║     Monitoring OCA Interaction Tickets          ║');
+  console.log('║   🏛️  Sistem Monitoring Humas Kanwil BPN Aceh    ║');
+  console.log('║   Pengawasan Aduan, Radar SLA & Media Humas      ║');
   console.log('╚══════════════════════════════════════════════════╝');
   console.log('\n');
 

@@ -1190,7 +1190,7 @@ function createRoutes() {
       if (!config.kanwil.phone) {
         return res.status(400).json({ success: false, error: 'Nomor HP Admin Kanwil belum dikonfigurasi di .env (KANWIL_ADMIN_PHONE)' });
       }
-      const message = `🔔 *TEST PING KANWIL*\n\nHalo ${config.kanwil.name || 'Admin Kanwil'},\nIni adalah pesan tes ping dari sistem *Auto Notif Pengaduan*.\n\n_Jika pesan ini sampai, koneksi WhatsApp Bot untuk Admin Kanwil berfungsi normal._`;
+      const message = `🔔 *TEST PING KANWIL*\n\nHalo ${config.kanwil.name || 'Admin Kanwil'},\nIni adalah pesan tes ping dari *Sistem Monitoring Humas Kanwil BPN Aceh*.\n\n_Jika pesan ini sampai, koneksi WhatsApp Bot untuk Admin Kanwil berfungsi normal._`;
       const result = await sendPersonalMessage(config.kanwil.phone, message);
       res.json({ success: result.success, data: result, error: result.error });
     } catch (error) {
@@ -1204,7 +1204,7 @@ function createRoutes() {
       if (!waGroupId) {
         return res.status(400).json({ success: false, error: 'ID atau Nama Group WhatsApp belum dikonfigurasi' });
       }
-      const message = `🔔 *TEST PING GROUP*\n\nIni adalah pesan tes ping ke Group dari sistem *Auto Notif Pengaduan*.\n\n_Jika pesan ini sampai, koneksi WhatsApp Bot ke group berfungsi normal._`;
+      const message = `🔔 *TEST PING GROUP*\n\nIni adalah pesan tes ping ke Group dari *Sistem Monitoring Humas Kanwil BPN Aceh*.\n\n_Jika pesan ini sampai, koneksi WhatsApp Bot ke group berfungsi normal._`;
       const result = await sendGroupMessage(waGroupId, message);
       res.json({ success: result.success, data: result, error: result.error });
     } catch (error) {

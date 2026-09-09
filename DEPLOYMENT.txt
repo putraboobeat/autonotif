@@ -1,8 +1,8 @@
-PANDUAN DEPLOY & UPDATE SERVER (Auto Notif Pengaduan)
-=====================================================
+PANDUAN DEPLOY & UPDATE SERVER (Sistem Monitoring Humas Kanwil BPN Aceh)
+==========================================================================
 
 Dokumen ini berisi perintah cepat (cheat sheet) untuk meng-update
-aplikasi Auto Notif Pengaduan di server VPS Anda.
+aplikasi Sistem Monitoring Humas Kanwil BPN Aceh di server VPS Anda.
 
 CARA CEPAT (COPY-PASTE):
 ------------------------

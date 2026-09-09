@@ -1,17 +1,14 @@
-# 🔔 Auto Notif Pengaduan
+# 🏛️ Sistem Monitoring Humas Kanwil BPN Provinsi Aceh
 
-Sistem otomatis yang memantau tiket pengaduan dari **OCA Interaction** dan mengirimkan notifikasi **WhatsApp** ke admin kantor pertanahan menggunakan **StarSender API**.
+Platform terpadu untuk pengawasan pelayanan pengaduan masyarakat (**OCA Interaction / SP4N LAPOR**), radar kesiagaan & SLA 24 Kantor Pertanahan di Aceh, integrasi media sosial Instagram & Nuelink, serta otomatisasi Web to WordPress.
 
-## ✨ Fitur
+## ✨ Modul & Fitur Utama
 
-- 🔄 **Auto Scraping** — Memantau tiket OCA Interaction setiap 1 menit
-- 🔍 **Deteksi Otomatis** — Mendeteksi tiket baru berstatus "Open"
-- 📱 **Notifikasi WA Group** — Kirim notifikasi ke group WhatsApp
-- 👤 **Notifikasi WA Personal** — Kirim notifikasi ke admin kantor pertanahan terkait
-- 🖥️ **Admin Dashboard** — Web UI untuk kelola data admin dan monitor sistem
-- 🔐 **Auto Login** — Login otomatis ke OCA Interaction dengan session persistence
-- 🖥️ **Headless Browser** — Berjalan di background tanpa tampilan GUI (cocok untuk VPS)
-- 🔄 **Auto Restart** — PM2 process manager untuk auto-restart saat crash
+- 🚀 **Radar SLA & Pengawasan Eksekutif (Level 6)** — Peringkat kecepatan respon, matriks kinerja 24 Kantah, export PDF/CSV, dan notifikasi rekap WA pimpinan
+- 📢 **Auto Notif Pengaduan** — Pemantauan aduan masyarakat OCA Interaction real-time dan eskalasi WhatsApp
+- 📸 **Instagram & Media Humas** — Monitoring Reels Kementerian ATR/BPN, auto-push Nuelink (*collection: repost*), dan broadcast WA
+- 🌐 **Web to WP Auto-Post (Streamlit)** — Scraper berita resmi Kementerian ATR/BPN dan auto-publish ke WordPress
+- 🖥️ **Executive Web Dashboard** — Antarmuka modern dengan Dark/Light theme, session persistence, dan kontrol 24/7
 
 ## 🚀 Quick Start
 
