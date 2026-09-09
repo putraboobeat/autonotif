@@ -8,7 +8,9 @@ def get_existing_urls():
     sheet_id = "1fJOXx9mEmM1vR_PUH0YrMXdy29aE9tZb9jA786IPqbU"
     sheet_name = "link"
     
-    gc = gspread.service_account(filename='credentials.json')
+    import os
+    cred_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'credentials.json')
+    gc = gspread.service_account(filename=cred_path)
     sh = gc.open_by_key(sheet_id)
     worksheet = sh.worksheet(sheet_name)
     

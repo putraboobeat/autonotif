@@ -9,7 +9,14 @@ from playwright.async_api import async_playwright
 from datetime import datetime
 
 # Load environment variables
-load_dotenv()
+dotenv_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
+if not os.path.exists(dotenv_path):
+    example_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env.example')
+    if os.path.exists(example_path):
+        import shutil
+        shutil.copyfile(example_path, dotenv_path)
+
+load_dotenv(dotenv_path)
 
 WP_URL = os.getenv("WP_URL", "").rstrip("/")
 WP_USERNAME = os.getenv("WP_USERNAME")
@@ -156,7 +163,8 @@ async def main():
     
     try:
         # This requires credentials.json to be present in the same directory
-        gc = gspread.service_account(filename='credentials.json')
+        cred_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'credentials.json')
+        gc = gspread.service_account(filename=cred_path)
         sh = gc.open_by_key(sheet_id)
         worksheet = sh.worksheet(sheet_name)
     except Exception as e:

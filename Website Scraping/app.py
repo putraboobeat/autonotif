@@ -29,7 +29,8 @@ st.markdown("Dashboard ini memungkinkan Anda menarik berita terbaru dan mem-post
 @st.cache_resource
 def get_google_sheet():
     try:
-        gc = gspread.service_account(filename='credentials.json')
+        cred_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'credentials.json')
+        gc = gspread.service_account(filename=cred_path)
         sh = gc.open_by_key("1fJOXx9mEmM1vR_PUH0YrMXdy29aE9tZb9jA786IPqbU")
         worksheet = sh.worksheet("link")
         return worksheet
