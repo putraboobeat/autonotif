@@ -296,8 +296,14 @@ function createRoutes() {
             account = matchUser[1];
           }
         }
+        // Normalize SQLite UTC created_at to ISO string so client browser parses local WIB correctly
+        let formattedCreatedAt = p.created_at;
+        if (formattedCreatedAt && typeof formattedCreatedAt === 'string' && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(formattedCreatedAt)) {
+          formattedCreatedAt = formattedCreatedAt.replace(' ', 'T') + 'Z';
+        }
         return {
           ...p,
+          created_at: formattedCreatedAt,
           category: isReel ? 'reels' : 'feed',
           account_username: account || defaultUser
         };
@@ -635,6 +641,15 @@ function createRoutes() {
         }
       }
 
+      const isReel = Boolean(videoUrl || (post.link && post.link.includes('/reel/')) || post.video_url || post.category === 'reels');
+      const cfg = getNuelinkConfig();
+      if (cfg.reelsOnly && !isReel) {
+        return res.status(400).json({
+          success: false,
+          error: 'Pengaturan Nuelink saat ini khusus Reels. Postingan ini adalah foto/feed biasa.',
+        });
+      }
+
       const publishMode = req.body.publishMode || 'QUEUE';
       const result = await postToNuelink({
         caption: post.caption,
@@ -665,6 +680,7 @@ function createRoutes() {
 
       const { IgPostModel } = require('../database/models');
       const numIds = ids.map(id => parseInt(id)).filter(id => !isNaN(id));
+      const cfg = getNuelinkConfig();
       
       let successful = [];
       let failed = [];
@@ -699,6 +715,12 @@ function createRoutes() {
           } catch (fErr) {
             log.warn(`Could not fetch fresh reel video URL: ${fErr.message}`);
           }
+        }
+
+        const isReel = Boolean(videoUrl || (post.link && post.link.includes('/reel/')) || post.video_url || post.category === 'reels');
+        if (cfg.reelsOnly && !isReel) {
+          failed.push({ id, shortcode: post.shortcode, error: 'Dilewati: Bukan Reels (Pengaturan khusus Reels aktif)' });
+          continue;
         }
 
         try {

@@ -207,6 +207,13 @@ async function postToNuelink(postData) {
     publishMode = cfg.publishMode,
   } = postData;
 
+  // Safety guard: if reelsOnly is active, reject non-video/reels posts
+  const isVideo = Boolean(videoUrl || (link && link.includes('/reel/')));
+  if (cfg.reelsOnly && !isVideo) {
+    log.info(`[NUELINK] Skipped post ${shortcode}: Post is not a Reel/Video and reelsOnly is active.`);
+    throw new Error('Nuelink saat ini dikonfigurasi khusus Reels. Postingan foto/feed tidak dikirim.');
+  }
+
   log.info(`[NUELINK] Preparing to post IG ${shortcode || 'content'} from @${username} to Collection ${cfg.collectionId}...`);
 
   // Build clean caption for social repost

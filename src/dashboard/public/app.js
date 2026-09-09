@@ -5,6 +5,22 @@
 const API_BASE = '/api';
 let refreshInterval = null;
 
+/**
+ * Universal UTC Date Parser (Ensures SQLite UTC timestamps convert cleanly to local WIB)
+ */
+function parseUtcDate(dateStr) {
+  if (!dateStr) return null;
+  if (typeof dateStr !== 'string') return new Date(dateStr);
+  let s = dateStr.trim();
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(s)) {
+    s = s.replace(' ', 'T') + 'Z';
+  } else if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(s)) {
+    s = s + 'Z';
+  }
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? new Date(dateStr) : d;
+}
+
 // ============================================
 // Dual Theme System (Cerah & Gelap / Light & Dark)
 // ============================================
@@ -1792,25 +1808,29 @@ async function loadIgPosts() {
         // 3. Tgl Posting (dipisah rapi tanggal & jam)
         let postingDateHtml = '<span style="color:var(--text-muted); font-size:12px;">-</span>';
         if (post.post_date) {
-          const pDate = new Date(post.post_date);
-          const pDateStr = pDate.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
-          const pTimeStr = pDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-          postingDateHtml = `
-            <div style="font-size:12px; font-weight:600; color:var(--text-primary);">${pDateStr}</div>
-            <div style="font-size:11px; color:var(--text-secondary); margin-top:2px;">🕐 ${pTimeStr} WIB</div>
-          `;
+          const pDate = parseUtcDate(post.post_date);
+          if (pDate && !isNaN(pDate.getTime())) {
+            const pDateStr = pDate.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            const pTimeStr = pDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+            postingDateHtml = `
+              <div style="font-size:12px; font-weight:600; color:var(--text-primary);">${pDateStr}</div>
+              <div style="font-size:11px; color:var(--text-secondary); margin-top:2px;">🕐 ${pTimeStr} WIB</div>
+            `;
+          }
         }
 
         // 4. Tgl Scrape (dipisah rapi tanggal & jam)
         let scrapeDateHtml = '<span style="color:var(--text-muted); font-size:12px;">-</span>';
         if (post.created_at) {
-          const sDate = new Date(post.created_at);
-          const sDateStr = sDate.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
-          const sTimeStr = sDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-          scrapeDateHtml = `
-            <div style="font-size:12px; font-weight:600; color:var(--text-primary);">${sDateStr}</div>
-            <div style="font-size:11px; color:var(--text-secondary); margin-top:2px;">⚡ ${sTimeStr} WIB</div>
-          `;
+          const sDate = parseUtcDate(post.created_at);
+          if (sDate && !isNaN(sDate.getTime())) {
+            const sDateStr = sDate.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            const sTimeStr = sDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            scrapeDateHtml = `
+              <div style="font-size:12px; font-weight:600; color:var(--text-primary);">${sDateStr}</div>
+              <div style="font-size:11px; color:var(--text-secondary); margin-top:2px;">⚡ ${sTimeStr} WIB</div>
+            `;
+          }
         }
 
         // 5. Caption & Link
