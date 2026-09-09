@@ -1396,21 +1396,46 @@ async function loadAnalytics() {
     if (document.getElementById('sla-avg-val')) document.getElementById('sla-avg-val').textContent = `${data.summary.avgResolutionHours} Jam`;
     if (document.getElementById('sla-escalated-val')) document.getElementById('sla-escalated-val').textContent = data.summary.escalatedTickets;
 
-    // Update Top Responders
+    // Update Top 10 Tercepat
     const topContainer = document.getElementById('top-responders-container');
-    if (topContainer && data.topResponders) {
-      topContainer.innerHTML = data.topResponders.map((item, idx) => `
-        <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border);">
-          <div style="display: flex; align-items: center; gap: 12px;">
-            <div style="width: 28px; height: 28px; border-radius: 50%; background: rgba(16, 185, 129, 0.2); color: #10b981; display: flex; align-items: center; justify-content: center; font-weight: bold;">#${idx + 1}</div>
-            <div>
-              <div style="font-weight: 600; color: var(--text-primary);">${item.kantor}</div>
-              <div style="font-size: 11px; color: var(--text-muted);">Selesai: ${item.closedTickets}/${item.totalTickets} (${item.resolutionRate}%)</div>
+    if (topContainer) {
+      if (data.topResponders && data.topResponders.length > 0) {
+        topContainer.innerHTML = data.topResponders.map((item, idx) => `
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border);">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div style="width: 26px; height: 26px; border-radius: 50%; background: rgba(16, 185, 129, 0.2); color: #10b981; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 11px;">#${idx + 1}</div>
+              <div>
+                <div style="font-weight: 600; color: var(--text-primary); font-size: 13px;">${item.kantor}</div>
+                <div style="font-size: 11px; color: var(--text-muted);">Selesai: ${item.closedTickets}/${item.totalTickets} (${item.resolutionRate}%)</div>
+              </div>
             </div>
+            <span style="font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); white-space: nowrap;">⚡ ${item.avgHours} Jam</span>
           </div>
-          <span style="font-size: 11px; font-weight: 700; padding: 4px 8px; border-radius: 6px; background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">⚡ ${item.avgHours} Jam</span>
-        </div>
-      `).join('') || '<p class="text-muted">Belum ada data respons aduan.</p>';
+        `).join('');
+      } else {
+        topContainer.innerHTML = '<div style="padding: 16px; text-align: center; color: var(--text-muted); font-size: 12px;">Belum ada data aduan yang diselesaikan.</div>';
+      }
+    }
+
+    // Update Top 10 Terlama
+    const slowestContainer = document.getElementById('slowest-responders-container');
+    if (slowestContainer) {
+      if (data.slowestResponders && data.slowestResponders.length > 0) {
+        slowestContainer.innerHTML = data.slowestResponders.map((item, idx) => `
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: 8px; background: rgba(245, 158, 11, 0.04); border: 1px solid rgba(245, 158, 11, 0.2);">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div style="width: 26px; height: 26px; border-radius: 50%; background: rgba(245, 158, 11, 0.2); color: #f59e0b; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 11px;">#${idx + 1}</div>
+              <div>
+                <div style="font-weight: 600; color: var(--text-primary); font-size: 13px;">${item.kantor}</div>
+                <div style="font-size: 11px; color: var(--text-muted);">Selesai: ${item.closedTickets}/${item.totalTickets} (${item.resolutionRate}%)</div>
+              </div>
+            </div>
+            <span style="font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); white-space: nowrap;">⏱️ ${item.avgHours} Jam</span>
+          </div>
+        `).join('');
+      } else {
+        slowestContainer.innerHTML = '<div style="padding: 16px; text-align: center; color: var(--text-muted); font-size: 12px;">Belum ada data aduan yang diselesaikan.</div>';
+      }
     }
 
     // Update Attention Needed

@@ -258,28 +258,39 @@
         </div>
       </div>
 
-      <!-- Leaderboard Cards (2 Columns) -->
+      <!-- Leaderboard Cards (2 Columns: 10 Tercepat vs 10 Terlama) -->
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 24px; margin-bottom: 24px;">
-        <!-- Top Responders -->
+        <!-- Top 10 Tercepat -->
         <div class="card" style="display: flex; flex-direction: column;">
           <div class="card-header" style="border-bottom: 1px solid var(--glass-border); padding-bottom: 16px;">
-            <h2 style="color: #10b981;">🏆 Top Responders (Tercepat & Responsif)</h2>
-            <span class="status-badge status-open" style="font-size: 11px;">5 Wilayah Terbaik</span>
+            <h2 style="color: #10b981;">🏆 10 Kantah Penyelesaian Tercepat</h2>
+            <span class="status-badge status-open" style="font-size: 11px;">10 Wilayah Terbaik</span>
           </div>
-          <div class="card-body" id="top-responders-container" style="padding-top: 16px; display: flex; flex-direction: column; gap: 12px;">
-            <p class="text-muted">Memuat data performa kantor pertanahan...</p>
+          <div class="card-body" id="top-responders-container" style="padding-top: 16px; display: flex; flex-direction: column; gap: 10px; max-height: 520px; overflow-y: auto;">
+            <p class="text-muted">Memuat data performa kantor pertanahan tercepat...</p>
           </div>
         </div>
 
-        <!-- Attention Needed / Butuh Pembinaan -->
+        <!-- Top 10 Terlama -->
         <div class="card" style="display: flex; flex-direction: column;">
           <div class="card-header" style="border-bottom: 1px solid var(--glass-border); padding-bottom: 16px;">
-            <h2 style="color: #ef4444;">🚨 Butuh Pembinaan & Eskalasi</h2>
-            <span class="status-badge status-escalation" style="font-size: 11px;">Attention Required</span>
+            <h2 style="color: #f59e0b;">⏱️ 10 Kantah Penyelesaian Terlama</h2>
+            <span class="status-badge" style="font-size: 11px; background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3);">10 Wilayah Terlama</span>
           </div>
-          <div class="card-body" id="attention-needed-container" style="padding-top: 16px; display: flex; flex-direction: column; gap: 12px;">
-            <p class="text-muted">Memuat analisa keterlambatan dan eskalasi...</p>
+          <div class="card-body" id="slowest-responders-container" style="padding-top: 16px; display: flex; flex-direction: column; gap: 10px; max-height: 520px; overflow-y: auto;">
+            <p class="text-muted">Memuat data performa kantor pertanahan terlama...</p>
           </div>
+        </div>
+      </div>
+
+      <!-- Attention Needed / Butuh Pembinaan & Eskalasi -->
+      <div class="card" style="margin-bottom: 24px;">
+        <div class="card-header" style="border-bottom: 1px solid var(--glass-border); padding-bottom: 16px;">
+          <h2 style="color: #ef4444;">🚨 Aduan Tertunda / Butuh Eskalasi & Pembinaan</h2>
+          <span class="status-badge status-escalation" style="font-size: 11px;">Attention Required</span>
+        </div>
+        <div class="card-body" id="attention-needed-container" style="padding-top: 16px; display: flex; flex-direction: column; gap: 12px;">
+          <p class="text-muted">Memuat analisa keterlambatan dan eskalasi...</p>
         </div>
       </div>
 

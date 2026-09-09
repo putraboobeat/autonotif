@@ -158,7 +158,7 @@ function getSlaMetrics() {
       };
     });
 
-    // Sort by Best (Top Responders) - EXCLUDE 0-ticket / 0-closed offices
+    // 1. Top 10 Fastest Responders (10 Kantah Penyelesaian Tercepat)
     const topResponders = [...rankingList]
       .filter(item => item.totalTickets > 0 && item.closedTickets > 0)
       .sort((a, b) => {
@@ -166,9 +166,19 @@ function getSlaMetrics() {
         if (b.resolutionRate !== a.resolutionRate) return b.resolutionRate - a.resolutionRate;
         return b.closedTickets - a.closedTickets;
       })
-      .slice(0, 5);
+      .slice(0, 10);
 
-    // Sort by Attention Needed - ONLY offices with active open/escalated tickets OR critical average hours > 24h
+    // 2. Top 10 Slowest Responders (10 Kantah Penyelesaian Terlama)
+    const slowestResponders = [...rankingList]
+      .filter(item => item.totalTickets > 0 && item.closedTickets > 0)
+      .sort((a, b) => {
+        if (b.avgHours !== a.avgHours) return b.avgHours - a.avgHours;
+        if (a.resolutionRate !== b.resolutionRate) return a.resolutionRate - b.resolutionRate;
+        return a.closedTickets - b.closedTickets;
+      })
+      .slice(0, 10);
+
+    // 3. Attention Needed - ONLY offices with active open/escalated tickets OR critical average hours > 24h
     const attentionNeeded = [...rankingList]
       .filter(item => item.totalTickets > 0 && (item.openTickets > 0 || item.escalatedTickets > 0 || (item.closedTickets > 0 && item.avgHours > 24)))
       .sort((a, b) => {
@@ -200,6 +210,7 @@ function getSlaMetrics() {
         globalResolutionRate: totalGlobalTickets > 0 ? Math.round((totalGlobalClosed / totalGlobalTickets) * 100) : 100
       },
       topResponders,
+      slowestResponders,
       attentionNeeded,
       allOffices: rankingList
     };

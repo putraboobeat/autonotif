@@ -71,9 +71,20 @@ function generateHtmlReport(metrics = null) {
         <strong>${item.kantor}</strong>
         <span>Selesai: ${item.closedTickets} dari ${item.totalTickets} aduan (${item.resolutionRate}%)</span>
       </div>
-      <span class="badge badge-success">${item.avgHours} Jam</span>
+      <span class="badge badge-success">⚡ ${item.avgHours} Jam</span>
     </div>
   `).join('');
+
+  const slowestHtml = data.slowestResponders ? data.slowestResponders.map((item, index) => `
+    <div class="leaderboard-item attn-item">
+      <span class="rank" style="background: rgba(245, 158, 11, 0.2); color: #d97706;">#${index + 1}</span>
+      <div class="info">
+        <strong>${item.kantor}</strong>
+        <span>Selesai: ${item.closedTickets} dari ${item.totalTickets} aduan (${item.resolutionRate}%)</span>
+      </div>
+      <span class="badge" style="background: #fef3c7; color: #b45309;">⏱️ ${item.avgHours} Jam</span>
+    </div>
+  `).join('') : '';
 
   const attnHtml = data.attentionNeeded.length > 0 ? data.attentionNeeded.map((item, index) => `
     <div class="leaderboard-item attn-item">
@@ -114,54 +125,52 @@ function generateHtmlReport(metrics = null) {
     .meta-date { font-size: 13px; color: #64748b; margin-top: 8px; }
     .kpi-grid { display: flex; justify-content: space-between; gap: 15px; margin-bottom: 30px; }
     .kpi-box { flex: 1; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; text-align: center; }
-    .kpi-box span { display: block; font-size: 12px; color: #64748b; text-transform: uppercase; font-weight: 600; }
-    .kpi-box strong { font-size: 24px; color: #0f172a; display: block; margin-top: 5px; }
-    .section-title { font-size: 16px; font-weight: 700; color: #0f172a; margin-top: 25px; margin-bottom: 15px; border-left: 4px solid #3b82f6; padding-left: 10px; }
+    .kpi-box span { display: block; font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600; margin-bottom: 5px; }
+    .kpi-box strong { font-size: 22px; color: #0f172a; }
     .leaderboard-grid { display: flex; gap: 20px; margin-bottom: 30px; }
     .col-half { flex: 1; }
+    .section-title { font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 12px; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px; }
     .leaderboard-item { display: flex; align-items: center; justify-content: space-between; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; }
-    .rank { font-weight: 700; font-size: 14px; width: 28px; height: 28px; border-radius: 50%; background: #e2e8f0; display: flex; align-items: center; justify-content: center; margin-right: 10px; }
-    .rank.warning { background: #fee2e2; color: #ef4444; }
-    .info { flex: 1; }
-    .info strong { display: block; font-size: 13px; }
+    .rank { width: 24px; height: 24px; border-radius: 50%; background: #e0e7ff; color: #3730a3; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 11px; margin-right: 10px; }
+    .rank.warning { background: #fee2e2; color: #991b1b; }
+    .info { flex: 1; display: flex; flex-direction: column; }
+    .info strong { font-size: 13px; color: #1e293b; }
     .info span { font-size: 11px; color: #64748b; }
-    .badge { font-size: 11px; font-weight: 700; padding: 4px 8px; border-radius: 4px; }
-    .badge-success { background: #dcfce7; color: #15803d; }
-    .badge-danger { background: #fee2e2; color: #b91c1c; }
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
-    th { background: #0f172a; color: #ffffff; text-align: left; padding: 10px; font-weight: 600; }
-    td { padding: 9px 10px; border-bottom: 1px solid #e2e8f0; }
-    tr:nth-child(even) { background-color: #f8fafc; }
-    .status-pill { display: inline-block; padding: 3px 8px; border-radius: 999px; font-size: 10px; font-weight: 600; }
+    .badge { font-size: 11px; font-weight: bold; padding: 4px 8px; border-radius: 4px; }
+    .badge-success { background: #dcfce7; color: #166534; }
+    .badge-danger { background: #fee2e2; color: #991b1b; }
+    .empty-msg { font-size: 12px; color: #166534; background: #dcfce7; padding: 12px; border-radius: 6px; text-align: center; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 12px; }
+    th { background: #0f172a; color: #ffffff; text-align: left; padding: 8px 10px; font-weight: 600; font-size: 11px; }
+    td { padding: 8px 10px; border-bottom: 1px solid #e2e8f0; }
+    tr:nth-child(even) { background: #f8fafc; }
+    .status-pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 10px; font-weight: bold; }
     .status-excellent { background: #dcfce7; color: #166534; }
-    .status-good { background: #fef9c3; color: #854d0e; }
+    .status-good { background: #fef3c7; color: #92400e; }
     .status-critical { background: #fee2e2; color: #991b1b; }
-    .footer { margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 15px; text-align: right; font-size: 11px; color: #64748b; }
+    .status-idle { background: #f1f5f9; color: #64748b; }
+    .footer { margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 15px; text-align: right; font-size: 11px; color: #94a3b8; }
   </style>
 </head>
 <body>
   <div class="header">
-    <h1>Kementerian Agraria dan Tata Ruang / Badan Pertanahan Nasional</h1>
-    <h2>Kantor Wilayah Provinsi Aceh — Laporan Analisis SLA & Pengawasan Pelayanan</h2>
-    <div class="meta-date">Diperbarui pada: ${dateStr}</div>
+    <h1>KANTOR WILAYAH BADAN PERTANAHAN NASIONAL PROVINSI ACEH</h1>
+    <h2>Laporan Pengawasan Pelayanan & Monitoring SLA Pengaduan</h2>
+    <div class="meta-date">Digenerate pada: ${dateStr}</div>
   </div>
 
   <div class="kpi-grid">
     <div class="kpi-box">
-      <span>Total Pengaduan</span>
+      <span>Total Aduan</span>
       <strong>${data.summary.totalTickets}</strong>
     </div>
     <div class="kpi-box">
-      <span>Selesai / Closed</span>
-      <strong style="color: #10b981;">${data.summary.closedTickets} (${data.summary.globalResolutionRate}%)</strong>
+      <span>Aduan Selesai</span>
+      <strong style="color: #166534;">${data.summary.closedTickets}</strong>
     </div>
     <div class="kpi-box">
-      <span>Belum Selesai / Open</span>
-      <strong style="color: ${data.summary.openTickets > 0 ? '#f59e0b' : '#64748b'};">${data.summary.openTickets}</strong>
-    </div>
-    <div class="kpi-box">
-      <span>Eskalasi & Urgen</span>
-      <strong style="color: ${data.summary.escalatedTickets > 0 ? '#ef4444' : '#64748b'};">${data.summary.escalatedTickets}</strong>
+      <span>Tingkat Resolusi</span>
+      <strong style="color: #2563eb;">${data.summary.globalResolutionRate}%</strong>
     </div>
     <div class="kpi-box">
       <span>Rata-Rata Waktu Respon</span>
@@ -171,14 +180,21 @@ function generateHtmlReport(metrics = null) {
 
   <div class="leaderboard-grid">
     <div class="col-half">
-      <div class="section-title">🏆 Top Responders (Tercepat & Terbaik)</div>
+      <div class="section-title">🏆 10 Kantah Penyelesaian Tercepat</div>
       ${topHtml}
     </div>
     <div class="col-half">
-      <div class="section-title">🚨 Perlu Pembinaan & Perhatian (Attention Needed)</div>
-      ${attnHtml}
+      <div class="section-title">⏱️ 10 Kantah Penyelesaian Terlama</div>
+      ${slowestHtml}
     </div>
   </div>
+
+  ${data.attentionNeeded.length > 0 ? `
+  <div style="margin-bottom: 30px;">
+    <div class="section-title" style="color: #991b1b;">🚨 Perlu Pembinaan & Perhatian Khusus (Aduan Tertunda)</div>
+    ${attnHtml}
+  </div>
+  ` : ''}
 
   <div class="section-title">📊 Matriks Kinerja 24 Kantor Pertanahan (Kabupaten/Kota)</div>
   <table>
