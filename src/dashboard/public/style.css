@@ -1195,7 +1195,8 @@ body::after {
     grid-template-columns: 1fr;
   }
 
-  .header-icon {
-    display: none;
+  .header-left {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
