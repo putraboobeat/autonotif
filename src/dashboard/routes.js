@@ -1407,6 +1407,38 @@ function createRoutes() {
     }
   });
 
+  router.get('/streamlit/status', async (req, res) => {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 2000);
+      const testRes = await fetch('http://localhost:8501', { signal: controller.signal });
+      clearTimeout(timeout);
+      res.json({ success: true, running: testRes.ok || testRes.status < 500, url: 'http://localhost:8501' });
+    } catch {
+      res.json({ success: true, running: false, url: 'http://localhost:8501' });
+    }
+  });
+
+  router.post('/streamlit/start', async (req, res) => {
+    try {
+      const path = require('path');
+      const { spawn } = require('child_process');
+      const streamlitBin = path.join(__dirname, '../../Website Scraping/venv/bin/streamlit');
+      const workingDir = path.join(__dirname, '../../Website Scraping');
+      
+      const child = spawn(streamlitBin, ['run', 'app.py', '--server.port=8501', '--server.headless=true'], {
+        cwd: workingDir,
+        detached: true,
+        stdio: 'ignore'
+      });
+      child.unref();
+
+      res.json({ success: true, message: 'Server Streamlit berhasil dinyalakan di port 8501.' });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   router.post('/ig-posts/batch-delete', async (req, res) => {
     try {
       const { ids } = req.body;

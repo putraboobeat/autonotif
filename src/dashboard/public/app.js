@@ -142,7 +142,7 @@ function initTabs() {
         case 'analytics': loadAnalytics(); break;
         case 'logs': loadLogs(); break;
         case 'instagram': break;
-        case 'website': loadWebArticles(); break;
+        case 'website': checkStreamlitStatus(); break;
         case 'settings': 
           loadSettings(); 
           loadTemplates(); 
@@ -2014,8 +2014,46 @@ async function pingIgAdmin() {
 
 
 // ==========================================
-// Web to WP Scraper UI Logic
+// Web to WP Scraper UI Logic (Streamlit Portal)
 // ==========================================
+
+async function checkStreamlitStatus() {
+  try {
+    const res = await apiGet('/streamlit/status');
+    const badge = document.getElementById('streamlit-status-badge');
+    const iframe = document.getElementById('streamlit-iframe');
+    
+    if (res.running) {
+      if (badge) {
+        badge.className = 'badge badge-success';
+        badge.textContent = '🟢 Online (Port 8501)';
+      }
+      if (iframe && (!iframe.src || iframe.src === 'about:blank' || iframe.src.includes('error'))) {
+        iframe.src = 'http://localhost:8501/?embed=true';
+      }
+    } else {
+      if (badge) {
+        badge.className = 'badge badge-danger';
+        badge.textContent = '🟡 Menyalakan server Streamlit...';
+      }
+      showToast('Menyalakan server Streamlit di latar belakang...', 'info');
+      await apiPost('/streamlit/start', {});
+      setTimeout(async () => {
+        const check = await apiGet('/streamlit/status');
+        if (check.running && iframe) {
+          iframe.src = 'http://localhost:8501/?embed=true';
+          if (badge) {
+            badge.className = 'badge badge-success';
+            badge.textContent = '🟢 Online (Port 8501)';
+          }
+          showToast('Dashboard Web Scraping siap digunakan!', 'success');
+        }
+      }, 3500);
+    }
+  } catch (e) {
+    console.error('Failed to check Streamlit status:', e);
+  }
+}
 
 async function loadWebArticles() {
   try {

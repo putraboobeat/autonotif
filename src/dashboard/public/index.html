@@ -484,100 +484,28 @@
 
     <!-- Tab: Website to WordPress Scraper -->
     <div class="tab-content" id="tab-website">
-      <div class="card">
-        <div class="card-header" style="flex-wrap: wrap; gap: 12px; border-left: 4px solid #10b981;">
+      <div class="card" style="border-top: 4px solid #10b981; margin-bottom: 20px;">
+        <div class="card-header" style="flex-wrap: wrap; gap: 12px; background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(6, 95, 70, 0.08));">
           <div>
-            <h2>🌐 Web to WordPress</h2>
-            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px;">Tarik berita terbaru dari website sumber lalu posting otomatis ke WordPress.</p>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <h2 style="margin: 0;">🤖 Dashboard Web Scraping (Streamlit)</h2>
+              <span class="badge badge-success" id="streamlit-status-badge" style="font-size: 11px;">🟢 Online (Port 8501)</span>
+            </div>
+            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px;">Aplikasi Bot Auto-Post ATR/BPN berbasis Streamlit dengan integrasi Google Sheets & Playwright.</p>
           </div>
-          <div style="display: flex; gap: 8px;">
-            <button class="btn btn-secondary" onclick="forceWebFetch()">⬇️ Tarik Link Baru</button>
-            <button class="btn btn-primary" onclick="forceWebPost()">🚀 Posting ke WP</button>
-          </div>
-        </div>
-
-        <div class="settings-group" style="padding: 16px;">
-          <h3 style="font-size: 1.1rem; margin-bottom: 16px;">⚙️ Konfigurasi WordPress & Scraper</h3>
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px;">
-            
-            <div class="setting-item">
-              <div class="settings-info">
-                <h4>URL Website Target (WordPress)</h4>
-                <p>Contoh: https://acehsahoe.com</p>
-              </div>
-              <input type="text" id="setting-web-wp-url" class="form-control" placeholder="https://..." onchange="updateSetting('web_wp_url', this.value)">
-            </div>
-            
-            <div class="setting-item">
-              <div class="settings-info">
-                <h4>Username WordPress</h4>
-                <p>Username login WP</p>
-              </div>
-              <input type="text" id="setting-web-wp-user" class="form-control" placeholder="Username WP" onchange="updateSetting('web_wp_username', this.value)">
-            </div>
-            
-            <div class="setting-item">
-              <div class="settings-info">
-                <h4>Application Password WP</h4>
-                <p>Gunakan Application Password, bukan password biasa</p>
-              </div>
-              <input type="password" id="setting-web-wp-pass" class="form-control" placeholder="**** **** **** ****" onchange="updateSetting('web_wp_password', this.value)">
-            </div>
-            
-            <div class="setting-item">
-              <div class="settings-info">
-                <h4>Status Artikel WP</h4>
-                <p>draft / publish</p>
-              </div>
-              <select id="setting-web-wp-status" class="form-control" onchange="updateSetting('web_wp_status', this.value)">
-                <option value="draft">Draft</option>
-                <option value="publish">Publish</option>
-              </select>
-            </div>
-            
-            <div class="setting-item" style="grid-column: 1 / -1;">
-              <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 8px 0;">
-            </div>
-
-            <div class="setting-item">
-              <div class="settings-info">
-                <h4>Status Aktif Web Scraper</h4>
-                <p>Jika nyala, sistem menarik berita dan mem-postingnya secara otomatis setiap siklus.</p>
-              </div>
-              <label class="toggle-switch">
-                <input type="checkbox" id="setting-web-enabled" onchange="updateSetting('web_enabled', this.checked ? '1' : '0')">
-                <span class="toggle-slider"></span>
-              </label>
-            </div>
-            
-            <div class="setting-item">
-              <div class="settings-info">
-                <h4>URL Sumber Berita (ATR/BPN)</h4>
-                <p>Link halaman daftar berita</p>
-              </div>
-              <input type="text" id="setting-web-source-url" class="form-control" placeholder="https://www.atrbpn.go.id/berita" onchange="updateSetting('web_source_url', this.value)">
-            </div>
-            
-            <div class="setting-item">
-              <div class="settings-info">
-                <h4>Interval (Menit)</h4>
-                <p>Seberapa sering bot berjalan (default: 60)</p>
-              </div>
-              <input type="number" id="setting-web-interval" class="form-control" placeholder="60" onchange="updateSetting('web_interval_minutes', this.value)">
-            </div>
-            
-          </div>
-          
-          <div style="margin-top: 20px; padding: 12px; background: rgba(59,130,246,0.1); border-radius: 8px; border: 1px solid rgba(59,130,246,0.2);">
-            <strong>Status Scraper Berjalan:</strong> <span id="web-scraper-status-text">Memuat...</span>
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <a href="http://localhost:8501" target="_blank" class="btn btn-primary" style="background: linear-gradient(135deg, #10b981, #059669); font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);">
+              🚀 Buka Halaman Scraping (Tab Baru) ↗
+            </a>
+            <button class="btn btn-secondary btn-sm" onclick="checkStreamlitStatus()" title="Refresh status koneksi Streamlit">↻ Cek Status</button>
           </div>
         </div>
 
         <div style="padding: 16px;">
-          <h3 style="margin-bottom: 16px;">📑 Riwayat Artikel Website</h3>
-          <div class="table-responsive">
-            <table class="table">
-              <thead>
+          <iframe id="streamlit-iframe" src="http://localhost:8501/?embed=true" style="width: 100%; height: 820px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-card);" allowfullscreen></iframe>
+        </div>
+      </div>
+    </div>
                 <tr>
                   <th style="width: 25%">Informasi</th>
                   <th style="width: 35%">Judul / URL Sumber</th>

@@ -120,7 +120,7 @@ with col1:
         
         # Menjalankan script secara real-time
         process = subprocess.Popen(
-            ["python", "-u", "link_fetcher.py", str(num_pages), source_url], 
+            [sys.executable, "-u", "link_fetcher.py", str(num_pages), source_url], 
             stdout=subprocess.PIPE, 
             stderr=subprocess.STDOUT, 
             text=True,
@@ -150,7 +150,7 @@ with col2:
         
         # Menjalankan script secara real-time
         process = subprocess.Popen(
-            ["python", "-u", "wp_autopost_bot.py"], 
+            [sys.executable, "-u", "wp_autopost_bot.py"], 
             stdout=subprocess.PIPE, 
             stderr=subprocess.STDOUT, 
             text=True,

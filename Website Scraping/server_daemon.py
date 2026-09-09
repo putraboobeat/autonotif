@@ -42,7 +42,7 @@ def main():
             log(f"--> Menjalankan AUTO FETCH ({target_pages} halaman, {source_url})...")
             try:
                 subprocess.run(
-                    ["python", "link_fetcher.py", str(target_pages), source_url], 
+                    [sys.executable, "link_fetcher.py", str(target_pages), source_url], 
                     check=True
                 )
                 log("AUTO FETCH selesai.")
@@ -53,7 +53,7 @@ def main():
             log("--> Menjalankan AUTO POST...")
             try:
                 subprocess.run(
-                    ["python", "wp_autopost_bot.py"], 
+                    [sys.executable, "wp_autopost_bot.py"], 
                     check=True
                 )
                 log("AUTO POST selesai.")
