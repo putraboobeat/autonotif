@@ -12,12 +12,35 @@ function getStreamlitCommand() {
   const fs = require('fs');
   const rootDir = path.join(__dirname, '../..');
   const workingDir = path.join(rootDir, 'Website Scraping');
-  const venvBin = path.join(workingDir, 'venv', 'bin', 'streamlit');
   
-  if (fs.existsSync(venvBin)) {
-    return { bin: venvBin, argsPrefix: [], workingDir };
+  // Check common virtualenv paths
+  const candidateVenvs = [
+    path.join(workingDir, 'venv', 'bin', 'streamlit'),
+    path.join(workingDir, '.venv', 'bin', 'streamlit'),
+    path.join(rootDir, 'venv', 'bin', 'streamlit'),
+    path.join(rootDir, '.venv', 'bin', 'streamlit'),
+  ];
+  for (const binPath of candidateVenvs) {
+    if (fs.existsSync(binPath)) {
+      return { bin: binPath, argsPrefix: [], workingDir };
+    }
   }
-  return { bin: 'streamlit', argsPrefix: [], workingDir };
+
+  // Check python binaries in venv
+  const candidatePythonVenvs = [
+    path.join(workingDir, 'venv', 'bin', 'python'),
+    path.join(workingDir, 'venv', 'bin', 'python3'),
+    path.join(workingDir, '.venv', 'bin', 'python'),
+    path.join(workingDir, '.venv', 'bin', 'python3'),
+  ];
+  for (const pyPath of candidatePythonVenvs) {
+    if (fs.existsSync(pyPath)) {
+      return { bin: pyPath, argsPrefix: ['-m', 'streamlit'], workingDir };
+    }
+  }
+
+  // Fallback to system python3 or streamlit
+  return { bin: 'python3', argsPrefix: ['-m', 'streamlit'], workingDir };
 }
 
 async function isStreamlitAlive() {

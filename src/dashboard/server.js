@@ -25,10 +25,15 @@ function startDashboard() {
     target: 'http://127.0.0.1:8501',
     changeOrigin: true,
     ws: true,
-    onError(err, req, res) {
-      if (res.writeHead && !res.headersSent) {
-        res.writeHead(502, { 'Content-Type': 'text/html; charset=utf-8' });
-        res.end('<h3>Sedang menyambungkan ke server Streamlit... Halaman akan termuat otomatis dalam beberapa detik.</h3><script>setTimeout(() => location.reload(), 2500);</script>');
+    timeout: 6000,
+    proxyTimeout: 6000,
+    on: {
+      error: (err, req, res) => {
+        log.warn('Streamlit proxy connection error', { error: err.message });
+        if (res && res.writeHead && !res.headersSent) {
+          res.writeHead(502, { 'Content-Type': 'text/html; charset=utf-8' });
+          res.end(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Memuat Streamlit...</title><style>body{font-family:system-ui,sans-serif;background:#0f172a;color:#f8fafc;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center}.card{background:#1e293b;padding:2rem;border-radius:12px;border:1px solid #334155;max-width:480px}.spinner{width:36px;height:36px;border:3px solid #334155;border-top-color:#3b82f6;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 1rem}@keyframes spin{to{transform:rotate(360deg)}}h2{font-size:1.15rem;margin-bottom:.5rem}p{color:#94a3b8;font-size:.85rem;line-height:1.4}</style></head><body><div class="card"><div class="spinner"></div><h2>Menghubungkan ke Streamlit...</h2><p>Server Streamlit sedang bersiap di background. Halaman akan otomatis memuat ulang dalam 3 detik...</p></div><script>setTimeout(()=>location.reload(),3000);</script></body></html>`);
+        }
       }
     }
   });
