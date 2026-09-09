@@ -110,14 +110,16 @@ function getSlaMetrics() {
       stats.totalDurationHours += hoursDiff;
       stats.durationCount++;
 
-      if (hoursDiff <= 24 || isClosed) {
+      if (isClosed) {
         stats.onTimeTickets++;
       } else {
-        stats.escalatedTickets++;
-      }
-
-      if (t.reminder_count >= 3 || (t.priority && t.priority.toLowerCase().includes('urgent'))) {
-        if (!stats.escalatedTickets) stats.escalatedTickets++;
+        // Open ticket checks
+        if (hoursDiff <= 24) {
+          stats.onTimeTickets++;
+        }
+        if (hoursDiff > 24 || t.reminder_count >= 3 || (t.priority && t.priority.toLowerCase().includes('urgent'))) {
+          stats.escalatedTickets++;
+        }
       }
     });
 
@@ -132,7 +134,7 @@ function getSlaMetrics() {
       if (stats.totalTickets === 0) {
         statusBadge = 'IDLE';
         statusText = 'Belum Ada Aduan';
-      } else if (stats.openTickets > 0 || stats.escalatedTickets > 0 || parseFloat(avgHours) > 24) {
+      } else if (stats.openTickets > 0 || stats.escalatedTickets > 0 || (stats.closedTickets > 0 && parseFloat(avgHours) > 24)) {
         if (stats.escalatedTickets > 0 || parseFloat(avgHours) > 24) {
           statusBadge = 'CRITICAL'; // Red / Attention needed
           statusText = 'Perlu Eskalasi & Pembinaan (> 24 Jam)';
@@ -166,9 +168,9 @@ function getSlaMetrics() {
       })
       .slice(0, 5);
 
-    // Sort by Attention Needed - EXCLUDE 0-ticket offices
+    // Sort by Attention Needed - ONLY offices with active open/escalated tickets OR critical average hours > 24h
     const attentionNeeded = [...rankingList]
-      .filter(item => item.totalTickets > 0 && (item.openTickets > 0 || item.escalatedTickets > 0 || item.avgHours > 24))
+      .filter(item => item.totalTickets > 0 && (item.openTickets > 0 || item.escalatedTickets > 0 || (item.closedTickets > 0 && item.avgHours > 24)))
       .sort((a, b) => {
         if (b.escalatedTickets !== a.escalatedTickets) return b.escalatedTickets - a.escalatedTickets;
         if (b.openTickets !== a.openTickets) return b.openTickets - a.openTickets;
