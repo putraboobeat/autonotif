@@ -1091,6 +1091,9 @@ async function loadSettings() {
       document.getElementById('setting-reminder-interval').value = res.data.reminder_interval_minutes || '';
       
       document.getElementById('setting-ig-enabled').checked = res.data.ig_enabled === '1';
+      if (document.getElementById('setting-ig-blast-kanwil-only')) {
+        document.getElementById('setting-ig-blast-kanwil-only').checked = res.data.ig_blast_kanwil_only === '1';
+      }
       document.getElementById('setting-ig-username').value = res.data.ig_username || '';
       document.getElementById('setting-ig-template').value = res.data.ig_template_msg || '';
       document.getElementById('setting-ig-caption-length').value = res.data.ig_caption_max_length || '50';
@@ -1817,6 +1820,7 @@ async function loadIgPosts() {
       res.data.forEach((post) => {
         let statusBadge = '';
         if (post.status === 'success') statusBadge = '<span class="badge badge-success" style="font-size:10px; padding:2px 6px;">Sukses</span>';
+        else if (post.status === 'monitored') statusBadge = '<span class="badge" style="background: rgba(2, 132, 199, 0.15); color: #0284c7; border: 1px solid rgba(2, 132, 199, 0.35); font-size:10px; padding:2px 6px;" title="Hanya dipantau / Nuelink (tidak diblast ke WA)">Terpantau</span>';
         else if (post.status === 'ignored') statusBadge = '<span class="badge" style="background:#4b5563; color:white; font-size:10px; padding:2px 6px;">Abaikan</span>';
         else statusBadge = `<span class="badge badge-danger" style="font-size:10px; padding:2px 6px;" title="${post.error_msg}">Gagal</span>`;
         

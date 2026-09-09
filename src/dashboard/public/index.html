@@ -407,12 +407,23 @@
           <div class="settings-row">
             <div class="settings-info">
               <h4>Username Instagram yang Dipantau</h4>
-              <p>Masukkan username tanpa @. Bisa lebih dari satu, pisahkan dengan koma (contoh: kanwilbpnaceh, kantaacehbesar)</p>
+              <p>Masukkan username tanpa @. Bisa lebih dari satu, pisahkan dengan koma (contoh: kanwilbpnaceh, kementerian.atrbpn)</p>
             </div>
             <div style="display: flex; gap: 8px;">
-              <input type="text" class="form-input" id="setting-ig-username" placeholder="username1, username2">
+              <input type="text" class="form-input" id="setting-ig-username" placeholder="kanwilbpnaceh, kementerian.atrbpn">
               <button class="btn btn-primary btn-sm" onclick="saveCustomSetting('ig_username', 'setting-ig-username')">Simpan</button>
             </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-info">
+              <h4>Filter Blast WhatsApp (Khusus @kanwilbpnaceh)</h4>
+              <p>Jika diaktifkan, postingan dari akun selain <strong>@kanwilbpnaceh</strong> (misal @kementerian.atrbpn) tetap dipantau &amp; masuk tabel riwayat/Nuelink, namun <strong>TIDAK</strong> akan diblast ke Group WA &amp; Admin.</p>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="setting-ig-blast-kanwil-only" onchange="updateSetting('ig_blast_kanwil_only', this.checked ? '1' : '0')">
+              <span class="toggle-slider"></span>
+            </label>
           </div>
 
           <div class="settings-row">

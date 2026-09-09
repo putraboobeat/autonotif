@@ -411,7 +411,14 @@ async function scrapeInstagram(options = {}) {
           let status = 'success';
           let errorMsg = '';
           
-          if (!targetGroup && !targetAdmin) {
+          // Cek toggle filter blast khusus akun kanwilbpnaceh
+          const blastKanwilOnly = ConfigModel.get('ig_blast_kanwil_only') === '1';
+          const isKanwilAccount = (username || '').toLowerCase().replace('@', '').trim() === 'kanwilbpnaceh';
+          
+          if (blastKanwilOnly && !isKanwilAccount) {
+            log.info(`[IG] Filter aktif: Postingan ${post.shortcode} dari @${username} dipantau tanpa blast ke WhatsApp (hanya @kanwilbpnaceh yang diblast).`);
+            status = 'monitored';
+          } else if (!targetGroup && !targetAdmin) {
             status = 'failed';
             errorMsg = 'Tujuan Group / Nomor Admin WhatsApp belum diatur di form Default Target Pengiriman Instagram atau Pengaturan Utama.';
             log.warn(`[IG] No target group or admin configured. Post ${post.shortcode} marked as failed.`);

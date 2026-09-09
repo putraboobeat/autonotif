@@ -219,9 +219,10 @@ function initDatabase() {
     log.error('Template migration failed', { error: err.message });
   }
 
-  // Default ig_caption_max_length
+  // Default ig_caption_max_length & ig_blast_kanwil_only
   try {
     db.prepare("INSERT OR IGNORE INTO system_config (key, value) VALUES ('ig_caption_max_length', '50')").run();
+    db.prepare("INSERT OR IGNORE INTO system_config (key, value) VALUES ('ig_blast_kanwil_only', '1')").run();
   } catch {}
 
   log.info('Database initialized successfully', { path: DB_PATH });
