@@ -25,7 +25,7 @@ function parseUtcDate(dateStr) {
 // Dual Theme System (Cerah & Gelap / Light & Dark)
 // ============================================
 function initTheme() {
-  const savedTheme = localStorage.getItem('bpn_portal_theme') || 'dark';
+  const savedTheme = localStorage.getItem('bpn_portal_theme') || 'light';
   document.documentElement.setAttribute('data-theme', savedTheme);
   updateThemeButtons(savedTheme);
 }
