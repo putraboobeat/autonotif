@@ -502,8 +502,8 @@ const IgRuleModel = {
 const IgPostModel = {
   getAll() {
     const db = getDb();
-    // Urutkan berdasarkan tanggal postingan terbaru, jika tidak ada fallback ke created_at
-    return db.prepare('SELECT * FROM processed_ig_posts ORDER BY COALESCE(post_date, created_at) DESC LIMIT 200').all();
+    // Urutkan berdasarkan tanggal postingan terbaru (dinormalisasi datetime agar ISO UTC & timestamp SQLite terurut akurat), jika tidak ada fallback ke created_at
+    return db.prepare('SELECT * FROM processed_ig_posts ORDER BY COALESCE(datetime(post_date), datetime(created_at), created_at) DESC, id DESC LIMIT 200').all();
   },
 
   isProcessed(shortcode) {

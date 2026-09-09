@@ -14,6 +14,15 @@ const { testNuelinkConnection, postToNuelink, getNuelinkConfig } = require('../n
 
 const log = createLogger('ROUTES');
 
+function cleanIgImageUrl(url) {
+  if (!url) return '';
+  let u = url.replace(/\\u0026/g, '&').replace(/\\\//g, '/').replace(/&amp;/g, '&');
+  u = u.replace(/stp=c[0-9\.]+a_/g, 'stp=');
+  u = u.replace(/\/c[0-9\.]+a\//g, '/');
+  u = u.replace(/\/s\d+x\d+\//g, '/');
+  return u;
+}
+
 function createRoutes() {
   const router = express.Router();
 
@@ -433,7 +442,7 @@ function createRoutes() {
                 if (hostedUrl) imageUrl = hostedUrl;
               } catch (upErr) {}
             } else if (extResult.slide1Img) {
-              imageUrl = extResult.slide1Img;
+              imageUrl = cleanIgImageUrl(extResult.slide1Img);
             }
 
             if (imageUrl && post.id) {
@@ -450,8 +459,13 @@ function createRoutes() {
             try {
               const resHtml = await fetch(post.link, { headers: { 'User-Agent': 'curl/7.68.0' }, signal: AbortSignal.timeout(6000) });
               const html = await resHtml.text();
-              const m = html.match(/property="og:image" content="([^"]+)"/);
-              if (m) imageUrl = m[1].replace(/&amp;/g, '&');
+              const mDisp = html.match(/"display_url":\s*"([^"]+)"/);
+              if (mDisp) {
+                imageUrl = cleanIgImageUrl(mDisp[1]);
+              } else {
+                const m = html.match(/property="og:image" content="([^"]+)"/);
+                if (m) imageUrl = cleanIgImageUrl(m[1].replace(/&amp;/g, '&'));
+              }
             } catch {}
           }
         }

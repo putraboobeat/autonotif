@@ -6,6 +6,16 @@ const { createLogger } = require('../utils/logger');
 
 const log = createLogger('IG-SCRAPER');
 
+function cleanIgImageUrl(url) {
+  if (!url) return '';
+  let u = url.replace(/\\u0026/g, '&').replace(/\\\//g, '/').replace(/&amp;/g, '&');
+  // Hapus parameter crop Instagram seperti stp=c0.140.1080.1080a_ atau /c0.140.1080.1080a/ atau /s640x640/ agar rasio asli 4:5 / portrait tidak terpotong jadi 1:1 square
+  u = u.replace(/stp=c[0-9\.]+a_/g, 'stp=');
+  u = u.replace(/\/c[0-9\.]+a\//g, '/');
+  u = u.replace(/\/s\d+x\d+\//g, '/');
+  return u;
+}
+
 let isScrapingInProgress = false;
 
 async function scrapeInstagram(options = {}) {
@@ -169,8 +179,7 @@ async function scrapeInstagram(options = {}) {
             await postPage.goto(post.link, { waitUntil: 'domcontentloaded', timeout: 20000 });
             // Tunggu sebentar agar elemen slide utama selesai di-render
             try {
-              await postPage.waitForSelector('div._aagv img, main img, meta[property="og:image"]', { timeout: 5000 });
-              // Ensure the image has finished loading so we don't grab a cropped placeholder
+              await postPage.waitForSelector('div._aagv img, main img, meta[property="og:image"]', { timeout: 6000 });
               await postPage.evaluate(async () => {
                 const img = document.querySelector('div._aagv img, main img');
                 if (img) {
@@ -183,6 +192,8 @@ async function scrapeInstagram(options = {}) {
                 }
               });
             } catch {}
+
+            const pageHtml = await postPage.content();
 
             const extracted = await postPage.evaluate(() => {
               let cap = '';
@@ -231,7 +242,7 @@ async function scrapeInstagram(options = {}) {
                 }
               }
 
-              // Fallback: og:image hanya jika elemen slide di DOM tidak ditemukan sama sekali
+              // Fallback: og:image jika elemen slide di DOM tidak ditemukan
               if (!slide1Img) {
                 const metaImg = document.querySelector('meta[property="og:image"]');
                 if (metaImg) {
@@ -249,8 +260,8 @@ async function scrapeInstagram(options = {}) {
               if (timeEl) {
                 pDate = timeEl.getAttribute('datetime');
               }
+              
               // Transcode Slide 1 langsung menggunakan Canvas Chromium ke format JPEG murni
-              // Ini mencegah bug text outline/rusak dan menjamin kompatibilitas 100% dengan WhatsApp
               let jpegBase64 = '';
               const targetImg = aagv || document.querySelector('main img, article img');
               if (targetImg && (targetImg.naturalWidth || targetImg.width) > 250) {
@@ -268,10 +279,76 @@ async function scrapeInstagram(options = {}) {
 
               return { cap, img, vid, pDate, jpegBase64 };
             });
+
             caption = extracted.cap;
-            imageUrl = extracted.img || '';
+            imageUrl = cleanIgImageUrl(extracted.img || '');
             videoUrl = extracted.vid || '';
             postDate = extracted.pDate;
+
+            // Ekstraksi mendalam dari pageHtml jika ada resource gambar tidak terpotong (display_resources / JSON-LD / display_url)
+            if (pageHtml) {
+              // 1. Ekstraksi tanggal publikasi jika timeEl kosong
+              if (!postDate) {
+                const mDatePub = pageHtml.match(/"datePublished":\s*"([^"]+)"/) || pageHtml.match(/"uploadDate":\s*"([^"]+)"/);
+                if (mDatePub) {
+                  postDate = mDatePub[1];
+                } else {
+                  const mTs = pageHtml.match(/"taken_at_timestamp":\s*(\d+)/) || pageHtml.match(/"taken_at":\s*(\d+)/);
+                  if (mTs) {
+                    postDate = new Date(parseInt(mTs[1], 10) * 1000).toISOString();
+                  } else {
+                    const mDatetime = pageHtml.match(/datetime="([^"]+)"/);
+                    if (mDatetime) postDate = mDatetime[1];
+                  }
+                }
+              }
+
+              // 2. Ekstraksi gambar asli (uncropped 4:5 / 1080x1350) jika imageUrl kosong atau berpotensi terpotong
+              const isPotentiallyCropped = !imageUrl || imageUrl.includes('stp=c') || imageUrl.includes('s640x640');
+              if (isPotentiallyCropped) {
+                // Cari display_resources (array resolusi asli Instagram)
+                const mDispRes = pageHtml.match(/"display_resources":\s*(\[[^\]]+\])/);
+                if (mDispRes) {
+                  try {
+                    const arr = JSON.parse(mDispRes[1]);
+                    if (Array.isArray(arr) && arr.length > 0) {
+                      arr.sort((a, b) => ((b.config_width || 0) * (b.config_height || 0)) - ((a.config_width || 0) * (a.config_height || 0)));
+                      imageUrl = cleanIgImageUrl(arr[0].src);
+                    }
+                  } catch {}
+                }
+
+                // Cari display_url uncropped
+                if (!imageUrl || isPotentiallyCropped) {
+                  const mDispUrl = pageHtml.match(/"display_url":\s*"([^"]+)"/);
+                  if (mDispUrl) {
+                    imageUrl = cleanIgImageUrl(mDispUrl[1]);
+                  }
+                }
+
+                // Cari JSON-LD image
+                if (!imageUrl) {
+                  const mLd = pageHtml.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
+                  if (mLd) {
+                    try {
+                      const ld = JSON.parse(mLd[1]);
+                      const ldImg = typeof ld.image === 'string' ? ld.image : (ld.image?.url || ld.image?.[0]);
+                      if (ldImg) imageUrl = cleanIgImageUrl(ldImg);
+                    } catch {}
+                  }
+                }
+              }
+
+              // 3. Ekstraksi video URL
+              if (!videoUrl) {
+                const mVid = pageHtml.match(/"video_versions":\[\{"type":\d+,"url":"([^"]+)"/) ||
+                             pageHtml.match(/"video_url":"([^"]+)"/) ||
+                             pageHtml.match(/property="og:video(?::secure_url)?" content="([^"]+)"/i);
+                if (mVid) {
+                  videoUrl = mVid[1].replace(/\\u0026/g, '&').replace(/\\\//g, '/');
+                }
+              }
+            }
 
             // Jika berhasil di-transcode ke JPEG murni via Canvas, upload langsung ke temporary host
             if (extracted.jpegBase64 && extracted.jpegBase64.startsWith('data:image/jpeg;base64,')) {
@@ -284,17 +361,6 @@ async function scrapeInstagram(options = {}) {
                 }
               } catch (upErr) {
                 log.warn(`[SCRAPER] Gagal upload JPEG canvas: ${upErr.message}`);
-              }
-            }
-
-            // Jika videoUrl belum didapat dari meta tags (sering terjadi pada format reels terbaru),
-            // cari pola video_versions langsung dari HTML halaman
-            if (!videoUrl) {
-              const pageHtml = await postPage.content();
-              const mVid = pageHtml.match(/"video_versions":\[\{"type":\d+,"url":"([^"]+)"/) ||
-                           pageHtml.match(/"video_url":"([^"]+)"/);
-              if (mVid) {
-                videoUrl = mVid[1].replace(/\\u0026/g, '&').replace(/\\\//g, '/');
               }
             }
 
