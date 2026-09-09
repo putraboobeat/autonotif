@@ -142,6 +142,15 @@ INSERT OR IGNORE INTO system_config (key, value) VALUES ('anti_ban_footer_text',
 INSERT OR IGNORE INTO system_config (key, value) VALUES ('anti_ban_footer_label', 'HumasKanwil');
 INSERT OR IGNORE INTO system_config (key, value) VALUES ('anti_ban_footer_prefix', 'ATR');
 
+-- Insert default config untuk Nuelink Auto Repost
+INSERT OR IGNORE INTO system_config (key, value) VALUES ('nuelink_enabled', '1');
+INSERT OR IGNORE INTO system_config (key, value) VALUES ('nuelink_api_key', 'ZjJiYjVlOGY0ZDc4Y2RlM2M3YWY0ZmQyMjg2OTlhZTVlOGJkMzAyZGE2N2JiNTFhYzEzZGMzNzk1YTA4MjI3Ng==');
+INSERT OR IGNORE INTO system_config (key, value) VALUES ('nuelink_brand_id', '33800');
+INSERT OR IGNORE INTO system_config (key, value) VALUES ('nuelink_collection_id', '98435');
+INSERT OR IGNORE INTO system_config (key, value) VALUES ('nuelink_publish_mode', 'QUEUE');
+INSERT OR IGNORE INTO system_config (key, value) VALUES ('nuelink_reels_only', '1');
+INSERT OR IGNORE INTO system_config (key, value) VALUES ('nuelink_target_accounts', 'kementerian.atrbpn,kementerian_atrbpn');
+
 -- ============================================
 -- Web to WP Scraper
 -- ============================================

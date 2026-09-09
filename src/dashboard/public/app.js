@@ -1838,9 +1838,10 @@ async function loadIgPosts() {
 
         // 7. Aksi
         let actions = `
-          <div style="display: flex; gap: 6px; justify-content: flex-end;">
-            <button class="btn btn-primary btn-sm" style="font-size:11px; padding: 4px 8px;" onclick="resendIgPost(${post.id})" title="Kirim Ulang notifikasi ke WhatsApp">🔄 Kirim</button>
-            <button class="btn btn-danger btn-sm" style="font-size:11px; padding: 4px 8px;" onclick="deleteIgPost(${post.id})" title="Hapus dari riwayat">🗑️ Hapus</button>
+          <div style="display: flex; gap: 5px; justify-content: flex-end; flex-wrap: nowrap;">
+            <button class="btn btn-warning btn-sm" style="font-size:11px; padding: 4px 8px; background: linear-gradient(135deg, #ea580c, #f97316); border:none; color:white; font-weight:600; white-space:nowrap; box-shadow: 0 2px 5px rgba(234,88,12,0.25);" onclick="pushToNuelink(${post.id})" title="Push postingan ini ke Nuelink Collection 'Repost'">🚀 Nuelink</button>
+            <button class="btn btn-primary btn-sm" style="font-size:11px; padding: 4px 8px; white-space:nowrap;" onclick="resendIgPost(${post.id})" title="Kirim Ulang notifikasi ke WhatsApp">🔄 Kirim</button>
+            <button class="btn btn-danger btn-sm" style="font-size:11px; padding: 4px 8px; white-space:nowrap;" onclick="deleteIgPost(${post.id})" title="Hapus dari riwayat">🗑️ Hapus</button>
           </div>
         `;
         
@@ -1873,16 +1874,56 @@ function toggleSelectAllIg(master) {
 function updateSelectedIgCount() {
   const checkboxes = document.querySelectorAll('.ig-post-checkbox:checked');
   const count = checkboxes.length;
-  const btn = document.getElementById('btn-batch-delete-ig');
+  const btnDelete = document.getElementById('btn-batch-delete-ig');
+  const btnNuelink = document.getElementById('btn-batch-nuelink-ig');
   const countSpan = document.getElementById('count-selected-ig');
+  const countNuelink = document.getElementById('count-selected-nuelink');
   const master = document.getElementById('check-all-ig');
   
   if (countSpan) countSpan.textContent = count;
-  if (btn) btn.style.display = count > 0 ? 'inline-block' : 'none';
+  if (countNuelink) countNuelink.textContent = count;
+  if (btnDelete) btnDelete.style.display = count > 0 ? 'inline-block' : 'none';
+  if (btnNuelink) btnNuelink.style.display = count > 0 ? 'inline-block' : 'none';
   
   const allCheckboxes = document.querySelectorAll('.ig-post-checkbox');
   if (master && allCheckboxes.length > 0) {
     master.checked = (count === allCheckboxes.length);
+  }
+}
+
+async function pushToNuelink(id) {
+  if (!confirm("Apakah Anda yakin ingin mengirim postingan ini ke Nuelink Collection 'Repost'?")) return;
+  
+  try {
+    showToast("Mengirim ke Nuelink...", "info");
+    const res = await apiPost(`/ig-posts/${id}/send-nuelink`, { publishMode: "QUEUE" });
+    if (res.success) {
+      showToast(res.message || "Berhasil di-push ke Nuelink!", "success");
+    } else {
+      showToast(res.error || "Gagal mengirim ke Nuelink", "error");
+    }
+  } catch (error) {
+    showToast("Gagal terhubung ke Nuelink", "error");
+  }
+}
+
+async function pushSelectedIgToNuelink() {
+  const checked = Array.from(document.querySelectorAll('.ig-post-checkbox:checked')).map(cb => parseInt(cb.value));
+  if (checked.length === 0) return;
+  
+  if (!confirm(`Apakah Anda yakin ingin mengirim ${checked.length} postingan IG terpilih ke Nuelink Collection 'Repost'?`)) return;
+  
+  try {
+    showToast(`Mengirim ${checked.length} postingan ke Nuelink...`, "info");
+    const res = await apiPost('/ig-posts/batch-push-nuelink', { ids: checked, publishMode: "QUEUE" });
+    if (res.success) {
+      showToast(res.message || "Berhasil di-push ke Nuelink!", "success");
+      loadIgPosts();
+    } else {
+      showToast(res.error || "Sebagian postingan gagal dikirim ke Nuelink", "error");
+    }
+  } catch (error) {
+    showToast("Gagal batch push ke Nuelink", "error");
   }
 }
 

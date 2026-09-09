@@ -44,6 +44,17 @@ const config = {
     phone: process.env.KASUBBAG_UMUM_HUMAS_PHONE || '',
   },
 
+  // Nuelink Social Media Auto Repost
+  nuelink: {
+    apiKey: process.env.NUELINK_API_KEY || '',
+    brandId: process.env.NUELINK_BRAND_ID || '33800',
+    collectionId: process.env.NUELINK_COLLECTION_ID || '98435',
+    autoPost: process.env.NUELINK_AUTO_POST !== '0',
+    publishMode: process.env.NUELINK_PUBLISH_MODE || 'QUEUE',
+    reelsOnly: process.env.NUELINK_REELS_ONLY !== '0',
+    targetAccounts: process.env.NUELINK_TARGET_ACCOUNTS || 'kementerian.atrbpn,kementerian_atrbpn',
+  },
+
   // App settings
   app: {
     scrapeInterval: parseInt(process.env.SCRAPE_INTERVAL, 10) || 60000,

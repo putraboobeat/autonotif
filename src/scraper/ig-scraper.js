@@ -1,6 +1,7 @@
 const { getBrowser, getPage } = require('./browser');
 const { IgPostModel, ConfigModel, NotificationLogModel } = require('../database/models');
 const { sendGroupMessage, sendPersonalMessage } = require('../notifier/starsender');
+const { isEligibleForNuelink, postToNuelink } = require('../notifier/nuelink');
 const { createLogger } = require('../utils/logger');
 
 const log = createLogger('IG-SCRAPER');
@@ -422,6 +423,29 @@ async function scrapeInstagram(options = {}) {
             }
           }
           
+          // ============================================
+          // Nuelink Auto Repost (Khusus Reels ATR/BPN)
+          // ============================================
+          try {
+            const nuelinkCheck = isEligibleForNuelink(post, username);
+            if (nuelinkCheck.eligible) {
+              log.info(`[IG->NUELINK] Post ${post.shortcode} from @${username} is eligible. Sending to Nuelink Repost collection...`);
+              const nuelinkRes = await postToNuelink({
+                caption: post.caption,
+                videoUrl: post.videoUrl,
+                imageUrl: post.imageUrl,
+                link: post.link,
+                username: username,
+                shortcode: post.shortcode
+              });
+              log.info(`[IG->NUELINK] ✅ Successfully queued to Nuelink (Post ID: ${nuelinkRes.postId})`);
+            } else {
+              log.debug(`[IG->NUELINK] Skipped post ${post.shortcode}: ${nuelinkCheck.reason}`);
+            }
+          } catch (nuelinkErr) {
+            log.error(`[IG->NUELINK] ⚠️ Failed posting to Nuelink: ${nuelinkErr.message}`);
+          }
+
           // Save to processed
           IgPostModel.save({
             shortcode: post.shortcode,

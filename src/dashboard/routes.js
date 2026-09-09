@@ -10,6 +10,7 @@ const { getAllTemplates, renderTemplate } = require('../notifier/templates');
 const { getSlaMetrics } = require('../analytics/sla-service');
 const { generateCsvReport, generateHtmlReport, generatePdfReport, sendExecutiveReportToKanwil } = require('../analytics/report-generator');
 const { scrapeInstagram } = require('../scraper/ig-scraper');
+const { testNuelinkConnection, postToNuelink, getNuelinkConfig } = require('../notifier/nuelink');
 
 const log = createLogger('ROUTES');
 
@@ -558,6 +559,170 @@ function createRoutes() {
         res.json({ success: true, message: 'Kirim ulang berhasil dikirim via WhatsApp!' });
       }
       
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // ============================================
+  // Nuelink Social Repost Endpoints
+  // ============================================
+
+  router.get('/nuelink/status', async (req, res) => {
+    try {
+      const cfg = getNuelinkConfig();
+      const statusRes = await testNuelinkConnection(cfg.apiKey);
+      res.json({
+        success: statusRes.success,
+        config: {
+          enabled: cfg.enabled,
+          brandId: cfg.brandId,
+          collectionId: cfg.collectionId,
+          publishMode: cfg.publishMode,
+          reelsOnly: cfg.reelsOnly,
+          targetAccounts: cfg.targetAccounts,
+        },
+        data: statusRes,
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  router.post('/nuelink/test-post', async (req, res) => {
+    try {
+      const { caption, publishMode } = req.body;
+      const result = await postToNuelink({
+        caption: caption || 'Uji coba koneksi Nuelink dari Auto Notif Pengaduan',
+        publishMode: publishMode || 'DRAFT',
+      });
+      res.json({ success: true, data: result });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  router.post('/ig-posts/:id/send-nuelink', async (req, res) => {
+    try {
+      const { IgPostModel } = require('../database/models');
+      const post = IgPostModel.getById(parseInt(req.params.id));
+      if (!post) {
+        return res.status(404).json({ success: false, error: 'Postingan tidak ditemukan' });
+      }
+
+      let imageUrl = post.image_url || '';
+      let videoUrl = post.video_url || '';
+
+      // If videoUrl is missing for a reel, try fetching it
+      if (!videoUrl && post.link && post.link.includes('/reel/')) {
+        try {
+          const { launchBrowser } = require('../scraper/browser');
+          const browser = await launchBrowser();
+          const pPage = await browser.newPage();
+          try {
+            await pPage.goto(post.link, { waitUntil: 'domcontentloaded', timeout: 20000 });
+            const pageHtml = await pPage.content();
+            const mVid = pageHtml.match(/"video_versions":\[\{"type":\d+,"url":"([^"]+)"/) ||
+                         pageHtml.match(/"video_url":"([^"]+)"/);
+            if (mVid) {
+              videoUrl = mVid[1].replace(/\\u0026/g, '&').replace(/\\\//g, '/');
+            }
+          } finally {
+            await pPage.close();
+          }
+        } catch (fErr) {
+          log.warn(`Could not fetch fresh reel video URL: ${fErr.message}`);
+        }
+      }
+
+      const publishMode = req.body.publishMode || 'QUEUE';
+      const result = await postToNuelink({
+        caption: post.caption,
+        videoUrl: videoUrl,
+        imageUrl: imageUrl,
+        link: post.link,
+        username: post.account_username || 'kementerian.atrbpn',
+        shortcode: post.shortcode,
+        publishMode: publishMode,
+      });
+
+      res.json({
+        success: true,
+        message: `Berhasil dikirim ke Nuelink (Collection Repost)! Post ID: ${result.postId}`,
+        data: result,
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  router.post('/ig-posts/batch-push-nuelink', async (req, res) => {
+    try {
+      const { ids, publishMode } = req.body;
+      if (!ids || !Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ success: false, error: 'Pilih minimal satu postingan untuk di-push ke Nuelink.' });
+      }
+
+      const { IgPostModel } = require('../database/models');
+      const numIds = ids.map(id => parseInt(id)).filter(id => !isNaN(id));
+      
+      let successful = [];
+      let failed = [];
+
+      for (const id of numIds) {
+        const post = IgPostModel.getById(id);
+        if (!post) {
+          failed.push({ id, error: 'Post tidak ditemukan' });
+          continue;
+        }
+
+        let imageUrl = post.image_url || '';
+        let videoUrl = post.video_url || '';
+
+        // If videoUrl is missing for a reel, try fetching it
+        if (!videoUrl && post.link && post.link.includes('/reel/')) {
+          try {
+            const { launchBrowser } = require('../scraper/browser');
+            const browser = await launchBrowser();
+            const pPage = await browser.newPage();
+            try {
+              await pPage.goto(post.link, { waitUntil: 'domcontentloaded', timeout: 20000 });
+              const pageHtml = await pPage.content();
+              const mVid = pageHtml.match(/"video_versions":\[\{"type":\d+,"url":"([^"]+)"/) ||
+                           pageHtml.match(/"video_url":"([^"]+)"/);
+              if (mVid) {
+                videoUrl = mVid[1].replace(/\\u0026/g, '&').replace(/\\\//g, '/');
+              }
+            } finally {
+              await pPage.close();
+            }
+          } catch (fErr) {
+            log.warn(`Could not fetch fresh reel video URL: ${fErr.message}`);
+          }
+        }
+
+        try {
+          const result = await postToNuelink({
+            caption: post.caption,
+            videoUrl: videoUrl,
+            imageUrl: imageUrl,
+            link: post.link,
+            username: post.account_username || 'kementerian.atrbpn',
+            shortcode: post.shortcode,
+            publishMode: publishMode || 'QUEUE',
+          });
+          successful.push({ id, postId: result.postId, shortcode: post.shortcode });
+        } catch (err) {
+          failed.push({ id, shortcode: post.shortcode, error: err.message });
+        }
+      }
+
+      res.json({
+        success: successful.length > 0,
+        message: `${successful.length} dari ${numIds.length} postingan berhasil di-push ke Nuelink.`,
+        successful,
+        failed,
+      });
     } catch (error) {
       res.status(500).json({ success: false, error: error.message });
     }
