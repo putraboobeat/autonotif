@@ -1890,9 +1890,14 @@ async function loadIgPosts() {
         `;
 
         // 7. Aksi
+        const isNuelinkPushed = Boolean(post.nuelink_post_id || post.nuelink_pushed_at);
+        const nuelinkBtn = isNuelinkPushed
+          ? `<button class="btn btn-sm" style="font-size:11px; padding: 4px 8px; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.35); color:#10b981; font-weight:600; white-space:nowrap;" onclick="pushToNuelink(${post.id}, true)" title="Sudah terkirim ke Nuelink (ID: ${post.nuelink_post_id || '-'}). Klik untuk kirim paksa ulang jika perlu.">✓ Nuelink</button>`
+          : `<button class="btn btn-warning btn-sm" style="font-size:11px; padding: 4px 8px; background: linear-gradient(135deg, #ea580c, #f97316); border:none; color:white; font-weight:600; white-space:nowrap; box-shadow: 0 2px 5px rgba(234,88,12,0.25);" onclick="pushToNuelink(${post.id})" title="Push postingan ini ke Nuelink Collection 'Repost'">🚀 Nuelink</button>`;
+
         let actions = `
           <div style="display: flex; gap: 5px; justify-content: flex-end; flex-wrap: nowrap;">
-            <button class="btn btn-warning btn-sm" style="font-size:11px; padding: 4px 8px; background: linear-gradient(135deg, #ea580c, #f97316); border:none; color:white; font-weight:600; white-space:nowrap; box-shadow: 0 2px 5px rgba(234,88,12,0.25);" onclick="pushToNuelink(${post.id})" title="Push postingan ini ke Nuelink Collection 'Repost'">🚀 Nuelink</button>
+            ${nuelinkBtn}
             <button class="btn btn-primary btn-sm" style="font-size:11px; padding: 4px 8px; white-space:nowrap;" onclick="resendIgPost(${post.id})" title="Kirim Ulang notifikasi ke WhatsApp">🔄 Kirim</button>
             <button class="btn btn-danger btn-sm" style="font-size:11px; padding: 4px 8px; white-space:nowrap;" onclick="deleteIgPost(${post.id})" title="Hapus dari riwayat">🗑️ Hapus</button>
           </div>
@@ -1944,14 +1949,18 @@ function updateSelectedIgCount() {
   }
 }
 
-async function pushToNuelink(id) {
-  if (!confirm("Apakah Anda yakin ingin mengirim postingan ini ke Nuelink Collection 'Repost'?")) return;
+async function pushToNuelink(id, isAlreadyPushed = false) {
+  const confirmMsg = isAlreadyPushed 
+    ? "⚠️ Postingan ini SUDAH PERNAH terkirim ke Nuelink sebelumnya. Anda yakin ingin mengirim ulang secara paksa?"
+    : "Apakah Anda yakin ingin mengirim postingan ini ke Nuelink Collection 'Repost'?";
+  if (!confirm(confirmMsg)) return;
   
   try {
     showToast("Mengirim ke Nuelink...", "info");
-    const res = await apiPost(`/ig-posts/${id}/send-nuelink`, { publishMode: "QUEUE" });
+    const res = await apiPost(`/ig-posts/${id}/send-nuelink`, { publishMode: "QUEUE", force: isAlreadyPushed });
     if (res.success) {
       showToast(res.message || "Berhasil di-push ke Nuelink!", "success");
+      loadIgPosts();
     } else {
       showToast(res.error || "Gagal mengirim ke Nuelink", "error");
     }

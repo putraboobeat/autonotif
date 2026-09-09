@@ -630,6 +630,15 @@ function createRoutes() {
         return res.status(404).json({ success: false, error: 'Postingan tidak ditemukan' });
       }
 
+      // Cegah pengiriman duplikat jika sudah pernah di-push ke Nuelink sebelumnya
+      if ((post.nuelink_post_id || post.nuelink_pushed_at) && !req.body.force) {
+        return res.status(400).json({
+          success: false,
+          alreadyPushed: true,
+          error: `Postingan ini sudah pernah dikirim ke Nuelink (ID: ${post.nuelink_post_id || '-'}) pada ${post.nuelink_pushed_at || 'sebelumnya'} untuk menghindari duplikasi konten.`
+        });
+      }
+
       let imageUrl = post.image_url || '';
       let videoUrl = post.video_url || '';
 
@@ -675,6 +684,11 @@ function createRoutes() {
         publishMode: publishMode,
       });
 
+      // Tandai di database bahwa postingan ini sudah terkirim ke Nuelink
+      if (result && result.postId) {
+        IgPostModel.markNuelinkPushed(post.id, result.postId);
+      }
+
       res.json({
         success: true,
         message: `Berhasil dikirim ke Nuelink (Collection Repost)! Post ID: ${result.postId}`,
@@ -703,6 +717,12 @@ function createRoutes() {
         const post = IgPostModel.getById(id);
         if (!post) {
           failed.push({ id, error: 'Post tidak ditemukan' });
+          continue;
+        }
+
+        // Cegah pengiriman duplikat jika sudah pernah terkirim ke Nuelink
+        if ((post.nuelink_post_id || post.nuelink_pushed_at) && !req.body.force) {
+          failed.push({ id, shortcode: post.shortcode, error: 'Dilewati: Sudah pernah dikirim ke Nuelink (mencegah duplikat).' });
           continue;
         }
 
@@ -747,6 +767,9 @@ function createRoutes() {
             shortcode: post.shortcode,
             publishMode: publishMode || 'QUEUE',
           });
+          if (result && result.postId) {
+            IgPostModel.markNuelinkPushed(post.id, result.postId);
+          }
           successful.push({ id, postId: result.postId, shortcode: post.shortcode });
         } catch (err) {
           failed.push({ id, shortcode: post.shortcode, error: err.message });

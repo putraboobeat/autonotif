@@ -136,6 +136,22 @@ function initDatabase() {
             ALTER TABLE processed_ig_posts ADD COLUMN account_username VARCHAR(100);
           `);
         }
+
+        const hasNuelinkPostId = postCols.some(c => c.name === 'nuelink_post_id');
+        if (!hasNuelinkPostId) {
+          log.info('Migrating database: Adding nuelink_post_id column to processed_ig_posts');
+          db.exec(`
+            ALTER TABLE processed_ig_posts ADD COLUMN nuelink_post_id TEXT;
+          `);
+        }
+
+        const hasNuelinkPushedAt = postCols.some(c => c.name === 'nuelink_pushed_at');
+        if (!hasNuelinkPushedAt) {
+          log.info('Migrating database: Adding nuelink_pushed_at column to processed_ig_posts');
+          db.exec(`
+            ALTER TABLE processed_ig_posts ADD COLUMN nuelink_pushed_at DATETIME;
+          `);
+        }
       }
     } catch (e) {
       log.error('IG migration failed', { error: e.message });

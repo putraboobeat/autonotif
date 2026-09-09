@@ -499,6 +499,9 @@ async function scrapeInstagram(options = {}) {
           // ============================================
           // Nuelink Auto Repost (Khusus Reels ATR/BPN)
           // ============================================
+          let nuelinkPostId = null;
+          let nuelinkPushedAt = null;
+
           try {
             const nuelinkCheck = isEligibleForNuelink(post, username);
             if (nuelinkCheck.eligible) {
@@ -511,7 +514,11 @@ async function scrapeInstagram(options = {}) {
                 username: username,
                 shortcode: post.shortcode
               });
-              log.info(`[IG->NUELINK] ✅ Successfully queued to Nuelink (Post ID: ${nuelinkRes.postId})`);
+              if (nuelinkRes && nuelinkRes.postId) {
+                nuelinkPostId = String(nuelinkRes.postId);
+                nuelinkPushedAt = new Date().toISOString();
+                log.info(`[IG->NUELINK] ✅ Successfully queued to Nuelink (Post ID: ${nuelinkPostId})`);
+              }
             } else {
               log.debug(`[IG->NUELINK] Skipped post ${post.shortcode}: ${nuelinkCheck.reason}`);
             }
@@ -531,7 +538,9 @@ async function scrapeInstagram(options = {}) {
             post_date: post.postDate,
             image_url: post.imageUrl || '',
             video_url: post.videoUrl || '',
-            account_username: username || ''
+            account_username: username || '',
+            nuelink_post_id: nuelinkPostId,
+            nuelink_pushed_at: nuelinkPushedAt
           });
         }
 

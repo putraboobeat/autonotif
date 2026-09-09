@@ -513,19 +513,21 @@ const IgPostModel = {
     return result || null;
   },
 
-  save({ shortcode, link, caption, matched_code, notified_group, status, error_msg, post_date, image_url, video_url, account_username }) {
+  save({ shortcode, link, caption, matched_code, notified_group, status, error_msg, post_date, image_url, video_url, account_username, nuelink_post_id, nuelink_pushed_at }) {
     const db = getDb();
     const stmt = db.prepare(`
       INSERT INTO processed_ig_posts 
-      (shortcode, link, caption, matched_code, notified_group, status, error_msg, post_date, image_url, video_url, account_username)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (shortcode, link, caption, matched_code, notified_group, status, error_msg, post_date, image_url, video_url, account_username, nuelink_post_id, nuelink_pushed_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(shortcode) DO UPDATE SET
       status = excluded.status,
       error_msg = excluded.error_msg,
       post_date = excluded.post_date,
       image_url = excluded.image_url,
       video_url = excluded.video_url,
-      account_username = COALESCE(excluded.account_username, processed_ig_posts.account_username)
+      account_username = COALESCE(excluded.account_username, processed_ig_posts.account_username),
+      nuelink_post_id = COALESCE(excluded.nuelink_post_id, processed_ig_posts.nuelink_post_id),
+      nuelink_pushed_at = COALESCE(excluded.nuelink_pushed_at, processed_ig_posts.nuelink_pushed_at)
     `);
     return stmt.run(
       shortcode, 
@@ -538,10 +540,23 @@ const IgPostModel = {
       post_date || null,
       image_url || '',
       video_url || '',
-      account_username || ''
+      account_username || '',
+      nuelink_post_id || null,
+      nuelink_pushed_at || null
     );
   },
   
+  markNuelinkPushed(idOrShortcode, nuelinkPostId) {
+    const db = getDb();
+    if (typeof idOrShortcode === 'number' || /^\d+$/.test(idOrShortcode)) {
+      const stmt = db.prepare('UPDATE processed_ig_posts SET nuelink_post_id = ?, nuelink_pushed_at = CURRENT_TIMESTAMP WHERE id = ?');
+      return stmt.run(String(nuelinkPostId || ''), parseInt(idOrShortcode, 10));
+    } else {
+      const stmt = db.prepare('UPDATE processed_ig_posts SET nuelink_post_id = ?, nuelink_pushed_at = CURRENT_TIMESTAMP WHERE shortcode = ?');
+      return stmt.run(String(nuelinkPostId || ''), String(idOrShortcode));
+    }
+  },
+
   updateStatus(id, status, error_msg) {
     const db = getDb();
     const stmt = db.prepare('UPDATE processed_ig_posts SET status = ?, error_msg = ? WHERE id = ?');
