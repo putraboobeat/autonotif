@@ -1437,17 +1437,21 @@ async function loadAnalytics() {
         let statusColor = '#10b981';
         if (item.statusBadge === 'CRITICAL') statusColor = '#ef4444';
         else if (item.statusBadge === 'GOOD') statusColor = '#f59e0b';
+        else if (item.statusBadge === 'IDLE' || item.totalTickets === 0) statusColor = '#64748b';
+
+        const displayRate = item.totalTickets > 0 ? `${item.resolutionRate}%` : '<span style="color: #64748b;">-</span>';
+        const displayAvg = item.totalTickets > 0 ? `${item.avgHours} Jam` : '<span style="color: #64748b;">-</span>';
 
         return `
           <tr>
             <td>${idx + 1}</td>
             <td><strong style="color: var(--text-primary);">${item.kantor}</strong></td>
             <td style="text-align: center;">${item.totalTickets}</td>
-            <td style="text-align: center; color: #10b981; font-weight: 600;">${item.closedTickets}</td>
+            <td style="text-align: center; color: ${item.closedTickets > 0 ? '#10b981' : 'inherit'}; font-weight: ${item.closedTickets > 0 ? '600' : '400'};">${item.closedTickets}</td>
             <td style="text-align: center; color: ${item.openTickets > 0 ? '#f59e0b' : 'inherit'}; font-weight: ${item.openTickets > 0 ? '700' : '400'};">${item.openTickets}</td>
             <td style="text-align: center; color: ${item.escalatedTickets > 0 ? '#ef4444' : 'inherit'}; font-weight: ${item.escalatedTickets > 0 ? '700' : '400'};">${item.escalatedTickets}</td>
-            <td style="text-align: center; font-weight: 600;">${item.resolutionRate}%</td>
-            <td style="text-align: center;">${item.avgHours} Jam</td>
+            <td style="text-align: center; font-weight: 600;">${displayRate}</td>
+            <td style="text-align: center;">${displayAvg}</td>
             <td>
               <span style="display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; background: ${statusColor}22; color: ${statusColor}; border: 1px solid ${statusColor}44;">
                 ${item.statusText}

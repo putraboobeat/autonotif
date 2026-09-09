@@ -124,12 +124,15 @@ function getSlaMetrics() {
     // Convert map to array and finalize metrics
     const rankingList = Array.from(officeMap.values()).map(stats => {
       const avgHours = stats.durationCount > 0 ? (stats.totalDurationHours / stats.durationCount).toFixed(1) : '0.0';
-      const resolutionRate = stats.totalTickets > 0 ? Math.round((stats.closedTickets / stats.totalTickets) * 100) : 100;
-      const onTimeRate = stats.totalTickets > 0 ? Math.round((stats.onTimeTickets / stats.totalTickets) * 100) : 100;
+      const resolutionRate = stats.totalTickets > 0 ? Math.round((stats.closedTickets / stats.totalTickets) * 100) : 0;
+      const onTimeRate = stats.totalTickets > 0 ? Math.round((stats.onTimeTickets / stats.totalTickets) * 100) : 0;
 
       let statusBadge = 'EXCELLENT'; // Green
       let statusText = 'Sangat Responsif (< 4 Jam)';
-      if (stats.openTickets > 0 || stats.escalatedTickets > 0) {
+      if (stats.totalTickets === 0) {
+        statusBadge = 'IDLE';
+        statusText = 'Belum Ada Aduan';
+      } else if (stats.openTickets > 0 || stats.escalatedTickets > 0 || parseFloat(avgHours) > 24) {
         if (stats.escalatedTickets > 0 || parseFloat(avgHours) > 24) {
           statusBadge = 'CRITICAL'; // Red / Attention needed
           statusText = 'Perlu Eskalasi & Pembinaan (> 24 Jam)';
@@ -137,6 +140,9 @@ function getSlaMetrics() {
           statusBadge = 'GOOD'; // Yellow / On progress
           statusText = 'Dalam Penanganan Normal (< 24 Jam)';
         }
+      } else if (parseFloat(avgHours) > 4) {
+        statusBadge = 'GOOD';
+        statusText = 'Penanganan Baik (< 24 Jam)';
       }
 
       return {
@@ -150,21 +156,25 @@ function getSlaMetrics() {
       };
     });
 
-    // Sort by Best (Top Responders)
-    const topResponders = [...rankingList].sort((a, b) => {
-      if (b.resolutionRate !== a.resolutionRate) return b.resolutionRate - a.resolutionRate;
-      if (a.openTickets !== b.openTickets) return a.openTickets - b.openTickets;
-      return a.avgHours - b.avgHours;
-    }).slice(0, 5);
+    // Sort by Best (Top Responders) - EXCLUDE 0-ticket / 0-closed offices
+    const topResponders = [...rankingList]
+      .filter(item => item.totalTickets > 0 && item.closedTickets > 0)
+      .sort((a, b) => {
+        if (a.avgHours !== b.avgHours) return a.avgHours - b.avgHours;
+        if (b.resolutionRate !== a.resolutionRate) return b.resolutionRate - a.resolutionRate;
+        return b.closedTickets - a.closedTickets;
+      })
+      .slice(0, 5);
 
-    // Sort by Attention Needed
+    // Sort by Attention Needed - EXCLUDE 0-ticket offices
     const attentionNeeded = [...rankingList]
-      .filter(item => item.openTickets > 0 || item.escalatedTickets > 0 || item.avgHours > 24)
+      .filter(item => item.totalTickets > 0 && (item.openTickets > 0 || item.escalatedTickets > 0 || item.avgHours > 24))
       .sort((a, b) => {
         if (b.escalatedTickets !== a.escalatedTickets) return b.escalatedTickets - a.escalatedTickets;
         if (b.openTickets !== a.openTickets) return b.openTickets - a.openTickets;
         return b.avgHours - a.avgHours;
-      }).slice(0, 10);
+      })
+      .slice(0, 10);
 
     const totalGlobalTickets = rankingList.reduce((acc, curr) => acc + curr.totalTickets, 0);
     const totalGlobalOpen = rankingList.reduce((acc, curr) => acc + curr.openTickets, 0);
