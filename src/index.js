@@ -38,10 +38,7 @@ let isScraping = false;
  */
 async function scrapeCycle() {
   if (isScraping) {
-    log.debug('Scrape cycle is already running, waiting for completion...');
-    while (isScraping) {
-      await sleep(500);
-    }
+    log.debug('Scrape cycle is already running, skipping...');
     return;
   }
   isScraping = true;

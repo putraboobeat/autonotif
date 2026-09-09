@@ -384,13 +384,6 @@ const ConfigModel = {
   },
 };
 
-module.exports = {
-  AdminModel,
-  TicketModel,
-  NotificationLogModel,
-  ConfigModel,
-};
-
 // ============================================
 // Holiday (Hari Besar) Operations
 // ============================================
@@ -627,6 +620,7 @@ module.exports = {
   NotificationLogModel,
   ConfigModel,
   HolidayModel,
+  IgRuleModel,
   IgPostModel,
   WebArticleModel
 };

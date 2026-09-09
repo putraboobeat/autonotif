@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS notification_logs (
 CREATE INDEX IF NOT EXISTS idx_notif_ticket ON notification_logs(ticket_id);
 CREATE INDEX IF NOT EXISTS idx_notif_status ON notification_logs(status);
 CREATE INDEX IF NOT EXISTS idx_notif_sent_at ON notification_logs(sent_at);
+CREATE INDEX IF NOT EXISTS idx_notif_target_status ON notification_logs(target_number, status);
 
 -- Config sistem
 CREATE TABLE IF NOT EXISTS system_config (

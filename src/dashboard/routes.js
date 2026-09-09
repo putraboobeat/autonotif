@@ -465,7 +465,7 @@ function createRoutes() {
       const captionSnippet = rawCaption.length > maxLen ? rawCaption.substring(0, maxLen).trim() + '...' : (rawCaption || 'Postingan baru');
       
       let message = templateMsg
-        .replace(/\{\{username\}\}/g, username || 'Instagram')
+        .replace(/\{\{username\}\}/g, post.account_username || 'Instagram')
         .replace(/\{\{caption\}\}/g, captionSnippet)
         .replace(/\{\{link\}\}/g, post.link || '')
         .replace(/Kode:\s*\{\{kode\}\}\n*/gi, '')
