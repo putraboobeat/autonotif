@@ -9,7 +9,36 @@ const log = createLogger('ANALYTICS_SLA');
 
 function parseDateSafe(dateStr) {
   if (!dateStr || dateStr === '-' || dateStr === '--') return null;
-  // Try direct date creation or parsing common ID formats
+  if (typeof dateStr !== 'string') dateStr = String(dateStr);
+  dateStr = dateStr.trim();
+
+  // 1. Format DD/MM/YYYY or DD-MM-YYYY [HH:mm[:ss]] (e.g. 26/08/2026 09:20)
+  const dmyMatch = dateStr.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+  if (dmyMatch) {
+    const day = parseInt(dmyMatch[1], 10);
+    const month = parseInt(dmyMatch[2], 10) - 1;
+    const year = parseInt(dmyMatch[3], 10);
+    const hour = dmyMatch[4] ? parseInt(dmyMatch[4], 10) : 0;
+    const minute = dmyMatch[5] ? parseInt(dmyMatch[5], 10) : 0;
+    const second = dmyMatch[6] ? parseInt(dmyMatch[6], 10) : 0;
+    const d = new Date(year, month, day, hour, minute, second);
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  // 2. Format YYYY-MM-DD [HH:mm[:ss]]
+  const ymdMatch = dateStr.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+  if (ymdMatch) {
+    const year = parseInt(ymdMatch[1], 10);
+    const month = parseInt(ymdMatch[2], 10) - 1;
+    const day = parseInt(ymdMatch[3], 10);
+    const hour = ymdMatch[4] ? parseInt(ymdMatch[4], 10) : 0;
+    const minute = ymdMatch[5] ? parseInt(ymdMatch[5], 10) : 0;
+    const second = ymdMatch[6] ? parseInt(ymdMatch[6], 10) : 0;
+    const d = new Date(year, month, day, hour, minute, second);
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  // 3. Fallback standard Date parse
   const parsed = new Date(dateStr);
   if (!isNaN(parsed.getTime())) return parsed;
   return null;
@@ -74,12 +103,8 @@ function getSlaMetrics() {
         stats.openTickets++;
       }
 
-      if (t.reminder_count >= 3 || (t.priority && t.priority.toLowerCase().includes('urgent'))) {
-        stats.escalatedTickets++;
-      }
-
       const created = parseDateSafe(t.created_date) || parseDateSafe(t.notified_at) || now;
-      const refTime = isClosed ? (parseDateSafe(t.last_update) || now) : now;
+      const refTime = isClosed ? (parseDateSafe(t.last_update) || parseDateSafe(t.notified_at) || now) : now;
       const hoursDiff = Math.max(0, (refTime.getTime() - created.getTime()) / (1000 * 60 * 60));
 
       stats.totalDurationHours += hoursDiff;
@@ -89,6 +114,10 @@ function getSlaMetrics() {
         stats.onTimeTickets++;
       } else {
         stats.escalatedTickets++;
+      }
+
+      if (t.reminder_count >= 3 || (t.priority && t.priority.toLowerCase().includes('urgent'))) {
+        if (!stats.escalatedTickets) stats.escalatedTickets++;
       }
     });
 
@@ -141,8 +170,10 @@ function getSlaMetrics() {
     const totalGlobalOpen = rankingList.reduce((acc, curr) => acc + curr.openTickets, 0);
     const totalGlobalClosed = rankingList.reduce((acc, curr) => acc + curr.closedTickets, 0);
     const totalGlobalEscalated = rankingList.reduce((acc, curr) => acc + curr.escalatedTickets, 0);
-    const avgGlobalHours = rankingList.length > 0 
-      ? (rankingList.reduce((acc, curr) => acc + curr.avgHours, 0) / rankingList.length).toFixed(1) 
+    const totalGlobalHours = rankingList.reduce((acc, curr) => acc + curr.totalDurationHours, 0);
+    const totalGlobalCount = rankingList.reduce((acc, curr) => acc + curr.durationCount, 0);
+    const avgGlobalHours = totalGlobalCount > 0 
+      ? (totalGlobalHours / totalGlobalCount).toFixed(1) 
       : '0.0';
 
     return {
