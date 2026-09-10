@@ -169,6 +169,17 @@ async function uploadJpegBuffer(buffer) {
 async function resolveImageAsJpgUrl(imageUrl) {
   if (!imageUrl || typeof imageUrl !== 'string') return '';
   
+
+  // Jika berupa path file lokal (diunduh saat scraping)
+  try {
+    const fs = require('fs');
+    if (fs.existsSync(imageUrl)) {
+      const buffer = fs.readFileSync(imageUrl);
+      const hosted = await uploadJpegBuffer(buffer);
+      if (hosted) return hosted;
+    }
+  } catch (err) {}
+
   // Jika berupa base64 data URL JPEG murni dari Canvas
   if (imageUrl.startsWith('data:image/jpeg;base64,')) {
     const buf = Buffer.from(imageUrl.replace(/^data:image\/jpeg;base64,/, ''), 'base64');

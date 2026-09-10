@@ -29,6 +29,7 @@
     "puppeteer": "^24.2.1",
     "puppeteer-extra": "^3.3.6",
     "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "sharp": "^0.35.4",
     "totp-generator": "^2.0.1"
   }
 }

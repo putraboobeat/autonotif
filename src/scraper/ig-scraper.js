@@ -60,7 +60,9 @@ async function scrapeInstagram(options = {}) {
       let igPage = null;
       
       try {
-        igPage = await browser.newPage();
+        const newPagePromise = browser.newPage();
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('newPage timeout')), 10000));
+        igPage = await Promise.race([newPagePromise, timeoutPromise]);
         await igPage.setCacheEnabled(false);
         
         // Block unnecessary resources
@@ -174,7 +176,9 @@ async function scrapeInstagram(options = {}) {
           let postDate = '';
           let postPage = null;
           try {
-            postPage = await browser.newPage();
+            const newPagePromise2 = browser.newPage();
+            const timeoutPromise2 = new Promise((_, reject) => setTimeout(() => reject(new Error('newPage timeout')), 10000));
+            postPage = await Promise.race([newPagePromise2, timeoutPromise2]);
             await postPage.setCacheEnabled(false);
             await postPage.goto(post.link, { waitUntil: 'domcontentloaded', timeout: 20000 });
             // Tunggu sebentar agar elemen slide utama selesai di-render
@@ -343,8 +347,52 @@ async function scrapeInstagram(options = {}) {
             }
           }
 
+          
+            // ============================================
+            // Download image locally for dashboard
+            // ============================================
+            if (imageUrl) {
+              try {
+                const fs = require('fs');
+                const path = require('path');
+                const uploadDir = path.join(__dirname, '..', 'dashboard', 'public', 'uploads');
+                if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+                const localPath = path.join(uploadDir, `ig_${post.shortcode}.jpg`);
+                
+                // Fetch image and save
+                const res = await fetch(imageUrl, {
+                  headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
+                  },
+                  signal: AbortSignal.timeout(10000)
+                });
+                if (res.ok) {
+                  
+                  let arrayBuffer = await res.arrayBuffer();
+                  let buffer = Buffer.from(arrayBuffer);
+                  
+                  try {
+                    const sharp = require('sharp');
+                    // Force convert any format (WEBP/AVIF/PNG) to standard JPEG
+                    buffer = await sharp(buffer)
+                      .jpeg({ quality: 90 })
+                      .toBuffer();
+                  } catch (sharpErr) {
+                    log.warn(`[IG] Warning: sharp conversion failed, using original buffer. Error: ${sharpErr.message}`);
+                  }
+                  
+                  fs.writeFileSync(localPath, buffer);
+
+                  post.imageUrl = localPath; // Save local path to DB instead of CDN url
+                }
+              } catch (dlErr) {
+                log.warn(`Failed to download image locally for ${post.shortcode}: ${dlErr.message}`);
+              }
+            }
+
           post.caption = caption || 'Tanpa Caption';
-          post.imageUrl = imageUrl || '';
+          post.imageUrl = post.imageUrl || imageUrl || '';
           post.videoUrl = videoUrl || '';
           post.postDate = postDate || '';
           

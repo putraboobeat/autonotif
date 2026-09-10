@@ -426,12 +426,24 @@ async function main() {
   log.info(`Starting OCA scrape loop (interval: ${config.app.scrapeInterval / 1000}s)...`);
 
   // OCA Loop
+  
+  // OCA Loop
   (async () => {
     while (isRunning) {
+      const { isBrowserAlive, launchBrowser } = require('./scraper/browser');
+      if (!isBrowserAlive()) {
+        try {
+          log.info('Browser is not alive. Re-launching...');
+          await launchBrowser();
+        } catch (e) {
+          log.error('Failed to re-launch browser in loop', { error: e.message });
+        }
+      }
       await scrapeCycle();
       await sleep(config.app.scrapeInterval);
     }
   })();
+
 
   // IG Loop
   (async () => {
