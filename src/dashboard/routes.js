@@ -415,33 +415,10 @@ function createRoutes() {
                 slide1Img = document.querySelector('meta[property="og:image"]')?.getAttribute('content') || '';
               }
 
-              // 4. Transcode via Canvas ke format JPEG murni
-              let jpegBase64 = '';
-              const targetImg = aagv || document.querySelector('main img, article img');
-              if (targetImg && (targetImg.naturalWidth || targetImg.width) > 250) {
-                try {
-                  const canvas = document.createElement('canvas');
-                  canvas.width = targetImg.naturalWidth || targetImg.width;
-                  canvas.height = targetImg.naturalHeight || targetImg.height;
-                  const ctx = canvas.getContext('2d');
-                  ctx.fillStyle = '#FFFFFF';
-                  ctx.fillRect(0, 0, canvas.width, canvas.height);
-                  ctx.drawImage(targetImg, 0, 0);
-                  jpegBase64 = canvas.toDataURL('image/jpeg', 0.95);
-                } catch (e) {}
-              }
-
-              return { slide1Img, jpegBase64 };
+              return { slide1Img };
             });
 
-            if (extResult.jpegBase64 && extResult.jpegBase64.startsWith('data:image/jpeg;base64,')) {
-              try {
-                const { uploadJpegBuffer } = require('../notifier/starsender');
-                const buf = Buffer.from(extResult.jpegBase64.replace(/^data:image\/jpeg;base64,/, ''), 'base64');
-                const hostedUrl = await uploadJpegBuffer(buf);
-                if (hostedUrl) imageUrl = hostedUrl;
-              } catch (upErr) {}
-            } else if (extResult.slide1Img) {
+            if (extResult.slide1Img) {
               imageUrl = cleanIgImageUrl(extResult.slide1Img);
             }
 
