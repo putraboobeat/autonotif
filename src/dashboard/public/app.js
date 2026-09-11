@@ -962,7 +962,22 @@ function renderLogs() {
       <td>${escapeHtml(log.target_name || log.target_number || '-')}</td>
       <td>
         <span class="badge ${log.status === 'sent' ? 'badge-success' : 'badge-danger'}">${log.status}</span>
-        ${log.status === 'failed' ? `<br><a href="https://wa.me/${formatWaNumber(log.target_number)}?text=${encodeURIComponent(log.message || '')}" target="_blank" class="btn btn-sm btn-primary" style="margin-top: 5px; font-size: 11px; padding: 2px 6px;">Kirim Manual</a>` : ''}
+        ${log.status === 'failed' ? `
+          <div style="font-size: 11px; color: #dc3545; margin-top: 5px; margin-bottom: 5px; line-height: 1.3; font-weight: normal; max-width: 250px; word-wrap: break-word;">
+            <i class="fas fa-exclamation-circle"></i> 
+            ${(() => {
+              try {
+                if (!log.response) return 'Gagal (tanpa detail error)';
+                const res = JSON.parse(log.response);
+                let errStr = res.error || res.message || log.response;
+                if (typeof errStr === 'object') errStr = JSON.stringify(errStr);
+                return escapeHtml(errStr);
+              } catch (e) {
+                return escapeHtml(log.response || 'Gagal');
+              }
+            })()}
+          </div>
+          <a href="https://wa.me/${formatWaNumber(log.target_number)}?text=${encodeURIComponent(log.message || '')}" target="_blank" class="btn btn-sm btn-primary" style="font-size: 11px; padding: 2px 6px;">Kirim Manual</a>` : ''}
       </td>
       <td class="timestamp">${formatDateTime(log.sent_at)}</td>
     </tr>
