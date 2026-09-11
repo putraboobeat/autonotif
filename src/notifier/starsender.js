@@ -183,6 +183,11 @@ async function uploadJpegBuffer(buffer, customFilename = null) {
 async function resolveImageAsJpgUrl(imageUrl) {
   if (!imageUrl || typeof imageUrl !== 'string') return '';
 
+  // Jika berupa path relatif /uploads/ dan config.app.baseUrl tersedia
+  if (imageUrl.startsWith('/uploads/') && config.app && config.app.baseUrl) {
+    return `${config.app.baseUrl.replace(/\/+$/, '')}${imageUrl}`;
+  }
+
   // Jika sudah URL .jpg yang disajikan oleh server lokal sendiri / Cloudflare Tunnel
   if (imageUrl.includes('/uploads/') && imageUrl.startsWith('http')) {
     return imageUrl;
@@ -209,12 +214,14 @@ async function resolveImageAsJpgUrl(imageUrl) {
     return hosted || imageUrl;
   }
 
-  // Jika sudah URL .jpg bersih yang sudah di-host pihak ketiga, langsung gunakan
-  if (imageUrl.includes('catbox.moe') || imageUrl.includes('tmpfiles.org') || imageUrl.includes('uguu.se')) {
-    return imageUrl;
-  }
-  if (imageUrl.endsWith('.jpg') && !imageUrl.includes('cdninstagram.com') && !imageUrl.includes('fbcdn.net') && !imageUrl.includes('instagram.')) {
-    return imageUrl;
+  // Jika APP_BASE_URL TIDAK disetel dan sudah di-host pihak ketiga, gunakan langsung
+  if (!config.app || !config.app.baseUrl) {
+    if (imageUrl.includes('catbox.moe') || imageUrl.includes('tmpfiles.org') || imageUrl.includes('uguu.se')) {
+      return imageUrl;
+    }
+    if (imageUrl.endsWith('.jpg') && !imageUrl.includes('cdninstagram.com') && !imageUrl.includes('fbcdn.net') && !imageUrl.includes('instagram.')) {
+      return imageUrl;
+    }
   }
   
   try {

@@ -235,11 +235,45 @@ function initDatabase() {
     log.error('Template migration failed', { error: err.message });
   }
 
-  // Default ig_caption_max_length & ig_blast_kanwil_only
+  // Auto-migrate legacy Catbox / Litterbox URLs to local /uploads/ URLs if available, or clear them so they can be re-fetched
   try {
-    db.prepare("INSERT OR IGNORE INTO system_config (key, value) VALUES ('ig_caption_max_length', '50')").run();
-    db.prepare("INSERT OR IGNORE INTO system_config (key, value) VALUES ('ig_blast_kanwil_only', '1')").run();
-  } catch {}
+    const uploadDir = path.join(__dirname, '../dashboard/public/uploads');
+    if (fs.existsSync(uploadDir)) {
+      const files = fs.readdirSync(uploadDir);
+      for (const file of files) {
+        if (file.startsWith('ig_') && file.endsWith('.jpg')) {
+          const shortcode = file.replace(/^ig_/, '').replace(/\.jpg$/, '');
+          db.prepare(`
+            UPDATE processed_ig_posts 
+            SET image_url = ? 
+            WHERE shortcode = ? AND (image_url LIKE '%catbox%' OR image_url LIKE '%litterbox%' OR image_url LIKE '%tmpfiles%' OR image_url IS NULL OR image_url = '')
+          `).run(`/uploads/${file}`, shortcode);
+        } else if (file.startsWith('reel_') && file.endsWith('.mp4')) {
+          const shortcode = file.replace(/^reel_/, '').replace(/\.mp4$/, '');
+          db.prepare(`
+            UPDATE processed_ig_posts 
+            SET video_url = ? 
+            WHERE shortcode = ? AND (video_url LIKE '%catbox%' OR video_url LIKE '%litterbox%' OR video_url LIKE '%tmpfiles%' OR video_url IS NULL OR video_url = '')
+          `).run(`/uploads/${file}`, shortcode);
+        }
+      }
+    }
+    // Bersihkan link Catbox/Litterbox lama yang tidak punya file lokal agar otomatis di-download ulang saat notifikasi dikirim
+    db.exec(`
+      UPDATE processed_ig_posts 
+      SET image_url = '' 
+      WHERE (image_url LIKE '%catbox%' OR image_url LIKE '%litterbox%' OR image_url LIKE '%tmpfiles%')
+        AND image_url NOT LIKE '%/uploads/%'
+    `);
+    db.exec(`
+      UPDATE processed_ig_posts 
+      SET video_url = '' 
+      WHERE (video_url LIKE '%catbox%' OR video_url LIKE '%litterbox%' OR video_url LIKE '%tmpfiles%')
+        AND video_url NOT LIKE '%/uploads/%'
+    `);
+  } catch (err) {
+    log.error('Media URL migration failed', { error: err.message });
+  }
 
   log.info('Database initialized successfully', { path: DB_PATH });
   return db;

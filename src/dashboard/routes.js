@@ -345,11 +345,37 @@ function createRoutes() {
       let imageUrl = post.image_url || '';
       let videoUrl = post.video_url || '';
 
-      // Cek apakah imageUrl kosong, thumbnail terpotong, atau CDN Instagram yang butuh transcode JPEG murni
+      const fs = require('fs');
+      const path = require('path');
+      const uploadDir = path.join(__dirname, 'public', 'uploads');
+      if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+      const localJpgFilename = `ig_${post.shortcode}.jpg`;
+      const localMp4Filename = `reel_${post.shortcode}.mp4`;
+      const localJpg = path.join(uploadDir, localJpgFilename);
+      const localMp4 = path.join(uploadDir, localMp4Filename);
+      const baseUrl = (config.app && config.app.baseUrl) ? config.app.baseUrl.replace(/\/+$/, '') : '';
+
+      // 1. Prioritaskan file fisik lokal yang sudah ada di disk uploads
+      if (fs.existsSync(localJpg) && baseUrl) {
+        imageUrl = `${baseUrl}/uploads/${localJpgFilename}`;
+      } else if (imageUrl && imageUrl.startsWith('/uploads/') && baseUrl) {
+        imageUrl = `${baseUrl}${imageUrl}`;
+      }
+
+      if (fs.existsSync(localMp4) && baseUrl) {
+        videoUrl = `${baseUrl}/uploads/${localMp4Filename}`;
+      } else if (videoUrl && videoUrl.startsWith('/uploads/') && baseUrl) {
+        videoUrl = `${baseUrl}${videoUrl}`;
+      }
+
+      // 2. Cek apakah butuh fetch ulang (jika belum berupa URL uploads lokal atau link lama yang usang/terblokir)
+      const isLocalUpload = imageUrl && imageUrl.includes('/uploads/');
       const isInstagramCdn = imageUrl && (imageUrl.includes('cdninstagram.com') || imageUrl.includes('fbcdn.net'));
       const isCroppedImage = imageUrl && (imageUrl.includes('stp=c') || imageUrl.includes('s640x640'));
-      const needsImageFetch = (!imageUrl || isCroppedImage || isInstagramCdn) && !videoUrl && post.link;
-      const needsVideoFetch = !videoUrl && post.link && post.link.includes('/reel/');
+      const isLegacyExternalHost = imageUrl && (imageUrl.includes('catbox.moe') || imageUrl.includes('tmpfiles.org'));
+
+      const needsImageFetch = (!imageUrl || !isLocalUpload || isCroppedImage || isInstagramCdn || isLegacyExternalHost) && !videoUrl && post.link;
+      const needsVideoFetch = (!videoUrl || !videoUrl.includes('/uploads/')) && post.link && post.link.includes('/reel/');
 
       if (needsVideoFetch || needsImageFetch) {
         try {
@@ -363,7 +389,31 @@ function createRoutes() {
             const mVid = pHtml.match(/"video_versions":\[\{"type":\d+,"url":"([^"]+)"/) ||
                          pHtml.match(/"video_url":"([^"]+)"/);
             if (mVid) {
-              videoUrl = mVid[1].replace(/\\u0026/g, '&').replace(/\\\//g, '/');
+              const rawVid = mVid[1].replace(/\\u0026/g, '&').replace(/\\\//g, '/');
+              try {
+                const vidRes = await fetch(rawVid, {
+                  headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': '*/*',
+                    'Referer': 'https://www.instagram.com/'
+                  },
+                  signal: AbortSignal.timeout(30000)
+                });
+                if (vidRes.ok) {
+                  const vidBuf = Buffer.from(await vidRes.arrayBuffer());
+                  fs.writeFileSync(localMp4, vidBuf);
+                  if (baseUrl) {
+                    videoUrl = `${baseUrl}/uploads/${localMp4Filename}`;
+                  } else {
+                    videoUrl = rawVid;
+                  }
+                } else {
+                  videoUrl = rawVid;
+                }
+              } catch {
+                videoUrl = rawVid;
+              }
+
               if (post.id) {
                 try {
                   const { getDb } = require('../database/init');
@@ -419,7 +469,36 @@ function createRoutes() {
             });
 
             if (extResult.slide1Img) {
-              imageUrl = cleanIgImageUrl(extResult.slide1Img);
+              const rawImgUrl = cleanIgImageUrl(extResult.slide1Img);
+              if (rawImgUrl) {
+                try {
+                  const imgRes = await fetch(rawImgUrl, {
+                    headers: {
+                      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                      'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
+                    },
+                    signal: AbortSignal.timeout(15000)
+                  });
+                  if (imgRes.ok) {
+                    let buf = Buffer.from(await imgRes.arrayBuffer());
+                    try {
+                      const sharp = require('sharp');
+                      buf = await sharp(buf).jpeg({ quality: 90 }).toBuffer();
+                    } catch {}
+                    fs.writeFileSync(localJpg, buf);
+                    if (baseUrl) {
+                      imageUrl = `${baseUrl}/uploads/${localJpgFilename}`;
+                    } else {
+                      const { uploadJpegBuffer } = require('../notifier/starsender');
+                      imageUrl = await uploadJpegBuffer(buf, localJpgFilename);
+                    }
+                  } else {
+                    imageUrl = rawImgUrl;
+                  }
+                } catch {
+                  imageUrl = rawImgUrl;
+                }
+              }
             }
 
             if (imageUrl && post.id) {
