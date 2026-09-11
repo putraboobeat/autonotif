@@ -397,9 +397,53 @@ async function scrapeInstagram(options = {}) {
               }
             }
 
+            // ============================================
+            // Upload video ke host publik agar URL tidak expire saat dikirim ke WA
+            // ============================================
+            if (videoUrl) {
+              try {
+                log.info(`[IG] Downloading Reels video for @${username} (${post.shortcode})...`);
+                const vidRes = await fetch(videoUrl, {
+                  headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': '*/*',
+                    'Referer': 'https://www.instagram.com/'
+                  },
+                  signal: AbortSignal.timeout(30000) // 30s timeout untuk video
+                });
+                if (vidRes.ok) {
+                  const vidBuf = Buffer.from(await vidRes.arrayBuffer());
+                  if (vidBuf.length > 1000) {
+                    // Upload video ke Catbox — Catbox support file hingga 200MB
+                    const form = new FormData();
+                    form.append('reqtype', 'fileupload');
+                    const blob = new Blob([vidBuf], { type: 'video/mp4' });
+                    form.append('fileToUpload', blob, 'reel.mp4');
+                    const catRes = await fetch('https://catbox.moe/user/api.php', {
+                      method: 'POST', body: form, signal: AbortSignal.timeout(60000)
+                    });
+                    const catUrl = (await catRes.text()).trim();
+                    if (catUrl.startsWith('http')) {
+                      post.videoUrl = catUrl;
+                      log.info(`[IG] ✅ Video Reels berhasil di-host: ${catUrl}`);
+                    } else {
+                      post.videoUrl = videoUrl; // fallback ke CDN Instagram
+                    }
+                  } else {
+                    post.videoUrl = videoUrl;
+                  }
+                } else {
+                  post.videoUrl = videoUrl;
+                }
+              } catch (vidErr) {
+                log.warn(`[IG] Gagal upload video ke host publik: ${vidErr.message}. Menggunakan CDN Instagram.`);
+                post.videoUrl = videoUrl;
+              }
+            }
+
           post.caption = caption || 'Tanpa Caption';
           post.imageUrl = post.imageUrl || imageUrl || '';
-          post.videoUrl = videoUrl || '';
+          post.videoUrl = post.videoUrl || videoUrl || '';
           post.postDate = postDate || '';
           
           let targetGroup = (ConfigModel.get('ig_default_group') || '').trim();
