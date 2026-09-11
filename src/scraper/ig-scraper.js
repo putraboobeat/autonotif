@@ -9,11 +9,8 @@ const log = createLogger('IG-SCRAPER');
 
 function cleanIgImageUrl(url) {
   if (!url) return '';
+  // Hanya bersihkan escape characters JSON / HTML entities, JANGAN ubah parameter query bertanda tangan (stp, oh, etc.)
   let u = url.replace(/\\u0026/g, '&').replace(/\\\//g, '/').replace(/&amp;/g, '&');
-  // Hapus parameter crop Instagram seperti stp=c0.140.1080.1080a_ atau /c0.140.1080.1080a/ atau /s640x640/ agar rasio asli 4:5 / portrait tidak terpotong jadi 1:1 square
-  u = u.replace(/stp=c[0-9\.]+a_/g, 'stp=');
-  u = u.replace(/\/c[0-9\.]+a\//g, '/');
-  u = u.replace(/\/s\d+x\d+\//g, '/');
   return u;
 }
 
@@ -110,8 +107,16 @@ async function scrapeInstagram(options = {}) {
               if (match) {
                 const type = match[1];
                 const shortcode = match[2];
+                const imgEl = el.querySelector('img');
+                const gridImg = imgEl ? (imgEl.src || '') : '';
+                const gridAlt = imgEl ? (imgEl.alt || '') : '';
                 if (!results.some(r => r.shortcode === shortcode)) {
-                  results.push({ shortcode, caption: '', link: `https://www.instagram.com/${type}/${shortcode}/` });
+                  results.push({ 
+                    shortcode, 
+                    caption: gridAlt, 
+                    link: `https://www.instagram.com/${type}/${shortcode}/`,
+                    gridImg 
+                  });
                 }
               }
             });
@@ -172,7 +177,7 @@ async function scrapeInstagram(options = {}) {
           
           // Fetch true caption, image, video, and date from the post page
           let caption = post.caption;
-          let imageUrl = '';
+          let imageUrl = post.gridImg || '';
           let videoUrl = '';
           let postDate = '';
           let postPage = null;
@@ -182,6 +187,7 @@ async function scrapeInstagram(options = {}) {
             postPage = await Promise.race([newPagePromise2, timeoutPromise2]);
             await postPage.setCacheEnabled(false);
             await postPage.goto(post.link, { waitUntil: 'domcontentloaded', timeout: 20000 });
+            await new Promise(r => setTimeout(r, 2000)); // Jeda 2 detik agar React mount elemen media slide
             // Tunggu sebentar agar elemen slide utama selesai di-render
             try {
               await postPage.waitForSelector('div._aagv img, main img, meta[property="og:image"]', { timeout: 6000 });
@@ -395,6 +401,34 @@ async function scrapeInstagram(options = {}) {
                       post.imageUrl = hostedUrl;
                     } else {
                       post.imageUrl = imageUrl;
+                    }
+                  }
+                } else {
+                  log.warn(`[IG] Gagal fetch image utama (HTTP ${res.status}): ${imageUrl.substring(0, 80)}...`);
+                  if (post.gridImg && post.gridImg !== imageUrl) {
+                    try {
+                      log.info(`[IG] Mencoba fallback ke gambar grid untuk ${post.shortcode}...`);
+                      const resFallback = await fetch(post.gridImg, {
+                        headers: {
+                          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+                          'Accept': 'image/*,*/*'
+                        },
+                        signal: AbortSignal.timeout(10000)
+                      });
+                      if (resFallback.ok) {
+                        let bufFallback = Buffer.from(await resFallback.arrayBuffer());
+                        try {
+                          const sharp = require('sharp');
+                          bufFallback = await sharp(bufFallback).jpeg({ quality: 90 }).toBuffer();
+                        } catch {}
+                        fs.writeFileSync(localPath, bufFallback);
+                        if (config.app && config.app.baseUrl) {
+                          post.imageUrl = `${config.app.baseUrl}/uploads/${localFilename}`;
+                          log.info(`[IG] ✅ Gambar JPEG (fallback grid) berhasil di-host secara lokal: ${post.imageUrl}`);
+                        }
+                      }
+                    } catch (fbErr) {
+                      log.warn(`[IG] Fallback grid image juga gagal: ${fbErr.message}`);
                     }
                   }
                 }

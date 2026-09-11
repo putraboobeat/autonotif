@@ -16,10 +16,8 @@ const log = createLogger('ROUTES');
 
 function cleanIgImageUrl(url) {
   if (!url) return '';
+  // Hanya bersihkan escape characters JSON / HTML entities, JANGAN ubah parameter query bertanda tangan (stp, oh, etc.)
   let u = url.replace(/\\u0026/g, '&').replace(/\\\//g, '/').replace(/&amp;/g, '&');
-  u = u.replace(/stp=c[0-9\.]+a_/g, 'stp=');
-  u = u.replace(/\/c[0-9\.]+a\//g, '/');
-  u = u.replace(/\/s\d+x\d+\//g, '/');
   return u;
 }
 
