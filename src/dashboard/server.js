@@ -66,8 +66,15 @@ function startDashboard() {
   const port = config.app.dashboardPort;
   server = app.listen(port, '0.0.0.0', () => {
     log.info(`Dashboard running at http://localhost:${port}`);
+    if (config.app.baseUrl) {
+      log.info(`Public Host URL / Cloudflare Tunnel configured: ${config.app.baseUrl}`);
+    }
     log.info(`Streamlit proxy available at http://localhost:${port}/streamlit/`);
   });
+
+  // Start 24-hour media cleanup cron
+  const { startMediaCleanupCron } = require('../utils/media-storage');
+  startMediaCleanupCron();
 
   // Handle WebSocket upgrade for Streamlit
   server.on('upgrade', (req, socket, head) => {

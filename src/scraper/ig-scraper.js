@@ -2,6 +2,7 @@ const { getBrowser, getPage } = require('./browser');
 const { IgPostModel, ConfigModel, NotificationLogModel } = require('../database/models');
 const { sendGroupMessage, sendPersonalMessage } = require('../notifier/starsender');
 const { isEligibleForNuelink, postToNuelink } = require('../notifier/nuelink');
+const { config } = require('../config');
 const { createLogger } = require('../utils/logger');
 
 const log = createLogger('IG-SCRAPER');
@@ -357,7 +358,8 @@ async function scrapeInstagram(options = {}) {
                 const path = require('path');
                 const uploadDir = path.join(__dirname, '..', 'dashboard', 'public', 'uploads');
                 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-                const localPath = path.join(uploadDir, `ig_${post.shortcode}.jpg`);
+                const localFilename = `ig_${post.shortcode}.jpg`;
+                const localPath = path.join(uploadDir, localFilename);
                 
                 // Fetch image and save
                 const res = await fetch(imageUrl, {
@@ -365,10 +367,9 @@ async function scrapeInstagram(options = {}) {
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                     'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
                   },
-                  signal: AbortSignal.timeout(10000)
+                  signal: AbortSignal.timeout(15000)
                 });
                 if (res.ok) {
-                  
                   let arrayBuffer = await res.arrayBuffer();
                   let buffer = Buffer.from(arrayBuffer);
                   
@@ -384,12 +385,17 @@ async function scrapeInstagram(options = {}) {
                   
                   fs.writeFileSync(localPath, buffer);
 
-                  const { uploadJpegBuffer } = require('../notifier/starsender');
-                  const hostedUrl = await uploadJpegBuffer(buffer);
-                  if (hostedUrl) {
-                    post.imageUrl = hostedUrl; // Save Catbox URL to DB so Nuelink/WA can access it publicly
+                  if (config.app && config.app.baseUrl) {
+                    post.imageUrl = `${config.app.baseUrl}/uploads/${localFilename}`;
+                    log.info(`[IG] ✅ Gambar JPEG berhasil di-host secara lokal via Cloudflare Tunnel: ${post.imageUrl}`);
                   } else {
-                    post.imageUrl = imageUrl; // Fallback to original CDN url
+                    const { uploadJpegBuffer } = require('../notifier/starsender');
+                    const hostedUrl = await uploadJpegBuffer(buffer, localFilename);
+                    if (hostedUrl) {
+                      post.imageUrl = hostedUrl;
+                    } else {
+                      post.imageUrl = imageUrl;
+                    }
                   }
                 }
               } catch (dlErr) {
@@ -398,7 +404,7 @@ async function scrapeInstagram(options = {}) {
             }
 
             // ============================================
-            // Upload video ke host publik agar URL tidak expire saat dikirim ke WA
+            // Host video reels ke lokal server / host publik
             // ============================================
             if (videoUrl) {
               try {
@@ -414,38 +420,54 @@ async function scrapeInstagram(options = {}) {
                 if (vidRes.ok) {
                   const vidBuf = Buffer.from(await vidRes.arrayBuffer());
                   if (vidBuf.length > 1000) {
-                    // Upload video ke uguu.se (Most reliable, direct URL, supports large files)
-                    try {
-                      const form = new FormData();
-                      const blob = new Blob([vidBuf], { type: 'video/mp4' });
-                      form.append('files[]', blob, 'reel.mp4');
-                      const res = await fetch('https://uguu.se/upload.php', {
-                        method: 'POST', body: form, signal: AbortSignal.timeout(60000)
-                      });
-                      const data = await res.json();
-                      if (data && data.success && data.files && data.files.length > 0) {
-                        const directUrl = data.files[0].url;
-                        post.videoUrl = directUrl;
-                        log.info(`[IG] ✅ Video Reels berhasil di-host via Uguu: ${directUrl}`);
-                      } else {
-                        throw new Error('Uguu failed');
-                      }
-                    } catch (e1) {
-                      log.warn(`[IG] Uguu gagal untuk video, mencoba Catbox...`);
-                      // Fallback ke Catbox
-                      const form = new FormData();
-                      form.append('reqtype', 'fileupload');
-                      const blob = new Blob([vidBuf], { type: 'video/mp4' });
-                      form.append('fileToUpload', blob, 'reel.mp4');
-                      const catRes = await fetch('https://catbox.moe/user/api.php', {
-                        method: 'POST', body: form, signal: AbortSignal.timeout(60000)
-                      });
-                      const catUrl = (await catRes.text()).trim();
-                      if (catUrl.startsWith('http')) {
-                        post.videoUrl = catUrl;
-                        log.info(`[IG] ✅ Video Reels berhasil di-host via Catbox: ${catUrl}`);
-                      } else {
-                        post.videoUrl = videoUrl; // fallback ke CDN Instagram
+                    const fs = require('fs');
+                    const path = require('path');
+                    const uploadDir = path.join(__dirname, '..', 'dashboard', 'public', 'uploads');
+                    if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+                    const vidFilename = `reel_${post.shortcode}.mp4`;
+                    const localVidPath = path.join(uploadDir, vidFilename);
+                    fs.writeFileSync(localVidPath, vidBuf);
+
+                    if (config.app && config.app.baseUrl) {
+                      post.videoUrl = `${config.app.baseUrl}/uploads/${vidFilename}`;
+                      log.info(`[IG] ✅ Video Reels berhasil di-host secara lokal via Cloudflare Tunnel: ${post.videoUrl}`);
+                    } else {
+                      // Fallback upload ke Uguu.se -> Catbox jika tidak ada tunnel
+                      try {
+                        const form = new FormData();
+                        const blob = new Blob([vidBuf], { type: 'video/mp4' });
+                        form.append('files[]', blob, vidFilename);
+                        const res = await fetch('https://uguu.se/upload.php', {
+                          method: 'POST', body: form, signal: AbortSignal.timeout(60000)
+                        });
+                        const data = await res.json();
+                        if (data && data.success && data.files && data.files.length > 0) {
+                          const directUrl = data.files[0].url;
+                          post.videoUrl = directUrl;
+                          log.info(`[IG] ✅ Video Reels berhasil di-host via Uguu: ${directUrl}`);
+                        } else {
+                          throw new Error('Uguu failed');
+                        }
+                      } catch (e1) {
+                        log.warn(`[IG] Uguu gagal untuk video, mencoba Catbox...`);
+                        try {
+                          const form = new FormData();
+                          form.append('reqtype', 'fileupload');
+                          const blob = new Blob([vidBuf], { type: 'video/mp4' });
+                          form.append('fileToUpload', blob, vidFilename);
+                          const catRes = await fetch('https://catbox.moe/user/api.php', {
+                            method: 'POST', body: form, signal: AbortSignal.timeout(60000)
+                          });
+                          const catUrl = (await catRes.text()).trim();
+                          if (catUrl.startsWith('http')) {
+                            post.videoUrl = catUrl;
+                            log.info(`[IG] ✅ Video Reels berhasil di-host via Catbox: ${catUrl}`);
+                          } else {
+                            post.videoUrl = videoUrl;
+                          }
+                        } catch (e2) {
+                          post.videoUrl = videoUrl;
+                        }
                       }
                     }
                   } else {
@@ -455,7 +477,7 @@ async function scrapeInstagram(options = {}) {
                   post.videoUrl = videoUrl;
                 }
               } catch (vidErr) {
-                log.warn(`[IG] Gagal upload video ke host publik: ${vidErr.message}. Menggunakan CDN Instagram.`);
+                log.warn(`[IG] Gagal memproses video reels: ${vidErr.message}. Menggunakan CDN Instagram.`);
                 post.videoUrl = videoUrl;
               }
             }

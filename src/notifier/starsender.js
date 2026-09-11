@@ -93,14 +93,28 @@ function applyAntiBanProtection(message) {
  * Upload buffer JPEG ke temporary host (Catbox / Litterbox / tmpfiles)
  * Menghasilkan URL langsung .jpg yang valid
  */
-async function uploadJpegBuffer(buffer) {
+async function uploadJpegBuffer(buffer, customFilename = null) {
   if (!buffer || buffer.length < 100) return '';
 
-  // Provider 1: uguu.se (Most reliable, returns direct URL)
+  // Prioritas 1: Local VPS / Cloudflare Tunnel Storage (Jika APP_BASE_URL disetel)
+  if (config.app && config.app.baseUrl) {
+    try {
+      const { saveMediaBufferLocally } = require('../utils/media-storage');
+      const localUrl = saveMediaBufferLocally(buffer, 'jpg', customFilename);
+      if (localUrl) {
+        log.info(`[MEDIA] ✅ Gambar JPEG di-host lokal via Cloudflare Tunnel: ${localUrl}`);
+        return localUrl;
+      }
+    } catch (eLocal) {
+      log.warn(`[MEDIA] Penyimpanan lokal gagal: ${eLocal.message}, fallback ke eksternal...`);
+    }
+  }
+
+  // Provider 1 (Fallback): uguu.se (Most reliable, returns direct URL)
   try {
     const form = new FormData();
     const blob = new Blob([buffer], { type: 'image/jpeg' });
-    form.append('files[]', blob, 'post.jpg');
+    form.append('files[]', blob, customFilename || 'post.jpg');
     
     const res = await fetch('https://uguu.se/upload.php', {
       method: 'POST',
@@ -123,7 +137,7 @@ async function uploadJpegBuffer(buffer) {
     form.append('reqtype', 'fileupload');
     form.append('time', '24h');
     const blob = new Blob([buffer], { type: 'image/jpeg' });
-    form.append('fileToUpload', blob, 'post.jpg');
+    form.append('fileToUpload', blob, customFilename || 'post.jpg');
     
     const litterRes = await fetch('https://litterbox.catbox.moe/resources/internals/api.php', {
       method: 'POST',
@@ -144,7 +158,7 @@ async function uploadJpegBuffer(buffer) {
     const form = new FormData();
     form.append('reqtype', 'fileupload');
     const blob = new Blob([buffer], { type: 'image/jpeg' });
-    form.append('fileToUpload', blob, 'post.jpg');
+    form.append('fileToUpload', blob, customFilename || 'post.jpg');
     
     const catboxRes = await fetch('https://catbox.moe/user/api.php', {
       method: 'POST',
@@ -168,13 +182,21 @@ async function uploadJpegBuffer(buffer) {
  */
 async function resolveImageAsJpgUrl(imageUrl) {
   if (!imageUrl || typeof imageUrl !== 'string') return '';
-  
+
+  // Jika sudah URL .jpg yang disajikan oleh server lokal sendiri / Cloudflare Tunnel
+  if (imageUrl.includes('/uploads/') && imageUrl.startsWith('http')) {
+    return imageUrl;
+  }
 
   // Jika berupa path file lokal (diunduh saat scraping)
   try {
     const fs = require('fs');
     if (fs.existsSync(imageUrl)) {
-      const buffer = fs.readFileSync(imageUrl);
+      let buffer = fs.readFileSync(imageUrl);
+      try {
+        const sharp = require('sharp');
+        buffer = await sharp(buffer).jpeg({ quality: 90 }).toBuffer();
+      } catch (err) {}
       const hosted = await uploadJpegBuffer(buffer);
       if (hosted) return hosted;
     }
@@ -188,7 +210,7 @@ async function resolveImageAsJpgUrl(imageUrl) {
   }
 
   // Jika sudah URL .jpg bersih yang sudah di-host pihak ketiga, langsung gunakan
-  if (imageUrl.includes('catbox.moe') || imageUrl.includes('tmpfiles.org')) {
+  if (imageUrl.includes('catbox.moe') || imageUrl.includes('tmpfiles.org') || imageUrl.includes('uguu.se')) {
     return imageUrl;
   }
   if (imageUrl.endsWith('.jpg') && !imageUrl.includes('cdninstagram.com') && !imageUrl.includes('fbcdn.net') && !imageUrl.includes('instagram.')) {
@@ -210,11 +232,16 @@ async function resolveImageAsJpgUrl(imageUrl) {
     }
     
     const arrayBuffer = await res.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    let buffer = Buffer.from(arrayBuffer);
     if (buffer.length < 100) {
       log.warn(`[MEDIA] Ukuran buffer gambar terlalu kecil (${buffer.length} bytes)`);
       return imageUrl;
     }
+
+    try {
+      const sharp = require('sharp');
+      buffer = await sharp(buffer).jpeg({ quality: 90 }).toBuffer();
+    } catch (err) {}
 
     const hosted = await uploadJpegBuffer(buffer);
     if (hosted) return hosted;
@@ -455,12 +482,12 @@ async function sendPersonalMessage(phoneNumber, message, options = {}) {
     if (options.tempFilePath) {
       try {
         const fs = require('fs');
-        if (fs.existsSync(options.tempFilePath)) {
+        if (fs.existsSync(options.tempFilePath) && !options.tempFilePath.includes('/uploads/')) {
           fs.unlinkSync(options.tempFilePath);
-          log.info(`[MEDIA] 🗑️ File media lokal langsung dihapus: ${options.tempFilePath}`);
+          log.info(`[MEDIA] 🗑️ File scratch temporary dihapus: ${options.tempFilePath}`);
         }
       } catch (cleanupErr) {
-        log.warn(`[MEDIA] Gagal menghapus file media lokal: ${cleanupErr.message}`);
+        log.warn(`[MEDIA] Gagal menghapus file temporary: ${cleanupErr.message}`);
       }
     }
   }
@@ -499,12 +526,12 @@ async function sendGroupMessage(groupName, message, options = {}) {
     if (options.tempFilePath) {
       try {
         const fs = require('fs');
-        if (fs.existsSync(options.tempFilePath)) {
+        if (fs.existsSync(options.tempFilePath) && !options.tempFilePath.includes('/uploads/')) {
           fs.unlinkSync(options.tempFilePath);
-          log.info(`[MEDIA] 🗑️ File media lokal langsung dihapus setelah kirim ke group: ${options.tempFilePath}`);
+          log.info(`[MEDIA] 🗑️ File scratch temporary dihapus setelah kirim ke group: ${options.tempFilePath}`);
         }
       } catch (cleanupErr) {
-        log.warn(`[MEDIA] Gagal menghapus file media lokal: ${cleanupErr.message}`);
+        log.warn(`[MEDIA] Gagal menghapus file temporary: ${cleanupErr.message}`);
       }
     }
   }

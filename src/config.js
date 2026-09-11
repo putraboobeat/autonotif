@@ -61,6 +61,7 @@ const config = {
     dashboardPort: parseInt(process.env.DASHBOARD_PORT, 10) || 3000,
     cookiePath: process.env.COOKIE_PATH || './data/cookies.json',
     env: process.env.NODE_ENV || 'development',
+    baseUrl: (process.env.APP_BASE_URL || '').trim().replace(/\/+$/, ''),
   },
 };
 
