@@ -414,20 +414,39 @@ async function scrapeInstagram(options = {}) {
                 if (vidRes.ok) {
                   const vidBuf = Buffer.from(await vidRes.arrayBuffer());
                   if (vidBuf.length > 1000) {
-                    // Upload video ke Catbox — Catbox support file hingga 200MB
-                    const form = new FormData();
-                    form.append('reqtype', 'fileupload');
-                    const blob = new Blob([vidBuf], { type: 'video/mp4' });
-                    form.append('fileToUpload', blob, 'reel.mp4');
-                    const catRes = await fetch('https://catbox.moe/user/api.php', {
-                      method: 'POST', body: form, signal: AbortSignal.timeout(60000)
-                    });
-                    const catUrl = (await catRes.text()).trim();
-                    if (catUrl.startsWith('http')) {
-                      post.videoUrl = catUrl;
-                      log.info(`[IG] ✅ Video Reels berhasil di-host: ${catUrl}`);
-                    } else {
-                      post.videoUrl = videoUrl; // fallback ke CDN Instagram
+                    // Upload video ke uguu.se (Most reliable, direct URL, supports large files)
+                    try {
+                      const form = new FormData();
+                      const blob = new Blob([vidBuf], { type: 'video/mp4' });
+                      form.append('files[]', blob, 'reel.mp4');
+                      const res = await fetch('https://uguu.se/upload.php', {
+                        method: 'POST', body: form, signal: AbortSignal.timeout(60000)
+                      });
+                      const data = await res.json();
+                      if (data && data.success && data.files && data.files.length > 0) {
+                        const directUrl = data.files[0].url;
+                        post.videoUrl = directUrl;
+                        log.info(`[IG] ✅ Video Reels berhasil di-host via Uguu: ${directUrl}`);
+                      } else {
+                        throw new Error('Uguu failed');
+                      }
+                    } catch (e1) {
+                      log.warn(`[IG] Uguu gagal untuk video, mencoba Catbox...`);
+                      // Fallback ke Catbox
+                      const form = new FormData();
+                      form.append('reqtype', 'fileupload');
+                      const blob = new Blob([vidBuf], { type: 'video/mp4' });
+                      form.append('fileToUpload', blob, 'reel.mp4');
+                      const catRes = await fetch('https://catbox.moe/user/api.php', {
+                        method: 'POST', body: form, signal: AbortSignal.timeout(60000)
+                      });
+                      const catUrl = (await catRes.text()).trim();
+                      if (catUrl.startsWith('http')) {
+                        post.videoUrl = catUrl;
+                        log.info(`[IG] ✅ Video Reels berhasil di-host via Catbox: ${catUrl}`);
+                      } else {
+                        post.videoUrl = videoUrl; // fallback ke CDN Instagram
+                      }
                     }
                   } else {
                     post.videoUrl = videoUrl;

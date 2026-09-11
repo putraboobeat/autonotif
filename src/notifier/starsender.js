@@ -96,25 +96,25 @@ function applyAntiBanProtection(message) {
 async function uploadJpegBuffer(buffer) {
   if (!buffer || buffer.length < 100) return '';
 
-  // Provider 1: Catbox (https://catbox.moe)
+  // Provider 1: uguu.se (Most reliable, returns direct URL)
   try {
     const form = new FormData();
-    form.append('reqtype', 'fileupload');
     const blob = new Blob([buffer], { type: 'image/jpeg' });
-    form.append('fileToUpload', blob, 'post.jpg');
+    form.append('files[]', blob, 'post.jpg');
     
-    const catboxRes = await fetch('https://catbox.moe/user/api.php', {
+    const res = await fetch('https://uguu.se/upload.php', {
       method: 'POST',
       body: form,
-      signal: AbortSignal.timeout(10000)
+      signal: AbortSignal.timeout(15000)
     });
-    const catboxUrl = (await catboxRes.text()).trim();
-    if (catboxUrl.startsWith('http')) {
-      log.info(`[MEDIA] ✅ Gambar JPEG berhasil di-host via Catbox: ${catboxUrl}`);
-      return catboxUrl;
+    const data = await res.json();
+    if (data && data.success && data.files && data.files.length > 0) {
+      const directUrl = data.files[0].url;
+      log.info(`[MEDIA] ✅ Gambar JPEG berhasil di-host via Uguu: ${directUrl}`);
+      return directUrl;
     }
-  } catch (e1) {
-    log.warn(`[MEDIA] Catbox gagal: ${e1.message}, mencoba Litterbox...`);
+  } catch (e3) {
+    log.warn(`[MEDIA] Uguu gagal: ${e3.message}, mencoba Litterbox...`);
   }
 
   // Provider 2: Litterbox (Temporary 24h retention)
@@ -136,28 +136,28 @@ async function uploadJpegBuffer(buffer) {
       return litterUrl;
     }
   } catch (e2) {
-    log.warn(`[MEDIA] Litterbox gagal: ${e2.message}, mencoba tmpfiles...`);
+    log.warn(`[MEDIA] Litterbox gagal: ${e2.message}, mencoba Catbox...`);
   }
 
-  // Provider 3: tmpfiles.org
+  // Provider 3: Catbox (https://catbox.moe)
   try {
     const form = new FormData();
+    form.append('reqtype', 'fileupload');
     const blob = new Blob([buffer], { type: 'image/jpeg' });
-    form.append('file', blob, 'post.jpg');
+    form.append('fileToUpload', blob, 'post.jpg');
     
-    const tmpRes = await fetch('https://tmpfiles.org/api/v1/upload', {
+    const catboxRes = await fetch('https://catbox.moe/user/api.php', {
       method: 'POST',
       body: form,
       signal: AbortSignal.timeout(10000)
     });
-    const tmpData = await tmpRes.json();
-    if (tmpData?.data?.url) {
-      const directUrl = tmpData.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
-      log.info(`[MEDIA] ✅ Gambar JPEG berhasil di-host via tmpfiles: ${directUrl}`);
-      return directUrl;
+    const catboxUrl = (await catboxRes.text()).trim();
+    if (catboxUrl.startsWith('http')) {
+      log.info(`[MEDIA] ✅ Gambar JPEG berhasil di-host via Catbox: ${catboxUrl}`);
+      return catboxUrl;
     }
-  } catch (e3) {
-    log.warn(`[MEDIA] tmpfiles gagal: ${e3.message}`);
+  } catch (e1) {
+    log.warn(`[MEDIA] Catbox gagal: ${e1.message}`);
   }
 
   return '';
