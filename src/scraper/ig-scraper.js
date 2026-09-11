@@ -384,7 +384,13 @@ async function scrapeInstagram(options = {}) {
                   
                   fs.writeFileSync(localPath, buffer);
 
-                  post.imageUrl = localPath; // Save local path to DB instead of CDN url
+                  const { uploadJpegBuffer } = require('../notifier/starsender');
+                  const hostedUrl = await uploadJpegBuffer(buffer);
+                  if (hostedUrl) {
+                    post.imageUrl = hostedUrl; // Save Catbox URL to DB so Nuelink/WA can access it publicly
+                  } else {
+                    post.imageUrl = imageUrl; // Fallback to original CDN url
+                  }
                 }
               } catch (dlErr) {
                 log.warn(`Failed to download image locally for ${post.shortcode}: ${dlErr.message}`);
