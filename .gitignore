@@ -7,5 +7,7 @@ cookies.json
 *.log
 .DS_Store
 Website Scraping/credentials.json
+__pycache__/
+*.pyc
 src/dashboard/public/uploads/*
 !src/dashboard/public/uploads/.gitkeep

@@ -5,9 +5,11 @@ import pandas as pd
 import time
 import json
 import os
+import sys
 
 # --- KONFIGURASI FILE ---
-CONFIG_FILE = "config.json"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+CONFIG_FILE = os.path.join(BASE_DIR, "config.json")
 
 def load_config():
     if os.path.exists(CONFIG_FILE):
@@ -125,7 +127,8 @@ with col1:
             stdout=subprocess.PIPE, 
             stderr=subprocess.STDOUT, 
             text=True,
-            bufsize=1
+            bufsize=1,
+            cwd=BASE_DIR
         )
         
         for line in process.stdout:
@@ -155,7 +158,8 @@ with col2:
             stdout=subprocess.PIPE, 
             stderr=subprocess.STDOUT, 
             text=True,
-            bufsize=1
+            bufsize=1,
+            cwd=BASE_DIR
         )
         
         for line in process.stdout:

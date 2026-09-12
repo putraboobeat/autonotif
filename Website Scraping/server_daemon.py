@@ -3,8 +3,10 @@ import json
 import subprocess
 from datetime import datetime
 import os
+import sys
 
-CONFIG_FILE = "config.json"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+CONFIG_FILE = os.path.join(BASE_DIR, "config.json")
 
 def log(msg):
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -43,7 +45,8 @@ def main():
             try:
                 subprocess.run(
                     [sys.executable, "link_fetcher.py", str(target_pages), source_url], 
-                    check=True
+                    check=True,
+                    cwd=BASE_DIR
                 )
                 log("AUTO FETCH selesai.")
             except subprocess.CalledProcessError as e:
@@ -54,7 +57,8 @@ def main():
             try:
                 subprocess.run(
                     [sys.executable, "wp_autopost_bot.py"], 
-                    check=True
+                    check=True,
+                    cwd=BASE_DIR
                 )
                 log("AUTO POST selesai.")
             except subprocess.CalledProcessError as e:
