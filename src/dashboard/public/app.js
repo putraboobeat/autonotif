@@ -1237,6 +1237,32 @@ async function forceCheckNow() {
   }
 }
 
+async function forceCheckLapor() {
+  try {
+    const result = await apiPost('/force-check-lapor', {});
+    if (result.success) {
+      showToast('⚡ Pengecekan Lapor sedang dijalankan secara manual!', 'success');
+    } else {
+      alert(`❌ Gagal mengeksekusi: ${result.error}`);
+    }
+  } catch (error) {
+    alert(`❌ Error: ${error.message}`);
+  }
+}
+
+async function forceCheckTuntas() {
+  try {
+    const result = await apiPost('/force-check-tuntas', {});
+    if (result.success) {
+      showToast('⚡ Pengecekan Tuntas sedang dijalankan secara manual!', 'success');
+    } else {
+      alert(`❌ Gagal mengeksekusi: ${result.error}`);
+    }
+  } catch (error) {
+    alert(`❌ Error: ${error.message}`);
+  }
+}
+
 async function saveWaGroup() {
   const waGroup = document.getElementById('setting-wa-group').value;
   try {

@@ -1368,6 +1368,32 @@ function createRoutes() {
     }
   });
 
+  router.post('/force-check-lapor', async (req, res) => {
+    try {
+      if (typeof global.triggerLaporScrape === 'function') {
+        global.triggerLaporScrape();
+        res.json({ success: true, message: 'Pengecekan tiket SP4N Lapor sedang dijalankan di latar belakang!' });
+      } else {
+        res.status(503).json({ success: false, error: 'Sistem scraper Lapor belum siap' });
+      }
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  router.post('/force-check-tuntas', async (req, res) => {
+    try {
+      if (typeof global.triggerTuntasScrape === 'function') {
+        global.triggerTuntasScrape();
+        res.json({ success: true, message: 'Pengecekan tiket Tuntas ATR/BPN sedang dijalankan di latar belakang!' });
+      } else {
+        res.status(503).json({ success: false, error: 'Sistem scraper Tuntas belum siap' });
+      }
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
   // ============================================
   // Auth & Interactive Login
   // ============================================

@@ -485,6 +485,8 @@ async function tuntasScrapeCycle() {
 }
 
 global.triggerManualScrape = () => scrapeCycle();
+global.triggerLaporScrape = () => laporScrapeCycle();
+global.triggerTuntasScrape = () => tuntasScrapeCycle();
 
 /**
  * Main application entry point

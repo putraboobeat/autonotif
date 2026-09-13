@@ -850,7 +850,8 @@
               <input type="text" id="setting_lapor_group_id" class="form-control" style="max-width: 250px;" onblur="updateSetting('lapor_group_id', this.value)">
             </div>
             
-            <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); text-align: right;">
+            <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: flex-end; gap: 10px;">
+              <button class="btn btn-primary" onclick="forceCheckLapor()" style="font-size: 14px; padding: 10px 24px; font-weight: bold; border-radius: 8px;">🔄 Sync Lapor Sekarang</button>
               <button class="btn btn-success" onclick="showToast('✅ Pengaturan Lapor berhasil disimpan secara otomatis!', 'success')" style="font-size: 14px; padding: 10px 24px; font-weight: bold; border-radius: 8px;">💾 Simpan Pengaturan Lapor</button>
             </div>
 
@@ -911,7 +912,8 @@
               <input type="text" id="setting_tuntas_group_id" class="form-control" style="max-width: 250px;" onblur="updateSetting('tuntas_group_id', this.value)">
             </div>
             
-            <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); text-align: right;">
+            <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: flex-end; gap: 10px;">
+              <button class="btn btn-primary" onclick="forceCheckTuntas()" style="font-size: 14px; padding: 10px 24px; font-weight: bold; border-radius: 8px;">🔄 Sync Tuntas Sekarang</button>
               <button class="btn btn-success" onclick="showToast('✅ Pengaturan Tuntas berhasil disimpan secara otomatis!', 'success')" style="font-size: 14px; padding: 10px 24px; font-weight: bold; border-radius: 8px;">💾 Simpan Pengaturan Tuntas</button>
             </div>
 
