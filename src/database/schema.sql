@@ -183,3 +183,53 @@ INSERT OR IGNORE INTO system_config (key, value) VALUES ('web_auto_post', '0');
 INSERT OR IGNORE INTO system_config (key, value) VALUES ('web_interval_minutes', '60');
 INSERT OR IGNORE INTO system_config (key, value) VALUES ('last_web_fetch_time', '');
 INSERT OR IGNORE INTO system_config (key, value) VALUES ('web_scraper_status', 'stopped');
+
+-- ============================================
+-- SP4N Lapor Scraper
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS lapor_tickets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ticket_id VARCHAR(50) NOT NULL UNIQUE,
+    subject VARCHAR(255),
+    status VARCHAR(50),
+    created_date VARCHAR(100),
+    notified_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    notified_group INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_lapor_tickets_ticket_id ON lapor_tickets(ticket_id);
+
+INSERT OR IGNORE INTO system_config (key, value) VALUES ('lapor_enabled', '0');
+INSERT OR IGNORE INTO system_config (key, value) VALUES ('lapor_username', '');
+INSERT OR IGNORE INTO system_config (key, value) VALUES ('lapor_password', '');
+INSERT OR IGNORE INTO system_config (key, value) VALUES ('lapor_scrape_interval', '60000');
+INSERT OR IGNORE INTO system_config (key, value) VALUES ('lapor_scraper_status', 'stopped');
+INSERT OR IGNORE INTO system_config (key, value) VALUES ('last_lapor_scrape_time', '');
+INSERT OR IGNORE INTO system_config (key, value) VALUES ('lapor_group_id', '');
+
+-- ============================================
+-- Tuntas ATR/BPN Scraper
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS tuntas_tickets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ticket_id VARCHAR(50) NOT NULL UNIQUE,
+    subject VARCHAR(255),
+    status VARCHAR(50),
+    created_date VARCHAR(100),
+    notified_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    notified_group INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_tuntas_tickets_ticket_id ON tuntas_tickets(ticket_id);
+
+INSERT OR IGNORE INTO system_config (key, value) VALUES ('tuntas_enabled', '0');
+INSERT OR IGNORE INTO system_config (key, value) VALUES ('tuntas_username', '');
+INSERT OR IGNORE INTO system_config (key, value) VALUES ('tuntas_password', '');
+INSERT OR IGNORE INTO system_config (key, value) VALUES ('tuntas_scrape_interval', '60000');
+INSERT OR IGNORE INTO system_config (key, value) VALUES ('tuntas_scraper_status', 'stopped');
+INSERT OR IGNORE INTO system_config (key, value) VALUES ('last_tuntas_scrape_time', '');
+INSERT OR IGNORE INTO system_config (key, value) VALUES ('tuntas_group_id', '');

@@ -79,6 +79,14 @@
           <span class="status-dot"></span>
           <span id="oca-text">OCA: Cek...</span>
         </div>
+        <div id="lapor-status" class="status-badge stopped" title="Status Mesin Scraper Lapor">
+          <span class="status-dot"></span>
+          <span id="lapor-status-text">Lapor: -</span>
+        </div>
+        <div id="tuntas-status" class="status-badge stopped" title="Status Mesin Scraper Tuntas">
+          <span class="status-dot"></span>
+          <span id="tuntas-status-text">Tuntas: -</span>
+        </div>
         <span class="timestamp" id="last-scrape">-</span>
         <button class="theme-btn" onclick="toggleTheme()" type="button" title="Ubah Mode Cerah / Gelap">
           <span class="theme-toggle-icon">🌙</span> <span class="theme-toggle-text">Gelap</span>
@@ -133,6 +141,12 @@
       </button>
       <button class="tab-btn" data-tab="logs">
         <span class="tab-icon">📨</span> Log Notifikasi
+      </button>
+      <button class="tab-btn" data-tab="lapor" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(185, 28, 28, 0.15)); border: 1px solid rgba(239, 68, 68, 0.4);">
+        <span class="tab-icon">🚨</span> SP4N Lapor
+      </button>
+      <button class="tab-btn" data-tab="tuntas" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(4, 120, 87, 0.15)); border: 1px solid rgba(16, 185, 129, 0.4);">
+        <span class="tab-icon">📝</span> Tuntas
       </button>
       <button class="tab-btn" data-tab="settings">
         <span class="tab-icon">⚙️</span> Pengaturan
@@ -780,6 +794,121 @@
         <div class="card-body">
           <div id="templates-loading" style="text-align: center; padding: 20px; color: var(--text-secondary);">Memuat daftar template notifikasi...</div>
           <div id="templates-container" style="display: flex; flex-direction: column; gap: 24px;"></div>
+        </div>
+      </div>
+    </div>
+    </div>
+
+    <!-- Tab: SP4N Lapor -->
+    <div class="tab-content" id="tab-lapor">
+      <div class="card">
+        <div class="card-header" style="background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); border-radius: 12px 12px 0 0; padding: 20px;">
+          <h2 style="color: white; margin: 0; font-size: 1.25rem;">🚨 Pengaturan Scraper SP4N Lapor</h2>
+        </div>
+        <div class="card-body">
+          <div class="settings-grid">
+            
+            <div class="settings-row">
+              <div class="settings-info">
+                <h4>Aktifkan Scraper Lapor</h4>
+                <p>Jalankan pengecekan otomatis tiket SP4N Lapor secara berkala.</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="setting_lapor_enabled" onchange="updateSetting('lapor_enabled', this.checked ? '1' : '0')">
+                <span class="slider round"></span>
+              </label>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-info">
+                <h4>Username Lapor.go.id</h4>
+                <p>Email atau Username untuk login ke portal admin Lapor</p>
+              </div>
+              <input type="text" id="setting_lapor_username" class="form-control" style="max-width: 250px;" onblur="updateSetting('lapor_username', this.value)">
+            </div>
+            
+            <div class="settings-row">
+              <div class="settings-info">
+                <h4>Password Lapor.go.id</h4>
+                <p>Kata sandi untuk portal admin Lapor</p>
+              </div>
+              <input type="password" id="setting_lapor_password" class="form-control" style="max-width: 250px;" onblur="updateSetting('lapor_password', this.value)">
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-info">
+                <h4>Interval Pengecekan</h4>
+                <p>Berapa milidetik sekali scraper mengecek pengaduan (Misal 60000 = 1 menit)</p>
+              </div>
+              <input type="number" id="setting_lapor_scrape_interval" class="form-control" style="max-width: 150px;" onblur="updateSetting('lapor_scrape_interval', this.value)">
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-info">
+                <h4>Target Group Notifikasi</h4>
+                <p>ID Group WhatsApp (jika dikosongkan akan menggunakan group default)</p>
+              </div>
+              <input type="text" id="setting_lapor_group_id" class="form-control" style="max-width: 250px;" onblur="updateSetting('lapor_group_id', this.value)">
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Tuntas -->
+    <div class="tab-content" id="tab-tuntas">
+      <div class="card">
+        <div class="card-header" style="background: linear-gradient(135deg, #10b981 0%, #047857 100%); border-radius: 12px 12px 0 0; padding: 20px;">
+          <h2 style="color: white; margin: 0; font-size: 1.25rem;">📝 Pengaturan Scraper Tuntas ATR/BPN</h2>
+        </div>
+        <div class="card-body">
+          <div class="settings-grid">
+            
+            <div class="settings-row">
+              <div class="settings-info">
+                <h4>Aktifkan Scraper Tuntas</h4>
+                <p>Jalankan pengecekan otomatis tiket di Tuntas ATR/BPN secara berkala.</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="setting_tuntas_enabled" onchange="updateSetting('tuntas_enabled', this.checked ? '1' : '0')">
+                <span class="slider round"></span>
+              </label>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-info">
+                <h4>Username Tuntas</h4>
+                <p>Username untuk login ke portal Tuntas</p>
+              </div>
+              <input type="text" id="setting_tuntas_username" class="form-control" style="max-width: 250px;" onblur="updateSetting('tuntas_username', this.value)">
+            </div>
+            
+            <div class="settings-row">
+              <div class="settings-info">
+                <h4>Password Tuntas</h4>
+                <p>Kata sandi untuk portal Tuntas</p>
+              </div>
+              <input type="password" id="setting_tuntas_password" class="form-control" style="max-width: 250px;" onblur="updateSetting('tuntas_password', this.value)">
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-info">
+                <h4>Interval Pengecekan</h4>
+                <p>Berapa milidetik sekali scraper mengecek pengaduan (Misal 60000 = 1 menit)</p>
+              </div>
+              <input type="number" id="setting_tuntas_scrape_interval" class="form-control" style="max-width: 150px;" onblur="updateSetting('tuntas_scrape_interval', this.value)">
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-info">
+                <h4>Target Group Notifikasi</h4>
+                <p>ID Group WhatsApp (jika dikosongkan akan menggunakan group default)</p>
+              </div>
+              <input type="text" id="setting_tuntas_group_id" class="form-control" style="max-width: 250px;" onblur="updateSetting('tuntas_group_id', this.value)">
+            </div>
+
+          </div>
         </div>
       </div>
     </div>

@@ -629,6 +629,78 @@ const WebArticleModel = {
   }
 };
 
+// ============================================
+// Lapor Tickets Model
+// ============================================
+const LaporTicketModel = {
+  isProcessed(ticketId) {
+    const db = getDb();
+    const stmt = db.prepare('SELECT * FROM lapor_tickets WHERE ticket_id = ?');
+    return stmt.get(ticketId) || null;
+  },
+
+  save(ticket) {
+    const db = getDb();
+    const stmt = db.prepare(`
+      INSERT INTO lapor_tickets 
+      (ticket_id, subject, status, created_date, notified_group)
+      VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(ticket_id) DO UPDATE SET
+        status = excluded.status,
+        subject = excluded.subject
+    `);
+    return stmt.run(
+      ticket.ticketId,
+      ticket.subject || '',
+      ticket.status || '',
+      ticket.createdDate || '',
+      ticket.notifiedGroup ? 1 : 0
+    );
+  },
+  
+  updateNotificationStatus(ticketId, { notifiedGroup }) {
+    const db = getDb();
+    const stmt = db.prepare('UPDATE lapor_tickets SET notified_group = ?, notified_at = CURRENT_TIMESTAMP WHERE ticket_id = ?');
+    return stmt.run(notifiedGroup ? 1 : 0, ticketId);
+  }
+};
+
+// ============================================
+// Tuntas Tickets Model
+// ============================================
+const TuntasTicketModel = {
+  isProcessed(ticketId) {
+    const db = getDb();
+    const stmt = db.prepare('SELECT * FROM tuntas_tickets WHERE ticket_id = ?');
+    return stmt.get(ticketId) || null;
+  },
+
+  save(ticket) {
+    const db = getDb();
+    const stmt = db.prepare(`
+      INSERT INTO tuntas_tickets 
+      (ticket_id, subject, status, created_date, notified_group)
+      VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(ticket_id) DO UPDATE SET
+        status = excluded.status,
+        subject = excluded.subject
+    `);
+    return stmt.run(
+      ticket.ticketId,
+      ticket.subject || '',
+      ticket.status || '',
+      ticket.createdDate || '',
+      ticket.notifiedGroup ? 1 : 0
+    );
+  },
+  
+  updateNotificationStatus(ticketId, { notifiedGroup }) {
+    const db = getDb();
+    const stmt = db.prepare('UPDATE tuntas_tickets SET notified_group = ?, notified_at = CURRENT_TIMESTAMP WHERE ticket_id = ?');
+    return stmt.run(notifiedGroup ? 1 : 0, ticketId);
+  }
+};
+
 module.exports = {
   AdminModel,
   TicketModel,
@@ -637,5 +709,7 @@ module.exports = {
   HolidayModel,
   IgRuleModel,
   IgPostModel,
-  WebArticleModel
+  WebArticleModel,
+  LaporTicketModel,
+  TuntasTicketModel
 };

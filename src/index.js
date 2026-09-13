@@ -23,6 +23,10 @@ const {
   buildClosedTicketPersonalMessage
 } = require('./notifier/message-builder');
 const { NotificationLogModel } = require('./database/models');
+const { scrapeLaporTickets } = require('./scraper/lapor-scraper');
+const { scrapeTuntasTickets } = require('./scraper/tuntas-scraper');
+const { detectLaporTickets, markLaporTicketProcessed } = require('./detector/lapor-detector');
+const { detectTuntasTickets, markTuntasTicketProcessed } = require('./detector/tuntas-detector');
 const { renderTemplate } = require('./notifier/templates');
 const { startDashboard } = require('./dashboard/server');
 
@@ -380,6 +384,106 @@ async function igScrapeCycle() {
   }
 }
 
+let isLaporScraping = false;
+async function laporScrapeCycle() {
+  if (isLaporScraping) return;
+  const enabled = ConfigModel.get('lapor_enabled');
+  if (enabled !== '1') return;
+  
+  isLaporScraping = true;
+  ConfigModel.set('lapor_scraper_status', 'running');
+  try {
+    const user = ConfigModel.get('lapor_username');
+    const pass = ConfigModel.get('lapor_password');
+    if (!user || !pass) {
+      log.warn('Kredensial Lapor belum diatur');
+      ConfigModel.set('lapor_scraper_status', 'error');
+      return;
+    }
+    
+    const { success, tickets, error } = await scrapeLaporTickets(user, pass);
+    if (!success) {
+      log.error('Lapor scrape failed', { error });
+      ConfigModel.set('lapor_scraper_status', 'error');
+      return;
+    }
+
+    ConfigModel.set('last_lapor_scrape_time', new Date().toISOString());
+    ConfigModel.set('lapor_scraper_status', 'connected');
+
+    const { newTickets } = detectLaporTickets(tickets);
+    if (newTickets.length > 0) {
+      log.info(`Ditemukan ${newTickets.length} tiket baru Lapor. Mengirim notifikasi...`);
+      const groupId = ConfigModel.get('lapor_group_id') || ConfigModel.get('wa_group_id');
+      
+      for (const ticket of newTickets) {
+        let notifiedGroup = false;
+        if (groupId) {
+          const message = `🚨 *PENGADUAN BARU SP4N LAPOR*\n\n*ID*: ${ticket.ticketId}\n*Status*: ${ticket.status}\n\n*Detail*: ${ticket.subject}`;
+          const res = await sendPersonalMessage(groupId, message);
+          if (res && res.success) notifiedGroup = true;
+        }
+        markLaporTicketProcessed(ticket, { notifiedGroup });
+      }
+    }
+  } catch (error) {
+    log.error('Error in Lapor scrape cycle', { error: error.message });
+    ConfigModel.set('lapor_scraper_status', 'error');
+  } finally {
+    isLaporScraping = false;
+  }
+}
+
+let isTuntasScraping = false;
+async function tuntasScrapeCycle() {
+  if (isTuntasScraping) return;
+  const enabled = ConfigModel.get('tuntas_enabled');
+  if (enabled !== '1') return;
+
+  isTuntasScraping = true;
+  ConfigModel.set('tuntas_scraper_status', 'running');
+  try {
+    const user = ConfigModel.get('tuntas_username');
+    const pass = ConfigModel.get('tuntas_password');
+    if (!user || !pass) {
+      log.warn('Kredensial Tuntas belum diatur');
+      ConfigModel.set('tuntas_scraper_status', 'error');
+      return;
+    }
+
+    const { success, tickets, error } = await scrapeTuntasTickets(user, pass);
+    if (!success) {
+      log.error('Tuntas scrape failed', { error });
+      ConfigModel.set('tuntas_scraper_status', 'error');
+      return;
+    }
+
+    ConfigModel.set('last_tuntas_scrape_time', new Date().toISOString());
+    ConfigModel.set('tuntas_scraper_status', 'connected');
+
+    const { newTickets } = detectTuntasTickets(tickets);
+    if (newTickets.length > 0) {
+      log.info(`Ditemukan ${newTickets.length} tiket baru Tuntas. Mengirim notifikasi...`);
+      const groupId = ConfigModel.get('tuntas_group_id') || ConfigModel.get('wa_group_id');
+      
+      for (const ticket of newTickets) {
+        let notifiedGroup = false;
+        if (groupId) {
+          const message = `📝 *PENGADUAN BARU TUNTAS ATR/BPN*\n\n*ID*: ${ticket.ticketId}\n*Status*: ${ticket.status}\n\n*Detail*: ${ticket.subject}`;
+          const res = await sendPersonalMessage(groupId, message);
+          if (res && res.success) notifiedGroup = true;
+        }
+        markTuntasTicketProcessed(ticket, { notifiedGroup });
+      }
+    }
+  } catch (error) {
+    log.error('Error in Tuntas scrape cycle', { error: error.message });
+    ConfigModel.set('tuntas_scraper_status', 'error');
+  } finally {
+    isTuntasScraping = false;
+  }
+}
+
 global.triggerManualScrape = () => scrapeCycle();
 
 /**
@@ -452,6 +556,26 @@ async function main() {
       const igInterval = parseInt(igIntervalStr, 10) || 300000;
       await igScrapeCycle();
       await sleep(igInterval);
+    }
+  })();
+
+  // Lapor Loop
+  (async () => {
+    while (isRunning) {
+      const intervalStr = ConfigModel.get('lapor_scrape_interval');
+      const interval = parseInt(intervalStr, 10) || 60000;
+      await laporScrapeCycle();
+      await sleep(interval);
+    }
+  })();
+
+  // Tuntas Loop
+  (async () => {
+    while (isRunning) {
+      const intervalStr = ConfigModel.get('tuntas_scrape_interval');
+      const interval = parseInt(intervalStr, 10) || 60000;
+      await tuntasScrapeCycle();
+      await sleep(interval);
     }
   })();
 

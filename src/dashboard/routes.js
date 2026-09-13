@@ -96,6 +96,16 @@ function createRoutes() {
             waGroupId: sysConfig.wa_group_id || '',
             reminderInterval: sysConfig.reminder_interval_minutes || '0',
           },
+          laporScraper: {
+            status: sysConfig.lapor_scraper_status || 'unknown',
+            lastScrape: sysConfig.last_lapor_scrape_time || '-',
+            interval: sysConfig.lapor_scrape_interval || '60000',
+          },
+          tuntasScraper: {
+            status: sysConfig.tuntas_scraper_status || 'unknown',
+            lastScrape: sysConfig.last_tuntas_scrape_time || '-',
+            interval: sysConfig.tuntas_scrape_interval || '60000',
+          },
         },
       });
     } catch (error) {

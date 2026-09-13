@@ -272,8 +272,26 @@ async function loadStats() {
       idle: 'Idle',
       stopped: 'Stopped',
       error: 'Error',
+      connected: 'Terhubung',
+      disconnected: 'Terputus'
     };
     statusText.textContent = statusLabels[scraper.status] || scraper.status;
+
+    // Lapor Status
+    if (result.data.laporScraper) {
+      const laporEl = document.getElementById('lapor-status');
+      const laporText = document.getElementById('lapor-status-text');
+      laporEl.className = `status-badge ${result.data.laporScraper.status || 'stopped'}`;
+      laporText.textContent = `Lapor: ${statusLabels[result.data.laporScraper.status] || result.data.laporScraper.status}`;
+    }
+
+    // Tuntas Status
+    if (result.data.tuntasScraper) {
+      const tuntasEl = document.getElementById('tuntas-status');
+      const tuntasText = document.getElementById('tuntas-status-text');
+      tuntasEl.className = `status-badge ${result.data.tuntasScraper.status || 'stopped'}`;
+      tuntasText.textContent = `Tuntas: ${statusLabels[result.data.tuntasScraper.status] || result.data.tuntasScraper.status}`;
+    }
 
     // Last scrape time
     if (scraper.lastScrape && scraper.lastScrape !== '-') {
@@ -1104,6 +1122,27 @@ async function loadSettings() {
       document.getElementById('setting-holiday-wa-group').value = res.data.holiday_wa_group_id || '';
       document.getElementById('setting-holiday-admin').value = res.data.holiday_admin_number || '';
       document.getElementById('setting-reminder-interval').value = res.data.reminder_interval_minutes || '';
+
+      // Lapor Settings
+      const laporEnabled = document.getElementById('setting_lapor_enabled');
+      if (laporEnabled) {
+        laporEnabled.checked = res.data.lapor_enabled === '1';
+        document.getElementById('setting_lapor_username').value = res.data.lapor_username || '';
+        document.getElementById('setting_lapor_password').value = res.data.lapor_password || '';
+        document.getElementById('setting_lapor_scrape_interval').value = res.data.lapor_scrape_interval || '60000';
+        document.getElementById('setting_lapor_group_id').value = res.data.lapor_group_id || '';
+      }
+
+      // Tuntas Settings
+      const tuntasEnabled = document.getElementById('setting_tuntas_enabled');
+      if (tuntasEnabled) {
+        tuntasEnabled.checked = res.data.tuntas_enabled === '1';
+        document.getElementById('setting_tuntas_username').value = res.data.tuntas_username || '';
+        document.getElementById('setting_tuntas_password').value = res.data.tuntas_password || '';
+        document.getElementById('setting_tuntas_scrape_interval').value = res.data.tuntas_scrape_interval || '60000';
+        document.getElementById('setting_tuntas_group_id').value = res.data.tuntas_group_id || '';
+      }
+
       
       document.getElementById('setting-ig-enabled').checked = res.data.ig_enabled === '1';
       if (document.getElementById('setting-ig-blast-kanwil-only')) {
