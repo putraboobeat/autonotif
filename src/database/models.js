@@ -643,17 +643,25 @@ const LaporTicketModel = {
     const db = getDb();
     const stmt = db.prepare(`
       INSERT INTO lapor_tickets 
-      (ticket_id, subject, status, created_date, notified_group)
-      VALUES (?, ?, ?, ?, ?)
+      (ticket_id, nama_pelapor, waktu_masuk, sumber_aduan, status_verifikasi, sla_deadline, kantah_terdisposisi, judul_laporan, isi_laporan, status_tiket, keterangan_selesai, notified_group)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(ticket_id) DO UPDATE SET
-        status = excluded.status,
-        subject = excluded.subject
+        status_tiket = excluded.status_tiket,
+        keterangan_selesai = excluded.keterangan_selesai,
+        status_verifikasi = excluded.status_verifikasi
     `);
     return stmt.run(
       ticket.ticketId,
-      ticket.subject || '',
-      ticket.status || '',
-      ticket.createdDate || '',
+      ticket.namaPelapor || '',
+      ticket.waktuMasuk || '',
+      ticket.sumberAduan || '',
+      ticket.statusVerifikasi || '',
+      ticket.slaDeadline || '',
+      ticket.kantahTerdisposisi || '',
+      ticket.judulLaporan || '',
+      ticket.isiLaporan || '',
+      ticket.statusTiket || '',
+      ticket.keteranganSelesai || '',
       ticket.notifiedGroup ? 1 : 0
     );
   },
@@ -679,17 +687,25 @@ const TuntasTicketModel = {
     const db = getDb();
     const stmt = db.prepare(`
       INSERT INTO tuntas_tickets 
-      (ticket_id, subject, status, created_date, notified_group)
-      VALUES (?, ?, ?, ?, ?)
+      (ticket_id, nama_pelapor, waktu_masuk, sumber_aduan, status_verifikasi, sla_deadline, kantah_terdisposisi, judul_laporan, isi_laporan, status_tiket, keterangan_selesai, notified_group)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(ticket_id) DO UPDATE SET
-        status = excluded.status,
-        subject = excluded.subject
+        status_tiket = excluded.status_tiket,
+        keterangan_selesai = excluded.keterangan_selesai,
+        status_verifikasi = excluded.status_verifikasi
     `);
     return stmt.run(
       ticket.ticketId,
-      ticket.subject || '',
-      ticket.status || '',
-      ticket.createdDate || '',
+      ticket.namaPelapor || '',
+      ticket.waktuMasuk || '',
+      ticket.sumberAduan || '',
+      ticket.statusVerifikasi || '',
+      ticket.slaDeadline || '',
+      ticket.kantahTerdisposisi || '',
+      ticket.judulLaporan || '',
+      ticket.isiLaporan || '',
+      ticket.statusTiket || '',
+      ticket.keteranganSelesai || '',
       ticket.notifiedGroup ? 1 : 0
     );
   },

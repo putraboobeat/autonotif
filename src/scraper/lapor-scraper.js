@@ -125,25 +125,92 @@ async function scrapeLaporTickets(username, password) {
   try {
     log.info('Membuka halaman pengaduan Lapor...');
     
-    // Coba ekstrak data jika ada tabel
+    // Coba ekstrak data
     const scrapedData = await page.evaluate(() => {
-      const rows = document.querySelectorAll('table tbody tr, .ticket-row, .complaint-item, .list-group-item');
+      // Halaman Lapor menggunakan list untuk tiket disposisi
+      const cards = document.querySelectorAll('.list-group-item, .ticket-item, li[class*="ticket"], li[class*="disposisi"], div[class*="card"]');
       const data = [];
       
-      rows.forEach((row, index) => {
-        const text = row.innerText;
-        // Buat ID unik sementara berdasarkan text konten jika tidak ada ID eksplisit
-        const ticketId = row.querySelector('[data-id], .ticket-id') 
-          ? (row.querySelector('[data-id]')?.getAttribute('data-id') || row.querySelector('.ticket-id')?.innerText)
-          : `LAPOR-${Date.now()}-${index}`;
-          
-        const status = text.toLowerCase().includes('selesai') ? 'Closed' : 'Open';
+      cards.forEach((card, index) => {
+        const text = card.innerText || '';
+        if (text.trim().length < 20) return; // Skip elemen kosong
+        
+        // Ekstrak ID Tiket (biasanya diawali # diikuti angka di bagian bawah)
+        const idMatch = text.match(/#(\d+)/);
+        let ticketId = idMatch ? '#' + idMatch[1] : null;
+        
+        // Jika tidak ada ticket_id eksplisit, buat ID unik fallback
+        if (!ticketId) ticketId = `LAPOR-${Date.now()}-${index}`;
+        
+        // Gunakan heuristik regex untuk memecah teks
+        const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        
+        // Asumsi baris 1: Nama | Tanggal | Sumber | Status Selesai/Verifikasi
+        const firstLine = lines[0] || '';
+        let namaPelapor = firstLine.split('Kamis')[0].split('Senin')[0].split('Selasa')[0].split('Rabu')[0].split('Jumat')[0].split('Sabtu')[0].split('Minggu')[0].split(',')[0].trim();
+        if (namaPelapor.length > 50) namaPelapor = 'Anonim'; // Fallback
+        
+        // Mencari Waktu (misal: Kamis, 18:04)
+        const timeMatch = firstLine.match(/(Senin|Selasa|Rabu|Kamis|Jumat|Sabtu|Minggu|\d{1,2}\s+[A-Za-z]{3}),\s+\d{2}:\d{2}/i);
+        const waktuMasuk = timeMatch ? timeMatch[0] : '';
+        
+        // Mencari sumber (Tatap Muka, Website, Pos Surat)
+        let sumberAduan = '';
+        if (text.toLowerCase().includes('website')) sumberAduan = 'Website';
+        else if (text.toLowerCase().includes('pos surat')) sumberAduan = 'Pos Surat';
+        else if (text.toLowerCase().includes('tatap muka')) sumberAduan = 'Tatap Muka';
+        
+        // SLA/Deadline
+        const slaMatch = text.match(/(Harus diproses dalam|Selesai otomatis dalam) \d+ hari/i);
+        const slaDeadline = slaMatch ? slaMatch[0] : '';
+        
+        // Terdisposisi
+        const dispMatch = text.match(/Terdisposisi:\s*(.+)/i);
+        const kantahTerdisposisi = dispMatch ? dispMatch[1].trim() : '';
+        
+        // Judul Laporan (Baris setelah terdisposisi)
+        let judulLaporan = '';
+        let isiLaporan = '';
+        const dispIndex = lines.findIndex(l => l.toLowerCase().startsWith('terdisposisi:'));
+        if (dispIndex >= 0 && dispIndex + 1 < lines.length) {
+          judulLaporan = lines[dispIndex + 1];
+          if (dispIndex + 2 < lines.length) {
+             isiLaporan = lines.slice(dispIndex + 2, dispIndex + 4).join('\n'); // ambil bbrp baris
+          }
+        } else {
+          judulLaporan = lines[1] || '';
+          isiLaporan = lines[2] || '';
+        }
+        
+        // Status dan Keterangan
+        let statusTiket = 'Open';
+        let statusVerifikasi = '';
+        let keteranganSelesai = '';
+        
+        if (text.toLowerCase().includes('selesai otomatis') || text.toLowerCase().includes('ditutup oleh')) {
+          statusTiket = 'Closed';
+          const tutupMatch = text.match(/Ditutup oleh (Admin|Sistem)/i);
+          if (tutupMatch) keteranganSelesai = tutupMatch[0];
+        } else if (text.toLowerCase().includes('sedang diproses') || text.toLowerCase().includes('ditindaklanjuti oleh instansi')) {
+          statusTiket = 'Sedang Diproses';
+          statusVerifikasi = 'Ditindaklanjuti';
+        } else {
+          statusTiket = 'Belum Ditindaklanjuti';
+          if (text.toLowerCase().includes('terverifikasi')) statusVerifikasi = 'Terverifikasi';
+        }
         
         data.push({
-          ticketId: ticketId.trim(),
-          subject: text.substring(0, 100).replace(/\n/g, ' ').trim() + '...',
-          status: status,
-          createdDate: new Date().toISOString(),
+          ticketId,
+          namaPelapor,
+          waktuMasuk,
+          sumberAduan,
+          statusVerifikasi,
+          slaDeadline,
+          kantahTerdisposisi,
+          judulLaporan,
+          isiLaporan: isiLaporan.substring(0, 300), // batasi panjang
+          statusTiket,
+          keteranganSelesai,
           rawText: text
         });
       });

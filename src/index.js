@@ -419,7 +419,7 @@ async function laporScrapeCycle() {
       for (const ticket of newTickets) {
         let notifiedGroup = false;
         if (groupId) {
-          const message = `🚨 *PENGADUAN BARU SP4N LAPOR*\n\n*ID*: ${ticket.ticketId}\n*Status*: ${ticket.status}\n\n*Detail*: ${ticket.subject}`;
+          const message = `🚨 *PENGADUAN BARU SP4N LAPOR*\n\n*ID*: ${ticket.ticketId}\n*Pelapor*: ${ticket.namaPelapor}\n*Waktu*: ${ticket.waktuMasuk}\n*SLA*: ${ticket.slaDeadline}\n*Status*: ${ticket.statusTiket} (${ticket.statusVerifikasi})\n\n*Judul*: ${ticket.judulLaporan}\n*Isi*: ${ticket.isiLaporan}`;
           const res = await sendPersonalMessage(groupId, message);
           if (res && res.success) notifiedGroup = true;
         }
@@ -469,7 +469,7 @@ async function tuntasScrapeCycle() {
       for (const ticket of newTickets) {
         let notifiedGroup = false;
         if (groupId) {
-          const message = `📝 *PENGADUAN BARU TUNTAS ATR/BPN*\n\n*ID*: ${ticket.ticketId}\n*Status*: ${ticket.status}\n\n*Detail*: ${ticket.subject}`;
+          const message = `📝 *PENGADUAN BARU TUNTAS ATR/BPN*\n\n*ID*: ${ticket.ticketId}\n*Status*: ${ticket.statusTiket}\n\n*Detail*: ${ticket.judulLaporan}`;
           const res = await sendPersonalMessage(groupId, message);
           if (res && res.success) notifiedGroup = true;
         }

@@ -156,6 +156,52 @@ function initDatabase() {
     } catch (e) {
       log.error('IG migration failed', { error: e.message });
     }
+
+    // Auto-migrate: Lapor and Tuntas Tickets
+    try {
+      const laporCols = db.pragma('table_info(lapor_tickets)');
+      if (laporCols.length > 0) {
+        const hasPelapor = laporCols.some(c => c.name === 'nama_pelapor');
+        if (!hasPelapor) {
+          log.info('Migrating database: Adding new columns to lapor_tickets');
+          db.exec(`
+            ALTER TABLE lapor_tickets ADD COLUMN nama_pelapor VARCHAR(150);
+            ALTER TABLE lapor_tickets ADD COLUMN waktu_masuk VARCHAR(100);
+            ALTER TABLE lapor_tickets ADD COLUMN sumber_aduan VARCHAR(50);
+            ALTER TABLE lapor_tickets ADD COLUMN status_verifikasi VARCHAR(100);
+            ALTER TABLE lapor_tickets ADD COLUMN sla_deadline VARCHAR(150);
+            ALTER TABLE lapor_tickets ADD COLUMN kantah_terdisposisi VARCHAR(255);
+            ALTER TABLE lapor_tickets ADD COLUMN judul_laporan TEXT;
+            ALTER TABLE lapor_tickets ADD COLUMN isi_laporan TEXT;
+            ALTER TABLE lapor_tickets ADD COLUMN status_tiket VARCHAR(50);
+            ALTER TABLE lapor_tickets ADD COLUMN keterangan_selesai VARCHAR(150);
+          `);
+        }
+      }
+
+      const tuntasCols = db.pragma('table_info(tuntas_tickets)');
+      if (tuntasCols.length > 0) {
+        const hasPelapor = tuntasCols.some(c => c.name === 'nama_pelapor');
+        if (!hasPelapor) {
+          log.info('Migrating database: Adding new columns to tuntas_tickets');
+          db.exec(`
+            ALTER TABLE tuntas_tickets ADD COLUMN nama_pelapor VARCHAR(150);
+            ALTER TABLE tuntas_tickets ADD COLUMN waktu_masuk VARCHAR(100);
+            ALTER TABLE tuntas_tickets ADD COLUMN sumber_aduan VARCHAR(50);
+            ALTER TABLE tuntas_tickets ADD COLUMN status_verifikasi VARCHAR(100);
+            ALTER TABLE tuntas_tickets ADD COLUMN sla_deadline VARCHAR(150);
+            ALTER TABLE tuntas_tickets ADD COLUMN kantah_terdisposisi VARCHAR(255);
+            ALTER TABLE tuntas_tickets ADD COLUMN judul_laporan TEXT;
+            ALTER TABLE tuntas_tickets ADD COLUMN isi_laporan TEXT;
+            ALTER TABLE tuntas_tickets ADD COLUMN status_tiket VARCHAR(50);
+            ALTER TABLE tuntas_tickets ADD COLUMN keterangan_selesai VARCHAR(150);
+          `);
+        }
+      }
+    } catch (e) {
+      log.error('Lapor/Tuntas migration failed', { error: e.message });
+    }
+
   } catch (err) {
     log.error('Migration failed', { error: err.message });
   }

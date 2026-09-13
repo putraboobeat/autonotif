@@ -120,23 +120,36 @@ async function scrapeTuntasTickets(username, password) {
     
     // Coba ekstrak data jika ada tabel
     const scrapedData = await page.evaluate(() => {
-      const rows = document.querySelectorAll('table tbody tr, .ticket-row, .complaint-item, .list-group-item');
+      const rows = document.querySelectorAll('table tbody tr, .ticket-row, .complaint-item, .list-group-item, li[class*="ticket"]');
       const data = [];
       
       rows.forEach((row, index) => {
-        const text = row.innerText;
+        const text = row.innerText || '';
+        if (text.trim().length < 10) return;
+
         // Buat ID unik sementara berdasarkan text konten jika tidak ada ID eksplisit
-        const ticketId = row.querySelector('[data-id], .ticket-id') 
-          ? (row.querySelector('[data-id]')?.getAttribute('data-id') || row.querySelector('.ticket-id')?.innerText)
-          : `TUNTAS-${Date.now()}-${index}`;
+        const ticketIdMatch = text.match(/#(\d+)/);
+        let ticketId = ticketIdMatch ? '#' + ticketIdMatch[1] : null;
+        if (!ticketId) {
+          ticketId = row.querySelector('[data-id], .ticket-id') 
+            ? (row.querySelector('[data-id]')?.getAttribute('data-id') || row.querySelector('.ticket-id')?.innerText)
+            : `TUNTAS-${Date.now()}-${index}`;
+        }
           
-        const status = text.toLowerCase().includes('selesai') ? 'Closed' : 'Open';
+        let statusTiket = text.toLowerCase().includes('selesai') ? 'Closed' : 'Open';
         
         data.push({
           ticketId: ticketId.trim(),
-          subject: text.substring(0, 100).replace(/\n/g, ' ').trim() + '...',
-          status: status,
-          createdDate: new Date().toISOString(),
+          namaPelapor: 'Anonim (Tuntas)',
+          waktuMasuk: new Date().toISOString(),
+          sumberAduan: 'Tuntas Web',
+          statusVerifikasi: 'Terkirim',
+          slaDeadline: '',
+          kantahTerdisposisi: '',
+          judulLaporan: text.substring(0, 100).replace(/\n/g, ' ').trim() + '...',
+          isiLaporan: text.substring(0, 200).replace(/\n/g, ' ').trim() + '...',
+          statusTiket: statusTiket,
+          keteranganSelesai: '',
           rawText: text
         });
       });
