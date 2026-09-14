@@ -679,12 +679,147 @@ Atas perhatian, kerja sama yang baik, dan dedikasi Bapak/Ibu dalam memberikan pe
   document.getElementById('send-msg-text').value = defaultMsg;
   document.getElementById('send-msg-target-type').value = 'all';
   const feedback = document.getElementById('send-msg-feedback');
-  if (feedback) feedback.style.display = 'none';
+  if (feedback) {
+    feedback.style.display = 'none';
+    feedback.innerHTML = '';
+  }
   document.getElementById('send-msg-modal').classList.add('active');
 }
 
 function closeSendMsgModal() {
   document.getElementById('send-msg-modal').classList.remove('active');
+}
+
+/**
+ * Render Fallback & Manual Sending Options (WA Web, WA Desktop PC, wa.me)
+ */
+function renderManualSendFallback(options = {}) {
+  const { isError = false, errorMsg = '', detailsList = null } = options;
+  const adminId = document.getElementById('send-msg-admin-id').value;
+  const message = document.getElementById('send-msg-text').value;
+  const targetType = document.getElementById('send-msg-target-type').value;
+  const feedback = document.getElementById('send-msg-feedback');
+  if (!feedback) return;
+
+  const admin = (allLoadedAdmins || []).find(a => String(a.id) === String(adminId));
+  let targets = [];
+
+  if (detailsList && Array.isArray(detailsList) && detailsList.length > 0) {
+    targets = detailsList.map(d => ({
+      target: d.target || 'Tujuan',
+      name: d.name || admin?.nama || '',
+      phone: formatWaNumber(d.phone),
+      rawPhone: d.phone,
+      error: d.result && d.result.error ? d.result.error : ''
+    }));
+  } else if (admin) {
+    if ((targetType === 'all' || targetType === 'admin') && admin.no_hp) {
+      targets.push({
+        target: 'Petugas Admin',
+        name: admin.nama,
+        phone: formatWaNumber(admin.no_hp),
+        rawPhone: admin.no_hp,
+        error: ''
+      });
+    }
+    if ((targetType === 'all' || targetType === 'ktu') && admin.no_hp_ktu) {
+      targets.push({
+        target: 'Kasubbag TU',
+        name: admin.nama_ktu,
+        phone: formatWaNumber(admin.no_hp_ktu),
+        rawPhone: admin.no_hp_ktu,
+        error: ''
+      });
+    }
+  }
+
+  const encodedText = encodeURIComponent((message || '').trim());
+
+  let targetsHtml = '';
+  if (targets.length > 0) {
+    targetsHtml = `
+      <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 10px; padding: 14px; margin-top: 12px; text-align: left;">
+        <div style="font-size: 13px; font-weight: 700; color: #34d399; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+          <i class="fab fa-whatsapp"></i> ${isError ? 'Solusi: Kirim Manual Langsung via WhatsApp' : 'Kirim Manual via WhatsApp'}
+        </div>
+        <p style="font-size: 12px; color: var(--text-secondary, #cbd5e1); margin: 0 0 10px 0; font-weight: normal; line-height: 1.4;">
+          ${isError ? 'Gateway StarSender gagal mengirim ke nomor ini. Anda dapat langsung mengirim pesan ini tanpa kendala lewat WhatsApp Web atau aplikasi WhatsApp Desktop di PC/Mac:' : 'Silakan klik salah satu opsi tombol di bawah untuk langsung membuka chat WhatsApp dengan teks pesan yang sudah disiapkan:'}
+        </p>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          ${targets.map(t => `
+            <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 10px 12px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 4px;">
+                <span style="font-size: 13px; font-weight: 600; color: var(--text-primary, #f8fafc);">
+                  👤 ${escapeHtml(t.target)}: <strong style="color: #38bdf8;">${escapeHtml(t.name || '-')}</strong>
+                </span>
+                <span style="font-size: 12px; color: #94a3b8; font-family: monospace;">(${escapeHtml(t.rawPhone || t.phone)})</span>
+              </div>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <a href="https://web.whatsapp.com/send?phone=${t.phone}&text=${encodedText}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-primary" style="display: inline-flex; align-items: center; gap: 5px; font-size: 12px; padding: 6px 12px; text-decoration: none; border-radius: 6px; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: #fff; font-weight: 600;" title="Buka di tab browser WhatsApp Web">
+                  🌐 Buka WA Web
+                </a>
+                <a href="whatsapp://send?phone=${t.phone}&text=${encodedText}" class="btn btn-sm btn-success" style="display: inline-flex; align-items: center; gap: 5px; font-size: 12px; padding: 6px 12px; text-decoration: none; border-radius: 6px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #fff; font-weight: 600;" title="Buka aplikasi WhatsApp Desktop di PC/Mac">
+                  💻 Buka WA PC
+                </a>
+                <a href="https://wa.me/${t.phone}?text=${encodedText}" target="_blank" rel="noopener noreferrer" class="btn btn-sm" style="display: inline-flex; align-items: center; gap: 5px; font-size: 12px; padding: 6px 12px; text-decoration: none; border-radius: 6px; background: rgba(255, 255, 255, 0.12); color: var(--text-primary, #e2e8f0); font-weight: 500;" title="Link universal wa.me">
+                  📱 wa.me
+                </a>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  feedback.style.display = 'block';
+  if (isError) {
+    feedback.style.backgroundColor = 'rgba(239, 68, 68, 0.12)';
+    feedback.style.color = '#f87171';
+    feedback.style.border = '1px solid rgba(239, 68, 68, 0.35)';
+    feedback.innerHTML = `
+      <div style="display: flex; align-items: flex-start; gap: 8px;">
+        <span style="font-size: 16px;">❌</span>
+        <div style="flex: 1; text-align: left;">
+          <div style="font-weight: 700; font-size: 13px; color: #f87171; margin-bottom: 3px;">Gagal Mengirim via Gateway:</div>
+          <div style="font-size: 12px; color: #fca5a5; line-height: 1.4; word-break: break-word;">${escapeHtml(errorMsg)}</div>
+        </div>
+      </div>
+      ${targetsHtml}
+    `;
+  } else {
+    feedback.style.backgroundColor = 'rgba(2, 132, 199, 0.12)';
+    feedback.style.color = '#38bdf8';
+    feedback.style.border = '1px solid rgba(2, 132, 199, 0.35)';
+    feedback.innerHTML = `
+      <div style="display: flex; align-items: flex-start; gap: 8px;">
+        <span style="font-size: 16px;">ℹ️</span>
+        <div style="flex: 1; text-align: left;">
+          <div style="font-weight: 700; font-size: 13px; color: #38bdf8; margin-bottom: 3px;">Pengiriman Pesan Manual:</div>
+          <div style="font-size: 12px; color: var(--text-secondary, #cbd5e1); line-height: 1.4;">Silakan klik salah satu opsi tombol WhatsApp di bawah untuk langsung membuka chat:</div>
+        </div>
+      </div>
+      ${targetsHtml}
+    `;
+  }
+}
+
+function triggerManualSendModalOptions() {
+  const message = document.getElementById('send-msg-text').value;
+  const feedback = document.getElementById('send-msg-feedback');
+
+  if (!message || message.trim() === '') {
+    if (feedback) {
+      feedback.style.display = 'block';
+      feedback.style.backgroundColor = 'rgba(239, 68, 68, 0.15)';
+      feedback.style.color = '#f87171';
+      feedback.style.border = '1px solid rgba(239, 68, 68, 0.35)';
+      feedback.innerHTML = '❌ Silakan isi teks pesan terlebih dahulu sebelum membuka link WhatsApp!';
+    }
+    return showToast('Silakan isi teks pesan terlebih dahulu!', 'warning');
+  }
+
+  renderManualSendFallback({ isError: false });
 }
 
 async function submitSendMessage() {
@@ -693,7 +828,10 @@ async function submitSendMessage() {
   const targetType = document.getElementById('send-msg-target-type').value;
   const feedback = document.getElementById('send-msg-feedback');
 
-  if (feedback) feedback.style.display = 'none';
+  if (feedback) {
+    feedback.style.display = 'none';
+    feedback.innerHTML = '';
+  }
 
   if (!message || message.trim() === '') {
     if (feedback) {
@@ -701,7 +839,7 @@ async function submitSendMessage() {
       feedback.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
       feedback.style.color = '#f87171';
       feedback.style.border = '1px solid rgba(239, 68, 68, 0.4)';
-      feedback.textContent = '❌ Teks pesan tidak boleh kosong!';
+      feedback.innerHTML = '❌ Teks pesan tidak boleh kosong!';
     }
     return showToast('Teks pesan tidak boleh kosong!', 'error');
   }
@@ -713,6 +851,8 @@ async function submitSendMessage() {
 
   try {
     const result = await apiPost(`/admins/${adminId}/send-message`, { message, targetType });
+    if (typeof loadLogs === 'function') loadLogs();
+
     if (result.success) {
       const successMsg = result.message || 'Pesan berhasil dikirim!';
       if (feedback) {
@@ -720,30 +860,19 @@ async function submitSendMessage() {
         feedback.style.backgroundColor = 'rgba(16, 185, 129, 0.2)';
         feedback.style.color = '#34d399';
         feedback.style.border = '1px solid rgba(16, 185, 129, 0.4)';
-        feedback.textContent = `✅ ${successMsg}`;
+        feedback.innerHTML = `✅ ${escapeHtml(successMsg)}`;
       }
       showToast(successMsg, 'success');
       setTimeout(() => closeSendMsgModal(), 1500);
     } else {
       const errorMsg = result.error || 'Gagal mengirim pesan ke admin.';
-      if (feedback) {
-        feedback.style.display = 'block';
-        feedback.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
-        feedback.style.color = '#f87171';
-        feedback.style.border = '1px solid rgba(239, 68, 68, 0.4)';
-        feedback.textContent = `❌ ${errorMsg}`;
-      }
+      renderManualSendFallback({ isError: true, errorMsg, detailsList: result.details });
       showToast(errorMsg, 'error');
     }
   } catch (error) {
+    if (typeof loadLogs === 'function') loadLogs();
     const errText = 'Terjadi kesalahan sistem: ' + error.message;
-    if (feedback) {
-      feedback.style.display = 'block';
-      feedback.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
-      feedback.style.color = '#f87171';
-      feedback.style.border = '1px solid rgba(239, 68, 68, 0.4)';
-      feedback.textContent = `❌ ${errText}`;
-    }
+    renderManualSendFallback({ isError: true, errorMsg: errText });
     showToast(errText, 'error');
   } finally {
     btn.disabled = false;
@@ -869,12 +998,14 @@ async function resendReminder(ticketId, btn) {
     btn.innerHTML = '⏳ Mengirim...';
     showToast('Menembakkan pesan peringatan...', 'info');
     const result = await apiPost(`/tickets/${ticketId}/resend`, {});
+    if (typeof loadLogs === 'function') loadLogs();
     if (result && result.success) {
       showToast(result.message || 'Penyampaian peringatan berhasil dikirim!', 'success');
     } else {
-      showToast('Gagal: ' + ((result && result.error) ? result.error : 'Terjadi kesalahan'), 'error');
+      showToast('Gagal: ' + ((result && result.error) ? result.error : 'Terjadi kesalahan') + '. Anda juga dapat mengirim manual melalui Riwayat Log.', 'error');
     }
   } catch (err) {
+    if (typeof loadLogs === 'function') loadLogs();
     showToast('Gagal mengirim peringatan', 'error');
   } finally {
     btn.disabled = false;
@@ -981,7 +1112,7 @@ function renderLogs() {
       <td>
         <span class="badge ${log.status === 'sent' ? 'badge-success' : 'badge-danger'}">${log.status}</span>
         ${log.status === 'failed' ? `
-          <div style="font-size: 11px; color: #dc3545; margin-top: 5px; margin-bottom: 5px; line-height: 1.3; font-weight: normal; max-width: 250px; word-wrap: break-word;">
+          <div style="font-size: 11px; color: #dc3545; margin-top: 5px; margin-bottom: 5px; line-height: 1.3; font-weight: normal; max-width: 260px; word-wrap: break-word;">
             <i class="fas fa-exclamation-circle"></i> 
             ${(() => {
               try {
@@ -995,7 +1126,11 @@ function renderLogs() {
               }
             })()}
           </div>
-          <a href="https://wa.me/${formatWaNumber(log.target_number)}?text=${encodeURIComponent(log.message || '')}" target="_blank" class="btn btn-sm btn-primary" style="font-size: 11px; padding: 2px 6px;">Kirim Manual</a>` : ''}
+          <div style="display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap;">
+            <a href="https://web.whatsapp.com/send?phone=${formatWaNumber(log.target_number)}&text=${encodeURIComponent(log.message || '')}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-primary" style="font-size: 10px; padding: 3px 7px; text-decoration: none; border-radius: 4px;" title="Kirim via WhatsApp Web di Browser">🌐 WA Web</a>
+            <a href="whatsapp://send?phone=${formatWaNumber(log.target_number)}&text=${encodeURIComponent(log.message || '')}" class="btn btn-sm btn-success" style="font-size: 10px; padding: 3px 7px; text-decoration: none; background: #16a34a; border-radius: 4px;" title="Kirim via Aplikasi WhatsApp Desktop PC">💻 WA PC</a>
+            <a href="https://wa.me/${formatWaNumber(log.target_number)}?text=${encodeURIComponent(log.message || '')}" target="_blank" rel="noopener noreferrer" class="btn btn-sm" style="font-size: 10px; padding: 3px 7px; text-decoration: none; background: rgba(255,255,255,0.15); color: inherit; border-radius: 4px;" title="Link universal wa.me">📱 wa.me</a>
+          </div>` : ''}
       </td>
       <td class="timestamp">${formatDateTime(log.sent_at)}</td>
     </tr>
@@ -1427,6 +1562,7 @@ function formatWaNumber(phone) {
   if (!phone) return '';
   let p = String(phone).replace(/\D/g, '');
   if (p.startsWith('0')) p = '62' + p.substring(1);
+  else if (p.startsWith('8')) p = '62' + p;
   return p;
 }
 
