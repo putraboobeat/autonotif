@@ -2,7 +2,7 @@ const { createLogger } = require('../utils/logger');
 const { config } = require('../config');
 const { sleep } = require('../utils/helpers');
 const { getPage, saveCookies } = require('./browser');
-const { ensureLoggedIn } = require('./login');
+const { ensureLoggedIn, isLoggedIn } = require('./login');
 
 const log = createLogger('SCRAPER');
 
@@ -29,8 +29,10 @@ async function navigateToTicketPage() {
 
   await sleep(3000);
 
-  // Save cookies to maintain session
-  await saveCookies();
+  // Save cookies to maintain session only if validly logged in
+  if (await isLoggedIn(page)) {
+    await saveCookies();
+  }
 
   return page;
 }
@@ -52,10 +54,22 @@ async function scrapeTickets() {
   try {
     await page.waitForSelector('table', { timeout: 15000 });
   } catch {
-    log.warn('Table not found, checking if page loaded correctly...');
-    const bodyText = await page.evaluate(() => document.body.innerText.substring(0, 500));
-    log.debug('Page content preview', { text: bodyText });
-    return [];
+    log.warn('Table not found, checking if session expired or page state is unexpected...');
+    if (!(await isLoggedIn(page))) {
+      log.warn('Detected session expired on ticket page, triggering auto re-login...');
+      await ensureLoggedIn();
+      await navigateToTicketPage();
+      try {
+        await page.waitForSelector('table', { timeout: 15000 });
+      } catch (retryErr) {
+        log.error('Table still not found after re-login', { error: retryErr.message });
+        return [];
+      }
+    } else {
+      const bodyText = await page.evaluate(() => document.body.innerText.substring(0, 500));
+      log.debug('Page content preview', { text: bodyText });
+      return [];
+    }
   }
 
   await sleep(2000);

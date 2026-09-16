@@ -24,7 +24,7 @@ let loginPage = null; // Store reference to the page where login is happening
  */
 async function getAuthStatus() {
   const page = getPage();
-  if (page) {
+  if (page && !page.isClosed()) {
     try {
       const logged = await isLoggedIn(page);
       if (logged) {
@@ -47,13 +47,153 @@ async function getAuthStatus() {
 }
 
 /**
- * Start interactive login process (Step 1: Email & Password)
+ * Perform a full automated login with TOTP Google Authenticator
+ * Fully awaitable and returns boolean (true = success, false = failure)
  */
-async function startLoginInteractive(email, password) {
-  if (currentStatus === AuthStatus.LOGIN_IN_PROGRESS || currentStatus === AuthStatus.NEED_OTP) {
-    throw new Error('Login process is already in progress or waiting for OTP');
+async function autoLoginWithTotp() {
+  if (!config.oca.totpSecret) {
+    log.warn('Cannot perform autoLoginWithTotp: OCA_TOTP_SECRET not configured in .env');
+    return false;
   }
 
+  log.info('Starting full automated login with TOTP...');
+  let page = getPage();
+  if (!page || page.isClosed()) {
+    page = await recreatePage();
+  }
+
+  if (!page) {
+    log.error('Browser page not available for auto-login');
+    return false;
+  }
+
+  currentStatus = AuthStatus.LOGIN_IN_PROGRESS;
+  authError = null;
+  loginPage = page;
+
+  try {
+    // 1. Navigate to login page
+    log.debug('Navigating to OCA account login...');
+    await page.goto(`${config.oca.url}account/login`, {
+      waitUntil: 'networkidle2',
+      timeout: 45000,
+    });
+
+    await sleep(2500);
+
+    // If already logged in (e.g. redirected directly)
+    if (await isLoggedIn(page)) {
+      log.info('Already logged in to OCA!');
+      await saveCookies();
+      currentStatus = AuthStatus.LOGGED_IN;
+      return true;
+    }
+
+    // 2. Fill email
+    const emailSelector = 'input[name="email_user"], input[type="email"], input[id="email"]';
+    await page.waitForSelector(emailSelector, { timeout: 15000 });
+    const emailEl = await page.$(emailSelector);
+    if (!emailEl) throw new Error('Email input field not found');
+    await emailEl.click({ clickCount: 3 });
+    await emailEl.type(config.oca.email, { delay: 25 });
+
+    // 3. Fill password
+    const pwSelector = 'input[name="password"], input[type="password"], input[id="password"]';
+    await page.waitForSelector(pwSelector, { timeout: 10000 });
+    const pwEl = await page.$(pwSelector);
+    if (!pwEl) throw new Error('Password input field not found');
+    await pwEl.click({ clickCount: 3 });
+    await pwEl.type(config.oca.password, { delay: 25 });
+
+    // 4. Click Sign In
+    const submitBtnSelector = 'button[type="submit"], .btn-pink, .btn-primary';
+    await page.waitForSelector(submitBtnSelector, { timeout: 10000 });
+    const submitBtn = await page.$(submitBtnSelector);
+    if (submitBtn) {
+      await submitBtn.click();
+    } else {
+      await page.keyboard.press('Enter');
+    }
+
+    log.info('Credentials submitted. Waiting for OTP prompt or dashboard...');
+    await sleep(4000);
+
+    // Check if directly logged in without OTP
+    if (await isLoggedIn(page)) {
+      log.info('Login successful without OTP!');
+      await saveCookies();
+      currentStatus = AuthStatus.LOGGED_IN;
+      return true;
+    }
+
+    // 5. Generate and fill OTP
+    const otpSelector = 'input.otp-input, input[type="tel"]';
+    await page.waitForSelector(otpSelector, { timeout: 15000 });
+
+    const { TOTP } = require('totp-generator');
+    const { otp: token } = await TOTP.generate(config.oca.totpSecret);
+    const cleanCode = (token || '').toString().trim();
+    log.info(`Generated TOTP internally: ${cleanCode}`);
+
+    const otpInputs = await page.$$(otpSelector);
+    if (otpInputs.length >= 6) {
+      for (let i = 0; i < 6; i++) {
+        await otpInputs[i].click();
+        await otpInputs[i].type(cleanCode[i], { delay: 40 });
+      }
+      log.info('Filled 6 OTP boxes.');
+    } else {
+      throw new Error(`Expected 6 OTP boxes, but found ${otpInputs.length}`);
+    }
+
+    await sleep(800);
+
+    // 6. Click Submit button in OTP modal
+    const otpSubmitBtn = await page.evaluateHandle(() => {
+      const buttons = Array.from(document.querySelectorAll('button'));
+      return buttons.find(b => {
+        const text = (b.innerText || b.value || '').trim().toLowerCase();
+        return (text === 'submit' || text === 'verifikasi' || text === 'verify') && !b.disabled;
+      }) || null;
+    });
+
+    if (otpSubmitBtn && (await otpSubmitBtn.asElement())) {
+      await otpSubmitBtn.asElement().click();
+      log.info('Clicked OTP Submit button.');
+    } else {
+      log.warn('Could not find enabled Submit button, pressing Enter...');
+      await page.keyboard.press('Enter');
+    }
+
+    // 7. Wait for post-OTP navigation / dashboard load
+    await sleep(6000);
+
+    const logged = await isLoggedIn(page);
+    if (logged) {
+      log.info('✅ Fully automated TOTP login successful!');
+      await saveCookies();
+      currentStatus = AuthStatus.LOGGED_IN;
+      authError = null;
+      return true;
+    } else {
+      log.error(`❌ Auto-login failed: URL after OTP is ${page.url()}`);
+      currentStatus = AuthStatus.ERROR;
+      authError = 'Auto-login failed after OTP';
+      return false;
+    }
+  } catch (err) {
+    log.error('❌ Auto-login encountered an exception', { error: err.message });
+    currentStatus = AuthStatus.ERROR;
+    authError = err.message;
+    return false;
+  }
+}
+
+/**
+ * Start interactive login process (Step 1: Email & Password)
+ * Used when user logs in manually through the Dashboard UI
+ */
+async function startLoginInteractive(email, password) {
   currentStatus = AuthStatus.LOGIN_IN_PROGRESS;
   authError = null;
   loginPage = getPage();
@@ -68,8 +208,7 @@ async function startLoginInteractive(email, password) {
     return { status: currentStatus, error: authError };
   }
 
-  // We run the Puppeteer automation in the background but return status quickly to API
-  // This allows the API request to not timeout while Puppeteer works
+  // Run in background for UI responsiveness
   _runPuppeteerLogin(email, password).catch(async (err) => {
     log.error('Background login task failed', { error: err.message });
     if (err.message.includes('detached Frame') || err.message.includes('closed')) {
@@ -84,30 +223,30 @@ async function startLoginInteractive(email, password) {
 }
 
 /**
- * The background Puppeteer logic for first step (email & password)
+ * The background Puppeteer logic for manual login from Dashboard UI
  */
 async function _runPuppeteerLogin(email, password) {
-  log.info('Running interactive login...');
+  log.info('Running interactive login from UI...');
   
   try {
-    await loginPage.goto('https://interaction.ocaindonesia.co.id', {
+    await loginPage.goto(`${config.oca.url}account/login`, {
       waitUntil: 'networkidle2',
-      timeout: 60000,
+      timeout: 45000,
     });
   } catch (err) {
     if (err.message.includes('detached Frame') || err.message.includes('closed')) {
       log.warn('Encountered detached frame during goto, recreating page and retrying...');
       loginPage = await recreatePage();
-      await loginPage.goto('https://interaction.ocaindonesia.co.id', {
+      await loginPage.goto(`${config.oca.url}account/login`, {
         waitUntil: 'networkidle2',
-        timeout: 60000,
+        timeout: 45000,
       });
     } else {
       throw err;
     }
   }
 
-  await sleep(3000);
+  await sleep(2500);
 
   if (await isLoggedIn(loginPage)) {
     log.info('Already logged in!');
@@ -116,78 +255,35 @@ async function _runPuppeteerLogin(email, password) {
   }
 
   // Find and fill email
-  let emailFilled = false;
-  const emailSelectors = [
-    'input[type="email"]', 'input[name="email"]', 'input[id="email"]', 'input[name="username"]'
-  ];
-  
-  for (const selector of emailSelectors) {
-    try {
-      const el = await loginPage.$(selector);
-      if (el) {
-        await el.click({ clickCount: 3 });
-        await el.type(email, { delay: 30 });
-        emailFilled = true;
-        break;
-      }
-    } catch {}
-  }
+  const emailSelector = 'input[name="email_user"], input[type="email"], input[id="email"]';
+  await loginPage.waitForSelector(emailSelector, { timeout: 15000 });
+  const emailEl = await loginPage.$(emailSelector);
+  if (!emailEl) throw new Error('Email field not found on page');
+  await emailEl.click({ clickCount: 3 });
+  await emailEl.type(email, { delay: 25 });
 
-  if (!emailFilled) throw new Error('Email field not found on page');
-
-  await sleep(1000);
+  await sleep(500);
 
   // Find and fill password
-  let passwordFilled = false;
-  const passwordSelectors = [
-    'input[type="password"]', 'input[name="password"]', 'input[id="password"]'
-  ];
-  
-  for (const selector of passwordSelectors) {
-    try {
-      const el = await loginPage.$(selector);
-      if (el) {
-        await el.click({ clickCount: 3 });
-        await el.type(password, { delay: 30 });
-        passwordFilled = true;
-        break;
-      }
-    } catch {}
-  }
+  const pwSelector = 'input[name="password"], input[type="password"], input[id="password"]';
+  await loginPage.waitForSelector(pwSelector, { timeout: 10000 });
+  const pwEl = await loginPage.$(pwSelector);
+  if (!pwEl) throw new Error('Password field not found on page');
+  await pwEl.click({ clickCount: 3 });
+  await pwEl.type(password, { delay: 25 });
 
-  if (!passwordFilled) throw new Error('Password field not found on page');
-
-  await sleep(1000);
+  await sleep(500);
 
   // Submit form
-  const submitSelectors = [
-    'button[type="submit"]', 'input[type="submit"]', '.btn-login', 'button.btn-primary'
-  ];
-  
-  let submitted = false;
-  for (const selector of submitSelectors) {
-    try {
-      const btn = await loginPage.$(selector);
-      if (btn) {
-        await btn.click();
-        submitted = true;
-        break;
-      }
-    } catch {}
-  }
-
-  if (!submitted) {
+  const submitSelector = 'button[type="submit"], .btn-pink, .btn-primary';
+  const submitBtn = await loginPage.$(submitSelector);
+  if (submitBtn) {
+    await submitBtn.click();
+  } else {
     await loginPage.keyboard.press('Enter');
   }
 
-  // Wait for navigation or OTP prompt
-  try {
-    await loginPage.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15000 });
-  } catch (e) {
-    log.warn('No full navigation detected, checking for OTP prompt inline...');
-  }
-  
-  await sleep(6000);
+  await sleep(4000);
 
   if (await isLoggedIn(loginPage)) {
     log.info('Login successful without OTP!');
@@ -196,148 +292,78 @@ async function _runPuppeteerLogin(email, password) {
     return;
   }
 
-  // Check if OTP is requested
-  const hasOTP = await loginPage.evaluate(() => {
-    const bodyText = document.body.innerText.toLowerCase();
-    return bodyText.includes('otp') || 
-           bodyText.includes('kode verifikasi') || 
-           bodyText.includes('verification') ||
-           bodyText.includes('login code') ||
-           bodyText.includes('authenticator') ||
-           bodyText.includes('6-digit');
-  });
-
-  if (hasOTP) {
-    log.info('OTP requested by OCA server.');
-    currentStatus = AuthStatus.NEED_OTP;
-
-    // Check if TOTP Secret is configured for full automation
-    if (config.oca.totpSecret) {
-      log.info('TOTP Secret found. Generating and submitting OTP automatically...');
-      const { TOTP } = require('totp-generator');
-      const { otp: token } = await TOTP.generate(config.oca.totpSecret);
-      log.info(`OTP Generated internally: ${token}`);
-      
-      try {
-        const result = await submitOtpInteractive(token);
-        if (result.status === AuthStatus.LOGGED_IN) {
-          log.info('Fully automated login with TOTP successful!');
-          return;
-        } else {
-          log.error('Automated TOTP failed', { error: result.error });
-        }
-      } catch (err) {
-        log.error('Failed during automated TOTP submission', { error: err.message });
-      }
-    } else {
-      log.info('No TOTP Secret configured. Waiting for manual UI input...');
+  // If TOTP secret is configured, auto-complete OTP
+  if (config.oca.totpSecret) {
+    log.info('TOTP secret available. Auto-filling OTP...');
+    const { TOTP } = require('totp-generator');
+    const { otp: token } = await TOTP.generate(config.oca.totpSecret);
+    const result = await submitOtpInteractive(token);
+    if (result.status === AuthStatus.LOGGED_IN) {
+      log.info('Auto TOTP completion successful!');
+      return;
     }
-  } else {
-    log.error('Login failed, no OTP prompt found but not on dashboard.');
-    await loginPage.screenshot({ path: './data/login_failed_no_otp.png' });
-    currentStatus = AuthStatus.ERROR;
-    authError = 'Login failed. Check credentials.';
   }
+
+  // Otherwise, set NEED_OTP for user to input in UI
+  currentStatus = AuthStatus.NEED_OTP;
+  log.info('System waiting for OTP from user via UI...');
 }
 
 /**
  * Submit the OTP code provided by the user via UI
  */
 async function submitOtpInteractive(otpCode) {
-  if (currentStatus !== AuthStatus.NEED_OTP || !loginPage) {
-    throw new Error('System is not waiting for OTP');
+  if (!loginPage || loginPage.isClosed()) {
+    loginPage = getPage();
+  }
+  if (!loginPage) {
+    throw new Error('Browser page not available');
   }
 
   currentStatus = AuthStatus.LOGIN_IN_PROGRESS;
   authError = null;
 
   try {
-    // Find all visible, empty input elements (handles both single input or 6 individual OTP input boxes)
-    let otpFilled = false;
-    try {
-      const allInputHandles = await loginPage.$$('input:not([type="hidden"]):not([readonly]):not([disabled])');
-      const emptyInputs = [];
-      for (const handle of allInputHandles) {
-        const isVisible = await handle.evaluate(el => {
-          const style = window.getComputedStyle(el);
-          return style.display !== 'none' && style.visibility !== 'hidden';
-        });
-        if (!isVisible) continue;
-        const val = await (await handle.getProperty('value')).jsonValue();
-        if (!val || val.toString().trim() === '') {
-          emptyInputs.push(handle);
-        }
-      }
-
-      if (emptyInputs.length >= 6) {
-        log.info(`Detected ${emptyInputs.length} empty input boxes (6-digit OTP modal). Filling...`);
-        await emptyInputs[0].click();
-        await sleep(200);
-        // Type entire string to test auto-advance
-        await loginPage.keyboard.type(otpCode, { delay: 100 });
-        await sleep(500);
-        
-        // Check if all 6 boxes are filled now
-        const sixthValue = await (await emptyInputs[5].getProperty('value')).jsonValue();
-        if (!sixthValue) {
-          log.warn('Auto-advance did not complete all 6 boxes, filling individually...');
-          for (let i = 0; i < Math.min(emptyInputs.length, otpCode.length); i++) {
-            await emptyInputs[i].click();
-            await emptyInputs[i].evaluate((el) => { el.value = ''; });
-            await emptyInputs[i].type(otpCode[i]);
-            await sleep(100);
-          }
-        }
-        otpFilled = true;
-      } else if (emptyInputs.length > 0) {
-        log.info('Detected single empty OTP input box. Filling...');
-        await emptyInputs[0].click({ clickCount: 3 });
-        await emptyInputs[0].type(otpCode, { delay: 50 });
-        otpFilled = true;
-      }
-    } catch (err) {
-      log.warn('Error during intelligent OTP filling, trying fallback selectors', { error: err.message });
+    const cleanCode = (otpCode || '').toString().trim().replace(/\D/g, '');
+    if (cleanCode.length !== 6) {
+      throw new Error(`Kode OTP harus 6 digit (diterima: ${cleanCode.length})`);
     }
 
-    if (!otpFilled) {
-      log.warn('Could not fill OTP via empty input detection, trying fallback (Tab + type)');
-      await loginPage.keyboard.press('Tab');
-      await sleep(500);
-      await loginPage.keyboard.type(otpCode, { delay: 50 });
+    const otpSelector = 'input.otp-input, input[type="tel"]';
+    await loginPage.waitForSelector(otpSelector, { timeout: 10000 });
+    const otpInputs = await loginPage.$$(otpSelector);
+
+    if (otpInputs.length >= 6) {
+      for (let i = 0; i < 6; i++) {
+        await otpInputs[i].click();
+        await otpInputs[i].type(cleanCode[i], { delay: 40 });
+      }
+    } else {
+      const singleInput = await loginPage.$('input[type="text"], input[name*="otp"]');
+      if (singleInput) {
+        await singleInput.click({ clickCount: 3 });
+        await singleInput.type(cleanCode, { delay: 40 });
+      }
     }
 
-    await sleep(1000);
+    await sleep(600);
 
-    let btnClicked = false;
-    const btnHandle = await loginPage.evaluateHandle(() => {
-      const buttons = Array.from(document.querySelectorAll('button, input[type="submit"], .btn'));
-      for (const btn of buttons) {
-        const style = window.getComputedStyle(btn);
-        if (style.display === 'none' || style.visibility === 'hidden' || btn.disabled) continue;
-        const text = (btn.innerText || btn.value || '').trim().toLowerCase();
-        if (['submit', 'verifikasi', 'verify', 'kirim', 'lanjut', 'continue', 'ok'].includes(text)) {
-          return btn;
-        }
-      }
-      return document.querySelector('button[type="submit"], .btn-submit, .btn-primary, button.btn') || null;
+    // Find enabled OTP submit button
+    const submitBtn = await loginPage.evaluateHandle(() => {
+      const buttons = Array.from(document.querySelectorAll('button'));
+      return buttons.find(b => {
+        const text = (b.innerText || b.value || '').trim().toLowerCase();
+        return (text === 'submit' || text === 'verifikasi' || text === 'verify') && !b.disabled;
+      }) || null;
     });
 
-    if (btnHandle && (await btnHandle.asElement())) {
-      await btnHandle.asElement().click();
-      btnClicked = true;
-      log.info('Clicked OTP Submit button successfully');
-    }
-
-    if (!btnClicked) {
-      log.info('Could not find specific OTP submit button, pressing Enter...');
+    if (submitBtn && (await submitBtn.asElement())) {
+      await submitBtn.asElement().click();
+    } else {
       await loginPage.keyboard.press('Enter');
     }
 
-    try {
-      await loginPage.waitForNavigation({ waitUntil: 'networkidle2', timeout: 20000 });
-    } catch {}
-    
-    await sleep(4000);
+    await sleep(6000);
 
     if (await isLoggedIn(loginPage)) {
       log.info('OTP Accepted! Login successful.');
@@ -345,24 +371,9 @@ async function submitOtpInteractive(otpCode) {
       currentStatus = AuthStatus.LOGGED_IN;
       return { status: currentStatus, message: 'Login successful' };
     } else {
-      const hasError = await loginPage.evaluate(() => {
-        const bodyText = document.body.innerText.toLowerCase();
-        return bodyText.includes('invalid') || bodyText.includes('salah') || bodyText.includes('expired');
-      });
-
-      if (hasError) {
-        log.error('OTP Rejected or expired');
-        await loginPage.screenshot({ path: './data/otp_failed.png' });
-        currentStatus = AuthStatus.NEED_OTP; // allow retry
-        authError = 'Kode OTP salah atau kadaluarsa';
-        return { status: currentStatus, error: authError };
-      } else {
-        log.error('Login failed after OTP (unknown reason)');
-        await loginPage.screenshot({ path: './data/otp_failed.png' });
-        currentStatus = AuthStatus.ERROR;
-        authError = 'Gagal masuk setelah submit OTP';
-        return { status: currentStatus, error: authError };
-      }
+      currentStatus = AuthStatus.ERROR;
+      authError = 'Gagal masuk setelah submit OTP';
+      return { status: currentStatus, error: authError };
     }
   } catch (error) {
     log.error('Error submitting OTP', { error: error.message });
@@ -375,6 +386,7 @@ async function submitOtpInteractive(otpCode) {
 module.exports = {
   AuthStatus,
   getAuthStatus,
+  autoLoginWithTotp,
   startLoginInteractive,
   submitOtpInteractive,
 };

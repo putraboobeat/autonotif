@@ -34,13 +34,19 @@ async function isOnLoginPage(page) {
  */
 async function isLoggedIn(page) {
   try {
+    if (!page || page.isClosed()) return false;
     const url = page.url();
-    // If we're on the interaction dashboard, we're logged in
-    if (url.includes('interaction.ocaindonesia.co.id') && !url.includes('/login') && !url.includes('sso.')) {
-      // Verify by checking for dashboard elements
+    // If on login or SSO page, not logged in
+    if (url.includes('/login') || url.includes('/auth') || url.includes('sso.')) {
+      return false;
+    }
+    // If we're on the interaction domain and not on login page
+    if (url.includes('interaction.ocaindonesia.co.id')) {
+      // Verify by checking for dashboard/inbox/ticket elements
       const hasDashboard = await page.evaluate(() => {
-        // Look for ticket-related elements or navigation
-        const ticketElements = document.querySelector('[class*="ticket"], [class*="sidebar"], [class*="nav"]');
+        const ticketElements = document.querySelector(
+          '[class*="ticket"], [class*="sidebar"], [class*="nav"], table, [class*="inbox"], [class*="header"], [class*="avatar"]'
+        );
         return !!ticketElements;
       });
       return hasDashboard;
@@ -231,13 +237,19 @@ async function performLogin() {
  */
 async function ensureLoggedIn() {
   const page = getPage();
-  if (!page) throw new Error('Browser page not available');
+  if (!page || page.isClosed()) throw new Error('Browser page not available');
 
   if (await isLoggedIn(page)) {
     return true;
   }
 
-  log.warn('Session expired or not logged in, attempting re-login...');
+  log.warn('Session expired or not logged in, attempting auto-login with TOTP...');
+  if (config.oca.totpSecret) {
+    const { autoLoginWithTotp } = require('./login-controller');
+    const success = await autoLoginWithTotp();
+    if (success) return true;
+  }
+
   return await performLogin();
 }
 

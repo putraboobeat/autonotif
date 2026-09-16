@@ -52,23 +52,25 @@ async function scrapeCycle() {
     const loggedIn = await isLoggedIn(getPage()).catch(() => false);
     if (!loggedIn) {
       if (config.oca.totpSecret) {
-        log.info('Not logged in, but TOTP Secret is configured. Triggering full auto-login...');
-        const { startLoginInteractive } = require('./scraper/login-controller');
-        
-        // Let it run in background and skip this scrape cycle
-        startLoginInteractive(config.oca.email, config.oca.password).catch(err => {
+        log.info('Not logged in, but TOTP Secret is configured. Performing automated TOTP login...');
+        const { autoLoginWithTotp } = require('./scraper/login-controller');
+        const loginSuccess = await autoLoginWithTotp().catch((err) => {
           log.error('Full auto-login failed', { error: err.message });
+          return false;
         });
-        
+
+        if (!loginSuccess) {
+          log.warn('Auto-login with TOTP was not successful. Will retry next cycle.');
+          ConfigModel.set('scraper_status', 'idle');
+          return;
+        }
+
+        log.info('Auto-login succeeded! Proceeding with scrape cycle immediately...');
+      } else {
+        log.warn('Not logged in. Waiting for user to login via Dashboard UI...');
         ConfigModel.set('scraper_status', 'idle');
-        await sleep(10000); // give it some time
         return;
       }
-
-      log.warn('Not logged in. Waiting for user to login via Dashboard UI...');
-      ConfigModel.set('scraper_status', 'idle');
-      await sleep(config.app.scrapeInterval);
-      return;
     }
 
     scrapeCount++;
