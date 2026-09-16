@@ -1058,9 +1058,30 @@ function createRoutes() {
     try {
       const tickets = TicketModel.getAll();
       const header = 'No,Ticket ID,Kantor Pertanahan,Customer,Priority,Status,Category,Subject,Created Date,Last Notified\n';
+      const formatWib = (dateStr) => {
+        if (!dateStr) return '-';
+        try {
+          let s = String(dateStr).trim();
+          if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(s)) s = s.replace(' ', 'T') + 'Z';
+          else if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(s)) s = s + 'Z';
+          const d = new Date(s);
+          if (isNaN(d.getTime())) return dateStr;
+          return d.toLocaleString('id-ID', {
+            timeZone: 'Asia/Jakarta',
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          });
+        } catch {
+          return dateStr;
+        }
+      };
+
       const rows = tickets.map((t, idx) => {
         const clean = str => `"${(str || '').toString().replace(/"/g, '""')}"`;
-        return `${idx + 1},${clean(t.ticket_id)},${clean(t.kantor_pertanahan)},${clean(t.customer)},${clean(t.priority)},${clean(t.status)},${clean(t.category)},${clean(t.subject)},${clean(t.created_date || t.created_at)},${clean(t.last_notified_at || t.notified_at)}`;
+        return `${idx + 1},${clean(t.ticket_id)},${clean(t.kantor_pertanahan)},${clean(t.customer)},${clean(t.priority)},${clean(t.status)},${clean(t.category)},${clean(t.subject)},${clean(t.created_date || t.created_at)},${clean(formatWib(t.last_notified_at || t.notified_at))}`;
       }).join('\n');
       
       const csv = '\uFEFF' + header + rows; // Include BOM for Excel UTF-8 display

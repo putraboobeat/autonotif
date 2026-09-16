@@ -1306,7 +1306,7 @@ async function loadSettings() {
       const elIgStatus = document.getElementById('ig-scraper-status-text');
       if (elIgStatus) {
         let text = res.data.ig_scraper_status === 'running' ? '<span style="color:#10b981">🟢 Berjalan</span>' : '<span style="color:#ef4444">🔴 Berhenti</span>';
-        if (res.data.last_ig_scrape_time) text += ` (Terakhir cek: ${new Date(res.data.last_ig_scrape_time).toLocaleTimeString()})`;
+        if (res.data.last_ig_scrape_time) text += ` (Terakhir cek: ${formatTime(res.data.last_ig_scrape_time)})`;
         elIgStatus.innerHTML = `Status: ${text}`;
       }
 
@@ -1323,7 +1323,7 @@ async function loadSettings() {
         const elWebStatus = document.getElementById('web-scraper-status-text');
         if (elWebStatus) {
            let wtext = res.data.web_scraper_status || 'idle';
-           if (res.data.last_web_fetch_time) wtext += ` (Terakhir tarik: ${new Date(res.data.last_web_fetch_time).toLocaleTimeString()})`;
+           if (res.data.last_web_fetch_time) wtext += ` (Terakhir tarik: ${formatTime(res.data.last_web_fetch_time)})`;
            elWebStatus.textContent = wtext;
         }
       }
@@ -1551,7 +1551,11 @@ function escapeHtml(str) {
 }
 
 function formatTime(date) {
-  return date.toLocaleTimeString('id-ID', {
+  if (!date) return '-';
+  const d = date instanceof Date ? date : parseUtcDate(date);
+  if (!d || isNaN(d.getTime())) return '-';
+  return d.toLocaleTimeString('id-ID', {
+    timeZone: 'Asia/Jakarta',
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
@@ -1569,8 +1573,10 @@ function formatWaNumber(phone) {
 function formatDateTime(dateStr) {
   if (!dateStr) return '-';
   try {
-    const date = new Date(dateStr);
+    const date = parseUtcDate(dateStr);
+    if (!date || isNaN(date.getTime())) return dateStr;
     return date.toLocaleString('id-ID', {
+      timeZone: 'Asia/Jakarta',
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -2059,8 +2065,8 @@ async function loadIgPosts() {
         if (post.post_date) {
           const pDate = parseUtcDate(post.post_date);
           if (pDate && !isNaN(pDate.getTime())) {
-            const pDateStr = pDate.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
-            const pTimeStr = pDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+            const pDateStr = pDate.toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta', day: '2-digit', month: '2-digit', year: 'numeric' });
+            const pTimeStr = pDate.toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' });
             postingDateHtml = `
               <div style="font-size:12px; font-weight:600; color:var(--text-primary);">${pDateStr}</div>
               <div style="font-size:11px; color:var(--text-secondary); margin-top:2px;">🕐 ${pTimeStr} WIB</div>
@@ -2073,8 +2079,8 @@ async function loadIgPosts() {
         if (post.created_at) {
           const sDate = parseUtcDate(post.created_at);
           if (sDate && !isNaN(sDate.getTime())) {
-            const sDateStr = sDate.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
-            const sTimeStr = sDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const sDateStr = sDate.toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta', day: '2-digit', month: '2-digit', year: 'numeric' });
+            const sTimeStr = sDate.toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', second: '2-digit' });
             scrapeDateHtml = `
               <div style="font-size:12px; font-weight:600; color:var(--text-primary);">${sDateStr}</div>
               <div style="font-size:11px; color:var(--text-secondary); margin-top:2px;">⚡ ${sTimeStr} WIB</div>
@@ -2335,7 +2341,7 @@ async function loadWebArticles() {
         
         tbody.innerHTML += `
           <tr>
-            <td style="font-size:12px;"><strong>Publikasi:</strong> ${article.post_date}<br><strong>Ditarik:</strong> ${new Date(article.created_at).toLocaleString('id-ID')}</td>
+            <td style="font-size:12px;"><strong>Publikasi:</strong> ${article.post_date}<br><strong>Ditarik:</strong> ${formatDateTime(article.created_at)}</td>
             <td style="font-size:12px; max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${article.title || article.url}"><strong>${article.title || 'Menunggu Scraping...'}</strong><br>${sourceLink}</td>
             <td><span class="badge" style="background: rgba(16,185,129,0.2); color: #10b981; border: 1px solid rgba(16,185,129,0.4);">${article.category || '-'}</span></td>
             <td style="font-size:12px;">${statusBadge}<br>${linkLabel}</td>
